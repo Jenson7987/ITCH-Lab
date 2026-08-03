@@ -1,0 +1,473 @@
+# 04 — Data model
+
+## Model principles
+
+- No relational database is used in the MVP.
+- Raw, interchange, analytical and result artefacts are immutable once completed.
+- Prices remain scaled integers until presentation.
+- Trading date, symbol and message index form the stable event identity.
+- Nullability is explicit in Parquet and JSON; binary records use validity flags.
+- Every derived artefact points to a completed parent manifest and content hash.
+
+## Canonical hashing and identities
+
+- Canonical JSON bytes follow [RFC 8785 JSON Canonicalization Scheme](https://www.rfc-editor.org/rfc/rfc8785.html), encoded as UTF-8. Implementations do not invent a separate C++/Python float formatting rule.
+- A stage identity digest is SHA-256 over: an ASCII domain separator ending in NUL; ordered raw 32-byte parent-content hashes; the raw 32-byte canonical-config hash; the exact executable or installed-wheel 32-byte content hash; and the output schema version as an unsigned two-byte big-endian integer.
+- Replay uses domain separator itchlab-replay-v1; later stages use itchlab-conversion-v1, itchlab-dataset-v1, itchlab-experiment-v1 and itchlab-simulation-v1.
+- Human run IDs are UTC basic timestamp, a hyphen and the first 12 lowercase hexadecimal digest characters. The full digest remains in the manifest.
+- A publishable run requires a clean recorded Git commit. Development runs from dirty trees are labelled non-publishable and receive a new timestamped directory even when other identity inputs match.
+- Observational start/end times, local paths and progress metrics do not enter the digest.
+
+## Conceptual relationships
+
+```mermaid
+erDiagram
+    SOURCE_FILE ||--o{ REPLAY_RUN : feeds
+    REPLAY_RUN ||--o{ INSTRUMENT : selects
+    REPLAY_RUN ||--o{ NORMALISED_EVENT : emits
+    REPLAY_RUN ||--o{ BOOK_SNAPSHOT : emits
+    REPLAY_RUN ||--o{ ORDER : maintains
+    INSTRUMENT ||--o{ ORDER : contains
+    NORMALISED_EVENT ||--o| BOOK_SNAPSHOT : triggers
+    REPLAY_RUN ||--o{ DATASET_RUN : transforms
+    DATASET_RUN ||--o{ PREDICTION : produces
+    DATASET_RUN ||--o{ SIMULATION_RUN : supports
+    SIMULATION_RUN ||--o{ SIMULATED_ORDER : owns
+    SIMULATED_ORDER ||--o{ FILL : receives
+```
+
+Order and PriceLevel are transient domain entities. Other entities are persisted as manifests, binary records or Parquet rows.
+
+## Primitive domain types
+
+| Type | Storage | Rule |
+| --- | --- | --- |
+| MessageIndex | uint64 | Monotonic within one source file, starts at 0 |
+| TimestampNs | uint64 | Nanoseconds since exchange-local midnight; less than 86,400,000,000,000 |
+| StockLocate | uint16 | Daily identifier; 0 is global/not instrument-specific |
+| SymbolId | uint16 | Project-local identifier within one replay output |
+| OrderReference | uint64 | Unique for a live order; source-day semantics |
+| MatchNumber | uint64 | Source-day trade/execution identifier |
+| Price4 | uint32 | Four implied decimal places; no floating arithmetic in core |
+| Shares | uint64 persisted | Positive for quantities; C++ validates narrower source fields before widening |
+| Side | int8 | +1 buy, -1 sell, 0 not applicable |
+| TradingDate | ISO date/uint32 | JSON uses YYYY-MM-DD; binary header uses YYYYMMDD |
+| ContentHash | string/bytes32 | SHA-256; lowercase hexadecimal in JSON |
+
+## Persisted entities
+
+### SourceFile
+
+Stored inside a replay manifest.
+
+| Field | Type | Nullable | Default | Constraints/owner |
+| --- | --- | --- | --- | --- |
+| canonical_name | string | No | — | Manifest builder; basename only in publishable output |
+| sha256 | 64-char hex | No | — | Computed before or during replay |
+| size_bytes | uint64 | No | — | Filesystem |
+| compression | enum | No | detected | gzip or none |
+| framing | string | No | itch-length-v1 | Verified by FramedMessageReader |
+| trading_date | ISO date | No | — | Required config; not silently inferred |
+| exchange_timezone | string | No | America/New_York | Fixed IANA zone for Nasdaq MVP |
+| source_uri | string | Yes | null | Optional public landing page, never a signed URL |
+
+### Instrument
+
+Persisted in replay manifest and binary symbol dictionary.
+
+| Field | Type | Nullable | Default | Constraints/owner |
+| --- | --- | --- | --- | --- |
+| symbol_id | uint16 | No | — | Unique per replay; assigned deterministically by requested-symbol order |
+| stock_locate | uint16 | No | — | Unique for active directory record in source day |
+| symbol | ASCII string | No | — | Trimmed Stock field, 1–8 bytes |
+| market_category | char | Yes | null | From Stock Directory if retained |
+| financial_status | char | Yes | null | From Stock Directory if retained |
+| round_lot_size | uint32 | No | — | From Stock Directory |
+| round_lots_only | bool | No | false | From Stock Directory |
+
+Uniqueness constraints: (replay_id, symbol_id), (replay_id, stock_locate), and (replay_id, symbol).
+
+### ReplayRun
+
+One directory with replay-manifest.json, events.ilb and snapshots.ilb.
+
+| Field | Type | Nullable | Default | Constraints/owner |
+| --- | --- | --- | --- | --- |
+| replay_id | string | No | generated | UTC timestamp plus 12-char identity-hash prefix |
+| status | enum | No | running | running, completed, failed, cancelled or degraded |
+| schema_version | uint16 | No | 1 | Manifest schema |
+| source | SourceFile | No | — | Exactly one source per replay |
+| config | object | No | — | Canonical replay config |
+| config_sha256 | hex | No | — | Hash of canonical config |
+| code_revision | string | No | — | Git commit plus dirty flag |
+| build | object | No | — | Compiler, version, target, build type |
+| instruments | array | No | [] | At least one on completed non-empty replay |
+| started_at | UTC timestamp | No | now | Observational, excluded from identity |
+| completed_at | UTC timestamp | Yes | null | Required for terminal status |
+| counts | object | No | zeroes | Source, decoded, selected, event, snapshot and error counts |
+| artefacts | array | No | [] | Relative path, schema, size and SHA-256 |
+| error_summary | object | No | {} | Counts by stable code |
+
+### NormalisedEvent
+
+Persisted in events.ilb and later events.parquet.
+
+| Field | Type | Nullable | Default | Validation |
+| --- | --- | --- | --- | --- |
+| trading_date | date | No | header | From completed replay |
+| message_index | uint64 | No | — | Strictly increasing in output |
+| timestamp_ns | uint64 | No | — | Non-decreasing for a clean source |
+| symbol_id | uint16 | No | — | Must exist in symbol dictionary |
+| event_kind | enum | No | — | add, execute, execute_price, cancel, delete, replace, trade, cross, broken_trade, trading_state |
+| source_type | uint8/char | No | — | Original ITCH type |
+| primary_reference | uint64 | Yes | null | Order reference or broken match according to kind |
+| secondary_reference | uint64 | Yes | null | New order reference or match number |
+| side | int8 | Yes | null | +1/-1 when defined; trade-side field is not treated as aggressor truth |
+| price4 | uint32 | Yes | null | Display/new/trade price according to kind |
+| execution_price4 | uint32 | Yes | null | Only execute-with-price |
+| quantity | uint64 | Yes | null | Event quantity |
+| remaining_quantity | uint64 | Yes | null | Remaining visible order shares after mutation |
+| aux_code | fixed ASCII[4] | Yes | null | MPID attribution for attributed add; reason code for trading_state |
+| event_subtype | uint8/char | Yes | null | Cross type for cross; trading-state code for trading_state |
+| in_session | bool | No | false | True exactly when timestamp is in the configured half-open research session |
+| flags | uint16 | No | 0 | Field-validity and in-session bits; unknown bits must be zero in v1 writer |
+
+Primary key: (trading_date, message_index, symbol_id, event_kind). A message can yield at most one normalised event for the selected instrument in the MVP.
+
+### BookSnapshot
+
+Persisted in snapshots.ilb and snapshots.parquet.
+
+| Field | Type | Nullable | Default | Validation |
+| --- | --- | --- | --- | --- |
+| trading_date | date | No | header | Replay trading date |
+| message_index | uint64 | No | — | References triggering event |
+| timestamp_ns | uint64 | No | — | Trigger time |
+| symbol_id | uint16 | No | — | Dictionary member |
+| event_kind | enum | No | — | Trigger classification |
+| event_price4 | uint32 | Yes | null | When meaningful |
+| event_quantity | uint64 | Yes | null | When meaningful |
+| last_trade_price4 | uint32 | Yes | null | Latest observed eligible trade |
+| last_trade_quantity | uint64 | Yes | null | Paired with last trade price |
+| top_n_changed | bool | No | false | True when this snapshot was emitted because exported depth changed |
+| bid_price4_1..N | uint32 | Yes | null | Strictly descending valid levels |
+| bid_quantity_1..N | uint64 | Yes | null | Positive when paired price valid |
+| ask_price4_1..N | uint32 | Yes | null | Strictly ascending valid levels |
+| ask_quantity_1..N | uint64 | Yes | null | Positive when paired price valid |
+| trading_state | enum | No | unknown | preopen, trading, halted, paused, quotation_only, closed or unknown |
+
+Uniqueness: (trading_date, symbol_id, message_index). Rows are physically sorted by symbol_id then message_index in Parquet partitions, while binary order follows source message order.
+
+### DatasetRun
+
+Stored in dataset-manifest.json with Parquet artefacts.
+
+| Field | Type | Nullable | Default | Constraints |
+| --- | --- | --- | --- | --- |
+| dataset_id | string | No | generated | Content-addressed identity |
+| parent_replay_ids | array[string] | No | — | Minimum three distinct days for publishable MVP |
+| schema_version | uint16 | No | 1 | Dataset schema |
+| feature_config | object | No | — | Names, windows, null policy |
+| label_config | object | No | — | Primary/secondary horizons and target definition |
+| partitions | object | No | — | Non-overlapping whole-day lists |
+| feature_catalogue | array | No | — | Name, dtype, formula, lookback and owner |
+| counts | object | No | — | Rows before/after filtering, by day/symbol/class |
+| artefacts | array | No | — | Paths, sizes and hashes |
+| status | enum | No | completed | Completed only after validation |
+
+Recommended Parquet partitioning: partition/trading_date/symbol, with row-group statistics on message_index and timestamp_ns. These are physical pruning aids, not database indexes.
+
+### Prediction
+
+Persisted as predictions.parquet.
+
+| Field | Type | Nullable | Default | Constraints |
+| --- | --- | --- | --- | --- |
+| dataset_id | string | No | — | Exact frozen dataset |
+| experiment_id | string | No | — | Exact model run |
+| trading_date | date | No | — | Test or validation partition |
+| symbol_id | uint16 | No | — | Dataset instrument |
+| message_index | uint64 | No | — | Decision row key |
+| probability_down | float64 | No | — | Finite, 0–1 |
+| probability_flat | float64 | No | — | Finite, 0–1 |
+| probability_up | float64 | No | — | Finite, 0–1; probabilities sum to 1 within 1e-9 |
+| score | float64 | No | — | Bounded documented transformation, default P(up)-P(down) |
+| model_name | string | No | — | Fixed catalogue value |
+
+Uniqueness: (experiment_id, trading_date, symbol_id, message_index, model_name).
+
+### SimulationRun
+
+Stored in simulation-manifest.json plus orders/fills/metrics Parquet files.
+
+| Field | Type | Nullable | Default | Constraints |
+| --- | --- | --- | --- | --- |
+| simulation_id | string | No | generated | Content-addressed identity |
+| dataset_id | string | No | — | Parent dataset |
+| prediction_identity | string | Yes | null | Null only for non-signal baseline |
+| config | object | No | — | Strategy, queue, latency, costs, liquidation |
+| random_seed | uint64 | No | — | Even if selected model is deterministic |
+| scenarios | array | No | — | Minimum three latency and two cost settings in final report |
+| status | enum | No | running | Terminal publication rules match ReplayRun |
+| metrics | object | No | — | Aggregate results and diagnostic counts |
+| artefacts | array | No | — | Orders, fills, time series, summary |
+
+### SimulatedOrder
+
+| Field | Type | Nullable | Default | Constraints |
+| --- | --- | --- | --- | --- |
+| simulated_order_id | uint64 | No | sequence | Unique within simulation scenario |
+| decision_message_index | uint64 | No | — | Strategy decision |
+| prediction_message_index | uint64 | Yes | null | Latest same-symbol prediction at or before decision; null for no-signal baseline |
+| requested_timestamp_ns | uint64 | No | — | Decision time |
+| effective_timestamp_ns | uint64 | No | — | Requested time plus submission latency |
+| symbol_id | uint16 | No | — | Instrument |
+| side | int8 | No | — | +1/-1 |
+| price4 | uint32 | No | — | Passive at activation or rejected |
+| original_quantity | uint64 | No | — | Positive |
+| remaining_quantity | uint64 | No | — | 0 through original |
+| queue_ahead_initial | uint64 | Yes | null | Null when rejected before activation |
+| state | enum | No | pending_submit | State machine in user flows, including terminal invalidated |
+| cancel_requested_ns | uint64 | Yes | null | Required for pending cancel |
+| terminal_timestamp_ns | uint64 | Yes | null | Required for terminal state |
+| rejection_reason | enum | Yes | null | Required when rejected or counterfactually invalidated |
+
+### Fill
+
+| Field | Type | Nullable | Default | Constraints |
+| --- | --- | --- | --- | --- |
+| fill_id | uint64 | No | sequence | Unique within scenario |
+| simulated_order_id | uint64 | No | — | Existing simulated order |
+| market_message_index | uint64 | No | — | Observed event causing fill |
+| timestamp_ns | uint64 | No | — | At or after effective order time |
+| price4 | uint32 | No | — | Active simulated order price |
+| quantity | uint64 | No | — | Positive; bounded by order remaining and event liquidity |
+| fee_microusd | int64 | No | 0 | Signed; rebate is negative cost |
+| cash_delta_microusd | int64 | No | — | Overflow checked |
+| inventory_after | int64 | No | — | Within configured limit |
+
+cash_delta_microusd excludes fees and equals −side × Price4 × quantity × 100. The factor 100 converts a four-decimal US-dollar price into millionths of a dollar. fee_microusd is a signed cost (positive fee, negative rebate), so the cash ledger adds cash_delta_microusd − fee_microusd.
+
+## Transient entities
+
+### Order
+
+Owned exclusively by OrderBook.
+
+| Field | Type | Rule |
+| --- | --- | --- |
+| reference | OrderReference | Unique while live |
+| stock_locate | StockLocate | Owning instrument |
+| side | Side | Buy or sell |
+| price4 | Price4 | Immutable until replacement, which creates a new order |
+| remaining | uint32 | Positive while live |
+| priority_sequence | MessageIndex | Source add/replace position |
+| level_iterator | internal | Valid stable iterator into matching PriceLevel queue |
+| attribution | optional char[4] | Present for F messages |
+
+Deletion: execution/cancel reaching zero, delete, replacement or end-of-day teardown. A removed reference cannot be mutated later.
+
+### PriceLevel
+
+Owned exclusively by one side of one OrderBook.
+
+| Field | Type | Rule |
+| --- | --- | --- |
+| price4 | Price4 | Map key |
+| total_quantity | uint64 | Sum of remaining shares in FIFO |
+| fifo_order_references | list[OrderReference] | Oldest first |
+
+An empty level is deleted immediately.
+
+## Binary interchange format v1
+
+**Recommendation:** use two files with explicit serialisation, not direct C++ struct dumps.
+
+### Common 104-byte header
+
+All numeric fields are little-endian. Readers must not rely on alignment.
+
+| Offset | Size | Field |
+| ---: | ---: | --- |
+| 0 | 8 | Magic: ASCII ITCHLE1 plus NUL for events; ITCHLS1 plus NUL for snapshots |
+| 8 | 2 | Schema version, 1 |
+| 10 | 2 | Header size, 104 |
+| 12 | 2 | Record size |
+| 14 | 2 | Depth; 0 for events, configured N for snapshots |
+| 16 | 4 | Price scale, 10000 |
+| 20 | 4 | Trading date as YYYYMMDD |
+| 24 | 2 | Symbol dictionary count |
+| 26 | 2 | Header flags; bit 0 means degraded, bits 1–15 are zero |
+| 28 | 8 | Record count |
+| 36 | 32 | Raw SHA-256 of canonical config |
+| 68 | 32 | Raw SHA-256 of source file |
+| 100 | 4 | Reserved zero bytes |
+
+The header is followed by symbol_count fixed 16-byte entries:
+
+| Offset | Size | Field |
+| ---: | ---: | --- |
+| 0 | 2 | SymbolId |
+| 2 | 2 | StockLocate |
+| 4 | 8 | Space-padded ASCII symbol |
+| 12 | 4 | Round-lot size |
+
+The source hash covers the exact source-file bytes as stored, including gzip bytes when compressed. A writer may place zeroes in record-count/source-hash fields while the file has a partial suffix, then seek back and patch them before hashing and atomic publication. A final reader rejects zero/placeholder identity fields.
+
+### Event record v1: 72 bytes
+
+| Offset | Size | Field |
+| ---: | ---: | --- |
+| 0 | 8 | MessageIndex |
+| 8 | 8 | TimestampNs |
+| 16 | 8 | Primary reference |
+| 24 | 8 | Secondary reference |
+| 32 | 8 | Quantity |
+| 40 | 4 | Price4 |
+| 44 | 4 | Remaining quantity |
+| 48 | 4 | Execution Price4 |
+| 52 | 2 | SymbolId |
+| 54 | 1 | Event-kind code |
+| 55 | 1 | Side as signed int8 |
+| 56 | 1 | Source ITCH type byte |
+| 57 | 2 | Validity flags |
+| 59 | 1 | Reserved zero |
+| 60 | 4 | Auxiliary ASCII code |
+| 64 | 1 | Event subtype |
+| 65 | 7 | Reserved zero |
+
+Event-kind codes are:
+
+| Code | Meaning |
+| ---: | --- |
+| 1 | add |
+| 2 | execute |
+| 3 | execute_price |
+| 4 | cancel |
+| 5 | delete |
+| 6 | replace |
+| 7 | trade |
+| 8 | cross |
+| 9 | broken_trade |
+| 10 | trading_state |
+
+Validity-flag bits are:
+
+| Bit | Field |
+| ---: | --- |
+| 0 | primary reference |
+| 1 | secondary reference |
+| 2 | side |
+| 3 | Price4 |
+| 4 | quantity |
+| 5 | remaining quantity |
+| 6 | execution Price4 |
+| 7 | auxiliary ASCII code |
+| 8 | event subtype |
+| 9 | in-session event |
+| 10–15 | reserved zero |
+
+Zero is therefore a value, not a null sentinel. A trading-state event stores its original H-state byte in event_subtype and causes a snapshot even when depth is unchanged.
+
+### Snapshot record v1: 48 + 28 × depth bytes
+
+Fixed prefix:
+
+| Offset | Size | Field |
+| ---: | ---: | --- |
+| 0 | 8 | MessageIndex |
+| 8 | 8 | TimestampNs |
+| 16 | 2 | SymbolId |
+| 18 | 1 | Trigger event-kind code |
+| 19 | 1 | Validity/state flags |
+| 20 | 4 | Trigger Price4 |
+| 24 | 8 | Trigger quantity |
+| 32 | 4 | Last-trade Price4 |
+| 36 | 4 | Reserved zero |
+| 40 | 8 | Last-trade quantity |
+
+Snapshot flag byte at offset 19 uses bit 0 for trigger-Price4 validity, bit 1 for trigger-quantity validity, bit 2 for last-trade-pair validity, bits 3–5 for trading state (0 unknown, 1 preopen, 2 trading, 3 halted, 4 paused, 5 quotation_only, 6 closed; 7 is invalid), and bit 6 for top-N-changed. Bit 7 is zero.
+
+Each depth entry:
+
+| Relative offset | Size | Field |
+| ---: | ---: | --- |
+| 0 | 1 | Bid valid |
+| 1 | 1 | Ask valid |
+| 2 | 2 | Reserved zero |
+| 4 | 4 | Bid Price4 |
+| 8 | 8 | Bid quantity |
+| 16 | 4 | Ask Price4 |
+| 20 | 8 | Ask quantity |
+
+The record-size field must exactly equal 48 + 28 × depth.
+
+## Ownership and enforcement
+
+| Rule | Primary enforcement | Secondary verification |
+| --- | --- | --- |
+| Payload length/endian decoding | ItchDecoder | Decoder fixture tests/fuzzer |
+| Live order uniqueness/quantity | OrderBook | InvariantChecker |
+| FIFO and aggregate totals | OrderBook | Golden state tests |
+| Binary schema and validity flags | C++ writers | Python interchange reader and validate command |
+| Causal features | Python features module | Leakage tests |
+| Day partition separation | Python splits module | Dataset validator |
+| Probability bounds | Models/metrics | Prediction schema validator |
+| Order lifecycle and queue | Simulator | State-machine/property tests |
+| Artefact immutability/hashes | Manifest publisher | Validate command |
+| Filesystem access | Operating system | CLI preflight checks |
+
+## Example records
+
+Normalised add event in JSON diagnostic form:
+
+    {
+      "trading_date": "2019-01-30",
+      "message_index": 1842042,
+      "timestamp_ns": 34200123456789,
+      "symbol_id": 1,
+      "event_kind": "add",
+      "source_type": "A",
+      "primary_reference": 90210155,
+      "secondary_reference": null,
+      "side": 1,
+      "price4": 1652300,
+      "quantity": 300,
+      "remaining_quantity": 300,
+      "aux_code": null
+    }
+
+Simulation fill:
+
+    {
+      "fill_id": 77,
+      "simulated_order_id": 21,
+      "market_message_index": 1928830,
+      "timestamp_ns": 34210987654321,
+      "price4": 1652200,
+      "quantity": 100,
+      "fee_microusd": -200000,
+      "cash_delta_microusd": -16522000000,
+      "inventory_after": 100
+    }
+
+These examples illustrate shape only and must be labelled synthetic.
+
+## Deletion and retention
+
+- Raw data: never automatically deleted; user-managed and never committed.
+- Partial outputs: may be removed by an explicit cleanup command after targets are listed; no recursive broad-path deletion.
+- Derived binary/Parquet data: reproducible and user-managed; no automatic expiry in MVP.
+- Completed manifests/reports: retained with published project evidence.
+- In-memory orders: destroyed at replay completion; no order-level database.
+- Logs: local files only when explicitly requested; default stderr is not retained.
+- Model artefacts: must not use an unsafe executable serialisation format as a required interchange. Untrusted pickle/joblib loading is prohibited.
+
+## Migration approach
+
+1. Binary and manifest readers reject unknown major schema versions.
+2. Additive optional JSON fields may be introduced within a version only when old readers safely ignore them and canonical hashing rules remain defined.
+3. Any binary layout change increments the schema version and adds a new reader/writer pair.
+4. Migration creates new artefacts and a new manifest; it never edits an old completed run in place.
+5. Golden fixtures for every supported version remain in tests.
+6. Removing a reader requires a deprecation ADR and a documented conversion release.
