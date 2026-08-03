@@ -15,51 +15,105 @@ if(ITCHLAB_ENABLE_SANITIZERS AND ITCHLAB_ENABLE_COVERAGE)
   message(FATAL_ERROR "Sanitizer and coverage instrumentation cannot be enabled together")
 endif()
 
+include(FetchContent)
+FetchContent_Declare(
+  nlohmann_json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG 55f93686c01528224f448c19128836e7df245f72
+  GIT_SHALLOW FALSE
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
+function(itchlab_configure_target target_name)
+  target_compile_features(${target_name} PRIVATE cxx_std_20)
+  set_target_properties(${target_name} PROPERTIES CXX_EXTENSIONS OFF)
+
+  if(MSVC)
+    target_compile_options(${target_name} PRIVATE /W4)
+    if(ITCHLAB_WARNINGS_AS_ERRORS)
+      target_compile_options(${target_name} PRIVATE /WX)
+    endif()
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "AppleClang|Clang|GNU")
+    target_compile_options(
+      ${target_name}
+      PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wconversion
+        -Wsign-conversion
+    )
+    if(ITCHLAB_WARNINGS_AS_ERRORS)
+      target_compile_options(${target_name} PRIVATE -Werror)
+    endif()
+  endif()
+
+  if(ITCHLAB_ENABLE_SANITIZERS)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "AppleClang|Clang|GNU")
+      target_compile_options(
+        ${target_name}
+        PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer
+      )
+      target_link_options(${target_name} PRIVATE -fsanitize=address,undefined)
+    else()
+      message(FATAL_ERROR "The sanitizers preset requires Clang, AppleClang or GCC")
+    endif()
+  endif()
+
+  if(ITCHLAB_ENABLE_COVERAGE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "AppleClang|Clang|GNU")
+      target_compile_options(${target_name} PRIVATE -O0 -g --coverage)
+      target_link_options(${target_name} PRIVATE --coverage)
+    else()
+      message(FATAL_ERROR "The coverage preset requires Clang, AppleClang or GCC")
+    endif()
+  endif()
+endfunction()
+
+add_library(
+  itchlab_core
+  cpp/src/config/canonical_json.cpp
+  cpp/src/config/replay_config.cpp
+  cpp/src/core/errors.cpp
+  cpp/src/core/sha256.cpp
+)
+target_include_directories(itchlab_core PUBLIC cpp/include)
+target_link_libraries(itchlab_core PRIVATE nlohmann_json::nlohmann_json)
+itchlab_configure_target(itchlab_core)
+
 add_executable(itchlab cpp/apps/itchlab/main.cpp)
-target_compile_features(itchlab PRIVATE cxx_std_20)
-set_target_properties(itchlab PROPERTIES CXX_EXTENSIONS OFF)
 target_compile_definitions(itchlab PRIVATE ITCHLAB_VERSION="${PROJECT_VERSION}")
-
-if(MSVC)
-  target_compile_options(itchlab PRIVATE /W4)
-  if(ITCHLAB_WARNINGS_AS_ERRORS)
-    target_compile_options(itchlab PRIVATE /WX)
-  endif()
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "AppleClang|Clang|GNU")
-  target_compile_options(
-    itchlab
-    PRIVATE
-      -Wall
-      -Wextra
-      -Wpedantic
-      -Wconversion
-      -Wsign-conversion
-  )
-  if(ITCHLAB_WARNINGS_AS_ERRORS)
-    target_compile_options(itchlab PRIVATE -Werror)
-  endif()
-endif()
-
-if(ITCHLAB_ENABLE_SANITIZERS)
-  if(CMAKE_CXX_COMPILER_ID MATCHES "AppleClang|Clang|GNU")
-    target_compile_options(itchlab PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
-    target_link_options(itchlab PRIVATE -fsanitize=address,undefined)
-  else()
-    message(FATAL_ERROR "The sanitizers preset requires Clang, AppleClang or GCC")
-  endif()
-endif()
-
-if(ITCHLAB_ENABLE_COVERAGE)
-  if(CMAKE_CXX_COMPILER_ID MATCHES "AppleClang|Clang|GNU")
-    target_compile_options(itchlab PRIVATE -O0 -g --coverage)
-    target_link_options(itchlab PRIVATE --coverage)
-  else()
-    message(FATAL_ERROR "The coverage preset requires Clang, AppleClang or GCC")
-  endif()
-endif()
+target_link_libraries(itchlab PRIVATE itchlab_core)
+itchlab_configure_target(itchlab)
 
 include(CTest)
 if(BUILD_TESTING)
+  FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG 2b60af89e23d28eefc081bc930831ee9d45ea58b
+    GIT_SHALLOW FALSE
+  )
+  FetchContent_MakeAvailable(Catch2)
+
+  add_executable(
+    itchlab_core_tests
+    tests/cpp/contract/canonical_hash_test.cpp
+    tests/cpp/contract/replay_config_test.cpp
+    tests/cpp/unit/errors_test.cpp
+    tests/cpp/unit/sha256_test.cpp
+    tests/cpp/unit/types_test.cpp
+  )
+  target_compile_definitions(
+    itchlab_core_tests PRIVATE ITCHLAB_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+  )
+  target_link_libraries(itchlab_core_tests PRIVATE itchlab_core Catch2::Catch2WithMain)
+  itchlab_configure_target(itchlab_core_tests)
+
+  list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
+  include(Catch)
+  catch_discover_tests(itchlab_core_tests)
+
   add_test(NAME TASK_001_cpp_cli_version COMMAND itchlab --version)
   set_tests_properties(
     TASK_001_cpp_cli_version

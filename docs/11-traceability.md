@@ -11,10 +11,10 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | FR-003 | 02 UF-002; 03 InstrumentDirectory | TASK-004, TASK-007, TASK-011 | Multi-symbol/session/filter integration |
 | FR-004 | 03 OrderBook; 04 transient entities | TASK-006, TASK-010 | UT-BOOK-001, UT-BOOK-002, UT-BOOK-003 |
 | FR-005 | 03 OrderBook; 04 PriceLevel/Snapshot | TASK-006, TASK-010 | Book aggregation/order property tests |
-| FR-006 | 02 UF-002/UF-006; 03 errors | TASK-012 | E2E-003, strict/permissive error-budget tests |
+| FR-006 | 02 UF-002/UF-006; 03 errors | TASK-002 (catalogue/config), TASK-012 (runtime policy) | UT-CFG-001, E2E-003, strict/permissive error-budget tests |
 | FR-007 | 04 NormalisedEvent/event v1; 05 replay | TASK-013 | UT-OUT-001, CT-BIN-001 |
 | FR-008 | 04 BookSnapshot/snapshot v1 | TASK-011, TASK-014 | UT-OUT-002, IT-004 |
-| FR-009 | 04 ReplayRun; 03 ManifestBuilder | TASK-014 | CT-JSON-001, IT-004 |
+| FR-009 | 04 ReplayRun; 03 ManifestBuilder | TASK-002 (config contract), TASK-014 (manifest) | UT-CFG-001, CT-JSON-001, IT-004 |
 | FR-010 | 03 Python conversion; 05 convert | TASK-016, TASK-017 | CT-BIN-001, IT-006, IT-007 |
 | FR-011 | 04 DatasetRun; 05 build-dataset | TASK-018 | UT-FEAT-001, hand-calculated features |
 | FR-012 | 02 UF-003; 05 dataset config | TASK-019 | UT-LABEL-001, IT-008, partition properties |
@@ -26,7 +26,7 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | FR-018 | ADR-004; 05 simulate | TASK-026 | UT-STRAT-002, prediction-key tests |
 | FR-019 | 02 UF-004/UF-005; 06 UI-009 | TASK-021, TASK-027, TASK-031 | IT-011, E2E-001, report-content checks |
 | FR-020 | 03 performance; 05 benchmark | TASK-029 | PERF-001 through PERF-008 |
-| FR-021 | 03 file contracts; 04 run entities | TASK-014, TASK-017, TASK-027 | Identity/hash/idempotency contract tests |
+| FR-021 | 03 file contracts; 04 run entities | TASK-002 (canonical hashes), TASK-014, TASK-017, TASK-027 | Canonical-hash and identity/hash/idempotency contract tests |
 | FR-022 | 03 ArtefactValidator; 05 validate | TASK-015 | IT-012, CT-BIN-001, tamper/version tests |
 
 ## Non-functional requirements

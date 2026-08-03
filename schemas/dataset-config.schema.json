@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://itchlab.local/schemas/dataset-config.schema.json",
+  "title": "ITCH-Lab dataset config v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "conversion_manifests",
+    "symbols",
+    "tick_size4_by_symbol",
+    "features",
+    "labels",
+    "sampling",
+    "partitions"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "conversion_manifests": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "symbols": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/symbol"}
+    },
+    "tick_size4_by_symbol": {
+      "type": "object",
+      "propertyNames": {"$ref": "#/$defs/symbol"},
+      "patternProperties": {
+        "^[!-~](?:[ -~]{0,6}[!-~])?$": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967295
+        }
+      },
+      "additionalProperties": false,
+      "minProperties": 1
+    },
+    "features": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["depth_levels", "event_windows", "clock_windows_ns"],
+      "properties": {
+        "depth_levels": {
+          "type": "array",
+          "minItems": 3,
+          "prefixItems": [{"const": 1}, {"const": 5}, {"const": 10}],
+          "items": false
+        },
+        "event_windows": {
+          "type": "array",
+          "minItems": 3,
+          "prefixItems": [{"const": 20}, {"const": 100}, {"const": 500}],
+          "items": false
+        },
+        "clock_windows_ns": {
+          "type": "array",
+          "minItems": 2,
+          "prefixItems": [{"const": 100000000}, {"const": 1000000000}],
+          "items": false
+        }
+      }
+    },
+    "labels": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary_event_horizon", "secondary_event_horizons", "flat_threshold_ticks"],
+      "properties": {
+        "primary_event_horizon": {"const": 100},
+        "secondary_event_horizons": {
+          "type": "array",
+          "minItems": 2,
+          "prefixItems": [{"const": 20}, {"const": 500}],
+          "items": false
+        },
+        "flat_threshold_ticks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "sampling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["row_stride"],
+      "properties": {
+        "row_stride": {"type": "integer", "minimum": 1, "maximum": 9007199254740991}
+      }
+    },
+    "partitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["train_dates", "validation_dates", "test_dates"],
+      "properties": {
+        "train_dates": {"$ref": "#/$defs/dates"},
+        "validation_dates": {"$ref": "#/$defs/dates"},
+        "test_dates": {"$ref": "#/$defs/dates"}
+      }
+    }
+  },
+  "$defs": {
+    "symbol": {
+      "type": "string",
+      "pattern": "^[!-~](?:[ -~]{0,6}[!-~])?$"
+    },
+    "dates": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "format": "date"}
+    }
+  }
+}

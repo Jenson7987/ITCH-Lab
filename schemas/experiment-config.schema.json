@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://itchlab.local/schemas/experiment-config.schema.json",
+  "title": "ITCH-Lab experiment config v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset_manifest",
+    "models",
+    "preprocessing",
+    "selection_metric",
+    "seed"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "dataset_manifest": {"type": "string", "minLength": 1},
+    "models": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prior", "logistic_regression", "hist_gradient_boosting"],
+      "properties": {
+        "prior": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled"],
+          "properties": {"enabled": {"const": true}}
+        },
+        "logistic_regression": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["c_values", "penalty", "solver", "max_iter"],
+          "properties": {
+            "c_values": {
+              "type": "array",
+              "minItems": 4,
+              "prefixItems": [{"const": 0.01}, {"const": 0.1}, {"const": 1.0}, {"const": 10.0}],
+              "items": false
+            },
+            "penalty": {"const": "l2"},
+            "solver": {"const": "lbfgs"},
+            "max_iter": {"const": 2000}
+          }
+        },
+        "hist_gradient_boosting": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["learning_rates", "max_leaf_nodes", "l2_regularization", "max_iter"],
+          "properties": {
+            "learning_rates": {
+              "type": "array",
+              "minItems": 2,
+              "prefixItems": [{"const": 0.05}, {"const": 0.1}],
+              "items": false
+            },
+            "max_leaf_nodes": {
+              "type": "array",
+              "minItems": 2,
+              "prefixItems": [{"const": 15}, {"const": 31}],
+              "items": false
+            },
+            "l2_regularization": {
+              "type": "array",
+              "minItems": 2,
+              "prefixItems": [{"const": 0.0}, {"const": 1.0}],
+              "items": false
+            },
+            "max_iter": {"const": 100}
+          }
+        }
+      }
+    },
+    "preprocessing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "continuous_imputation",
+        "standardise_logistic",
+        "standardise_hist_gradient_boosting",
+        "unknown_symbol"
+      ],
+      "properties": {
+        "continuous_imputation": {"const": "median"},
+        "standardise_logistic": {"const": true},
+        "standardise_hist_gradient_boosting": {"const": false},
+        "unknown_symbol": {"const": "all_zero"}
+      }
+    },
+    "selection_metric": {"const": "multiclass_log_loss"},
+    "seed": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+  }
+}

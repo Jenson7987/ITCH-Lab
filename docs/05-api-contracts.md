@@ -68,6 +68,14 @@ Raw message bytes and stack traces are absent unless an explicit debug flag is u
 | 70 | Unexpected internal failure |
 | 130 | Graceful cancellation after SIGINT |
 
+### Configuration validation and hashing
+
+The four version-1 command configs use JSON Schema draft 2020-12. Every object sets `additionalProperties` to false. Parsing rejects duplicate object names, invalid Unicode and non-finite numbers before schema validation. Structural failures use `ERR_CONFIG_SCHEMA`; semantic failures use the most specific stable code below. When several independent config failures can be reported safely, they are returned in ascending JSON-pointer order.
+
+Domain validation follows schema validation and enforces relationships that JSON Schema does not express portably, including sorted unique horizons/windows, symbol-to-tick-map equality, chronological non-overlapping dates and strategy-to-prediction requirements. JSON integer fields are limited to the RFC 8785/I-JSON exact range even when the corresponding in-memory type is wider; numeric seeds are therefore 0 through 9,007,199,254,740,991.
+
+`config_sha256` hashes the complete canonical effective config. `identity_config_sha256` hashes the locator-free identity projection defined in 04-data-model.md. Both are lowercase SHA-256 hexadecimal strings; C++ and Python must match the committed golden vectors.
+
 ## C++ CLI
 
 ### itchlab inspect
@@ -131,6 +139,7 @@ Semantic rules:
 - Symbols are unique and non-empty.
 - Session is half-open [start, end).
 - invariant_interval 1 means after every selected mutation; 0 is invalid.
+- In strict mode max_skipped_messages must be 0; permissive mode may use a non-negative explicit budget.
 
 Success artefacts:
 
@@ -238,13 +247,39 @@ Idempotency follows immutable run identity.
 
     itchlab-research train --config <experiment-config.json>
 
-Required fields:
+Experiment config v1:
 
-- dataset_manifest.
-- models: prior, logistic_regression and hist_gradient_boosting.
-- preprocessing settings.
-- validation selection metric.
-- explicit random seed.
+    {
+      "schema_version": 1,
+      "dataset_manifest": "runs/dataset/.../dataset-manifest.json",
+      "models": {
+        "prior": {
+          "enabled": true
+        },
+        "logistic_regression": {
+          "c_values": [0.01, 0.1, 1.0, 10.0],
+          "penalty": "l2",
+          "solver": "lbfgs",
+          "max_iter": 2000
+        },
+        "hist_gradient_boosting": {
+          "learning_rates": [0.05, 0.1],
+          "max_leaf_nodes": [15, 31],
+          "l2_regularization": [0.0, 1.0],
+          "max_iter": 100
+        }
+      },
+      "preprocessing": {
+        "continuous_imputation": "median",
+        "standardise_logistic": true,
+        "standardise_hist_gradient_boosting": false,
+        "unknown_symbol": "all_zero"
+      },
+      "selection_metric": "multiclass_log_loss",
+      "seed": 7987
+    }
+
+The candidate arrays are the complete ordered version-1 grids, not arbitrary user extensions. Prior, logistic regression and histogram gradient boosting are all required. Changing the grids or preprocessing rules creates a new experiment contract rather than an unrecorded default.
 
 The command must not accept test dates different from the dataset manifest. It writes:
 
@@ -259,7 +294,7 @@ Arbitrary pickle/joblib input loading is prohibited. If a library-native model a
 
     itchlab-research simulate --config <simulation-config.json>
 
-Representative config:
+Simulation config v1:
 
     {
       "schema_version": 1,
@@ -272,7 +307,10 @@ Representative config:
         "order_quantity": 100,
         "inventory_limit": 1000,
         "gamma": 0.1,
-        "signal_weight_ticks": 1.0
+        "volatility_window_ns": 60000000000,
+        "risk_horizon_seconds": 10,
+        "signal_weight_ticks": 1.0,
+        "max_signal_ticks": 2.0
       },
       "execution": {
         "passive_only": true,
@@ -285,6 +323,8 @@ Representative config:
       },
       "seed": 7987
     }
+
+The `inventory_aware_avellaneda_stoikov` strategy uses the same shape with `prediction_manifest` set to null and `signal_weight_ticks` set to 0. The signal-adjusted strategy requires a non-null prediction manifest and a signal weight from the declared version-1 candidate set. `order_quantity` and `inventory_limit` are positive, inventory limit is at least one order quantity, gamma/risk horizon/volatility window are positive, latency is 0 through 10 seconds in nanoseconds, and each fee/rebate has absolute value at most 1,000,000 microusd per share. Version 1 requires passive-only execution, `known_orders_conservative` queue policy and `cross_visible_spread` terminal liquidation.
 
 Outputs:
 
@@ -407,11 +447,11 @@ Contracts:
 
 Stable public codes include:
 
-- ERR_INPUT_PATH, ERR_UNSUPPORTED_COMPRESSION, ERR_FRAMING, ERR_TRUNCATED_MESSAGE.
+- ERR_INPUT_PATH, ERR_UNSUPPORTED_COMPRESSION, ERR_FRAMING, ERR_TRUNCATED_MESSAGE, ERR_EMPTY_INPUT.
 - ERR_MESSAGE_LENGTH, ERR_UNKNOWN_MESSAGE, ERR_TIMESTAMP.
-- ERR_UNKNOWN_SYMBOL, ERR_ORDER_REFERENCE, ERR_QUANTITY, ERR_BOOK_CROSSED, ERR_INVARIANT.
+- ERR_UNKNOWN_SYMBOL, ERR_TRADING_DATE, ERR_ORDER_REFERENCE, ERR_QUANTITY, ERR_PRICE, ERR_BOOK_CROSSED, ERR_INVARIANT.
 - ERR_OUTPUT_PATH, ERR_DISK_WRITE, ERR_HASH_MISMATCH, ERR_SCHEMA_VERSION, ERR_PARTIAL_ARTEFACT.
-- ERR_CONFIG_SCHEMA, ERR_SESSION_WINDOW, ERR_TIMEZONE, ERR_DEPTH, ERR_PARTITION, ERR_ROW_STRIDE, ERR_EMPTY_DATASET.
+- ERR_CONFIG_SCHEMA, ERR_SESSION_WINDOW, ERR_TIMEZONE, ERR_DEPTH, ERR_HORIZON, ERR_PARTITION, ERR_ROW_STRIDE, ERR_SEED, ERR_EMPTY_DATASET.
 - ERR_LEAKAGE_GUARD, ERR_MODEL_TRAINING, ERR_PREDICTION_KEY.
 - ERR_LATENCY, ERR_COST, ERR_QUEUE_STATE, ERR_INVENTORY_LIMIT, ERR_SIMULATION_ANOMALY, ERR_BROKEN_SIM_FILL.
 - ERR_RUN_EXISTS, ERR_CANCELLED and ERR_INTERNAL.

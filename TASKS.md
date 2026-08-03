@@ -4,12 +4,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Current milestone — M0 Reproducible repository skeleton
 
-- [ ] TASK-002: Define domain primitives, errors and JSON schemas
-  - Dependencies: TASK-001
-  - Acceptance criteria: Fixed types/errors and strict config schemas; canonical hashes agree cross-language
-  - Tests: UT-CFG-001, boundary and hash contract tests
-  - Documentation to update: 04-data-model.md, 05-api-contracts.md
-
 - [ ] TASK-003: Build independent synthetic ITCH fixture tooling
   - Dependencies: TASK-002
   - Acceptance criteria: Independent framed/gzip fixtures cover all required types and corruptions
@@ -193,6 +187,10 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-002: Define domain primitives, errors and JSON schemas
+  - Completed: 2026-08-03
+  - Evidence: 15 CTest cases passed in dev, release and ASan/UBSan presets; 46 Python tests, Ruff, mypy, C++ formatting, dependency checks and clean-wheel schema/hash smoke passed; committed golden replay canonical bytes and matching C++/Python SHA-256 values.
 
 - [x] TASK-001: Scaffold toolchains and repository boundaries
   - Completed: 2026-08-03

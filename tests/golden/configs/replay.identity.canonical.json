@@ -1,0 +1,1 @@
+{"input":{"exchange_timezone":"America/New_York","trading_date":"2019-01-30"},"output":{"depth":10,"emit_unchanged_trade_snapshots":true},"schema_version":1,"selection":{"require_trading_state":true,"session_end_ns":57600000000000,"session_start_ns":34200000000000,"symbols":["AAPL","MSFT","AMZN"]},"validation":{"invariant_interval":1,"max_skipped_messages":0,"mode":"strict"}}

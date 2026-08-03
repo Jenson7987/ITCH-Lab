@@ -1,0 +1,146 @@
+"""TASK-002 strict config-schema and semantic-validation tests."""
+
+from __future__ import annotations
+
+import json
+from dataclasses import FrozenInstanceError
+from pathlib import Path
+from typing import cast
+
+import pytest
+from jsonschema import Draft202012Validator
+
+from itchlab_research.config import ConfigKind, ReplayConfig, load_config, parse_config
+from itchlab_research.errors import ConfigValidationError, ErrorCode
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+VALID_ROOT = REPOSITORY_ROOT / "tests" / "golden" / "configs" / "valid"
+INVALID_ROOT = REPOSITORY_ROOT / "tests" / "golden" / "configs" / "invalid"
+
+
+@pytest.mark.parametrize("kind", ["replay", "dataset", "experiment", "simulation"])
+def test_task_002_example_and_valid_golden_configs_match(kind: ConfigKind) -> None:
+    example = REPOSITORY_ROOT / "configs" / f"{kind}.example.json"
+    golden = VALID_ROOT / f"{kind}.json"
+
+    assert example.read_bytes() == golden.read_bytes()
+    assert load_config(example, kind) == load_config(golden, kind)
+
+
+@pytest.mark.parametrize(
+    ("kind", "filename", "expected_code"),
+    [
+        ("replay", "replay-unknown-key.json", ErrorCode.CONFIG_SCHEMA),
+        ("dataset", "dataset-overlap.json", ErrorCode.PARTITION),
+        ("experiment", "experiment-unsafe-seed.json", ErrorCode.SEED),
+        ("simulation", "simulation-inventory.json", ErrorCode.INVENTORY_LIMIT),
+    ],
+)
+def test_task_002_invalid_goldens_fail_with_stable_codes(
+    kind: ConfigKind, filename: str, expected_code: ErrorCode
+) -> None:
+    with pytest.raises(ConfigValidationError) as captured:
+        load_config(INVALID_ROOT / filename, kind)
+
+    assert expected_code in {issue.code for issue in captured.value.issues}
+    assert list(captured.value.issues) == sorted(captured.value.issues)
+
+
+def test_ut_cfg_001_unknown_nested_key_fails() -> None:
+    document = json.loads((VALID_ROOT / "replay.json").read_text(encoding="utf-8"))
+    document["output"]["surprise"] = True
+
+    with pytest.raises(ConfigValidationError) as captured:
+        parse_config(json.dumps(document), "replay")
+
+    assert captured.value.issues[0].code is ErrorCode.CONFIG_SCHEMA
+    assert captured.value.issues[0].json_pointer == "/output"
+
+
+@pytest.mark.parametrize("kind", ["replay", "dataset", "experiment", "simulation"])
+def test_ut_cfg_001_every_config_rejects_unknown_root_keys(kind: ConfigKind) -> None:
+    document = json.loads((VALID_ROOT / f"{kind}.json").read_text(encoding="utf-8"))
+    document["unexpected"] = True
+
+    with pytest.raises(ConfigValidationError) as captured:
+        parse_config(json.dumps(document), kind)
+
+    assert captured.value.issues[0].code is ErrorCode.CONFIG_SCHEMA
+    assert captured.value.issues[0].json_pointer == ""
+
+
+def test_ut_cfg_001_overlapping_dates_fail() -> None:
+    with pytest.raises(ConfigValidationError) as captured:
+        load_config(INVALID_ROOT / "dataset-overlap.json", "dataset")
+
+    assert any(issue.code is ErrorCode.PARTITION for issue in captured.value.issues)
+
+
+@pytest.mark.parametrize(
+    "document",
+    [
+        '{"schema_version": 1, "schema_version": 1}',
+        '{"seed": NaN}',
+        '{"seed": Infinity}',
+        '"not-an-object"',
+    ],
+)
+def test_task_002_non_ijson_input_fails_before_schema_use(document: str) -> None:
+    with pytest.raises(ConfigValidationError) as captured:
+        parse_config(document, "experiment")
+
+    assert captured.value.issues == (captured.value.issues[0],)
+    assert captured.value.issues[0].code is ErrorCode.CONFIG_SCHEMA
+
+
+@pytest.mark.parametrize("kind", ["experiment", "simulation"])
+def test_task_002_safe_integer_seed_boundary(kind: ConfigKind) -> None:
+    document = json.loads((VALID_ROOT / f"{kind}.json").read_text(encoding="utf-8"))
+    document["seed"] = 9_007_199_254_740_991
+
+    assert parse_config(json.dumps(document), kind).seed == 9_007_199_254_740_991
+
+    document["seed"] += 1
+    with pytest.raises(ConfigValidationError) as captured:
+        parse_config(json.dumps(document), kind)
+
+    assert ErrorCode.SEED in {issue.code for issue in captured.value.issues}
+
+
+def test_task_002_config_models_are_immutable() -> None:
+    config = cast(ReplayConfig, load_config(VALID_ROOT / "replay.json", "replay"))
+
+    with pytest.raises(FrozenInstanceError):
+        config.schema_version = 2  # type: ignore[misc]
+
+
+def test_task_002_schema_documents_are_valid_draft_2020_12() -> None:
+    for schema_path in sorted((REPOSITORY_ROOT / "schemas").glob("*-config.schema.json")):
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        Draft202012Validator.check_schema(schema)
+
+
+def test_task_002_root_and_packaged_schemas_are_identical() -> None:
+    packaged_root = REPOSITORY_ROOT / "python" / "src" / "itchlab_research" / "_schemas"
+    for root_schema in sorted((REPOSITORY_ROOT / "schemas").glob("*-config.schema.json")):
+        assert root_schema.read_bytes() == (packaged_root / root_schema.name).read_bytes()
+
+
+def test_task_002_tick_map_must_exactly_match_symbols() -> None:
+    document = json.loads((VALID_ROOT / "dataset.json").read_text(encoding="utf-8"))
+    del document["tick_size4_by_symbol"]["AMZN"]
+
+    with pytest.raises(ConfigValidationError) as captured:
+        parse_config(json.dumps(document), "dataset")
+
+    assert captured.value.issues[0].json_pointer == "/tick_size4_by_symbol"
+
+
+def test_task_002_signal_strategy_requires_prediction_manifest() -> None:
+    document = json.loads((VALID_ROOT / "simulation.json").read_text(encoding="utf-8"))
+    document["prediction_manifest"] = None
+
+    with pytest.raises(ConfigValidationError) as captured:
+        parse_config(json.dumps(document), "simulation")
+
+    assert captured.value.issues[0].code is ErrorCode.CONFIG_SCHEMA

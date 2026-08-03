@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "dataset_manifest": "runs/dataset/example/dataset-manifest.json",
+  "prediction_manifest": "runs/experiment/example/experiment-manifest.json",
+  "strategy": {
+    "name": "signal_adjusted_avellaneda_stoikov",
+    "decision_interval_ns": 100000000,
+    "max_prediction_age_ns": 500000000,
+    "order_quantity": 100,
+    "inventory_limit": 1000,
+    "gamma": 0.1,
+    "volatility_window_ns": 60000000000,
+    "risk_horizon_seconds": 10,
+    "signal_weight_ticks": 1.0,
+    "max_signal_ticks": 2.0
+  },
+  "execution": {
+    "passive_only": true,
+    "submission_latency_ns": 100000,
+    "cancellation_latency_ns": 100000,
+    "maker_fee_microusd_per_share": -2000,
+    "taker_fee_microusd_per_share": 3000,
+    "queue_policy": "known_orders_conservative",
+    "terminal_liquidation": "cross_visible_spread"
+  },
+  "seed": 7987
+}

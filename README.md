@@ -55,7 +55,7 @@ Classification legend used throughout the documentation:
     ├── schemas/
     └── tests/
 
-The repository structure is being implemented incrementally according to `TASKS.md`. The current foundation provides buildable version/help CLIs and toolchain smoke tests only.
+The repository structure is being implemented incrementally according to `TASKS.md`. The current foundation provides buildable version/help CLIs, fixed C++ domain/error types and strict validated configuration contracts with canonical cross-language hashes. Replay, research and simulation commands are implemented by later tasks.
 
 ## Local setup
 

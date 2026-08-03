@@ -8,7 +8,10 @@ version = "0.1.0"
 description = "Offline research package for ITCH-Lab"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+  "jsonschema>=4.25,<5",
+  "rfc8785>=0.1.4,<1",
+]
 
 [project.scripts]
 itchlab-research = "itchlab_research.cli:main"
@@ -17,7 +20,7 @@ itchlab-research = "itchlab_research.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-itchlab_research = ["py.typed"]
+itchlab_research = ["py.typed", "_schemas/*.json"]
 
 [tool.pytest.ini_options]
 addopts = ["--strict-config", "--strict-markers"]

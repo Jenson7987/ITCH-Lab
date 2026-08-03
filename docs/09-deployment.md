@@ -39,7 +39,7 @@ Recommended setup:
 
     python3 -m venv .venv
     source .venv/bin/activate
-    python -m pip install --upgrade pip
+    python -m pip install --upgrade "pip>=25,<26"
     python -m pip install --require-hashes -r python/requirements-dev.lock
     python -m pip install --no-deps -e ./python
     python -m pytest python/tests

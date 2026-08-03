@@ -11,12 +11,15 @@
 
 ## Canonical hashing and identities
 
-- Canonical JSON bytes follow [RFC 8785 JSON Canonicalization Scheme](https://www.rfc-editor.org/rfc/rfc8785.html), encoded as UTF-8. Implementations do not invent a separate C++/Python float formatting rule.
-- A stage identity digest is SHA-256 over: an ASCII domain separator ending in NUL; ordered raw 32-byte parent-content hashes; the raw 32-byte canonical-config hash; the exact executable or installed-wheel 32-byte content hash; and the output schema version as an unsigned two-byte big-endian integer.
+- Canonical JSON bytes follow [RFC 8785 JSON Canonicalization Scheme](https://www.rfc-editor.org/rfc/rfc8785.html), encoded as UTF-8. Duplicate object names, invalid Unicode, NaN and infinity are rejected before hashing. Implementations do not invent a separate C++/Python float formatting rule.
+- The effective config is the validated version-1 config after documented defaults have been materialised. `config_sha256` is SHA-256 over the complete canonical effective config, including relative locator fields, and is the integrity fingerprint stored with the config.
+- An identity-config projection removes only locator fields whose identified parent content is already supplied separately: replay `input.path` and `input.sha256`; dataset `conversion_manifests`; experiment `dataset_manifest`; and simulation `dataset_manifest` and `prediction_manifest`. No scientific, validation or selection field is removed. `identity_config_sha256` is SHA-256 over that canonical projection.
+- A stage identity digest is SHA-256 over: an ASCII domain separator ending in NUL; ordered raw 32-byte parent-content hashes; the raw 32-byte identity-config hash; the exact executable or installed-wheel 32-byte content hash; and the output schema version as an unsigned two-byte big-endian integer.
 - Replay uses domain separator itchlab-replay-v1; later stages use itchlab-conversion-v1, itchlab-dataset-v1, itchlab-experiment-v1 and itchlab-simulation-v1.
 - Human run IDs are UTC basic timestamp, a hyphen and the first 12 lowercase hexadecimal digest characters. The full digest remains in the manifest.
 - A publishable run requires a clean recorded Git commit. Development runs from dirty trees are labelled non-publishable and receive a new timestamped directory even when other identity inputs match.
-- Observational start/end times, local paths and progress metrics do not enter the digest.
+- Observational start/end times, locator paths and progress metrics do not enter the stage-identity digest. They remain covered by the full config or manifest integrity hash where present.
+- RFC 8785 uses the I-JSON number model. JSON integer fields therefore use the interoperable exact range −(2^53−1) through 2^53−1 even when their in-memory domain type is wider. In particular, version-1 numeric random seeds are restricted to 0 through 2^53−1 while remaining `uint64` in memory and manifests.
 
 ## Conceptual relationships
 
@@ -50,6 +53,8 @@ Order and PriceLevel are transient domain entities. Other entities are persisted
 | MatchNumber | uint64 | Source-day trade/execution identifier |
 | Price4 | uint32 | Four implied decimal places; no floating arithmetic in core |
 | Shares | uint64 persisted | Positive for quantities; C++ validates narrower source fields before widening |
+| Microusd | int64 | Cash, fees and P&L; every arithmetic operation is overflow checked |
+| RandomSeed | uint64 | JSON v1 accepts 0 through 2^53−1 for RFC 8785/I-JSON interoperability |
 | Side | int8 | +1 buy, -1 sell, 0 not applicable |
 | TradingDate | ISO date/uint32 | JSON uses YYYY-MM-DD; binary header uses YYYYMMDD |
 | ContentHash | string/bytes32 | SHA-256; lowercase hexadecimal in JSON |
@@ -206,7 +211,7 @@ Stored in simulation-manifest.json plus orders/fills/metrics Parquet files.
 | dataset_id | string | No | — | Parent dataset |
 | prediction_identity | string | Yes | null | Null only for non-signal baseline |
 | config | object | No | — | Strategy, queue, latency, costs, liquidation |
-| random_seed | uint64 | No | — | Even if selected model is deterministic |
+| random_seed | uint64 | No | — | Even if selected model is deterministic; JSON v1 maximum is 2^53−1 |
 | scenarios | array | No | — | Minimum three latency and two cost settings in final report |
 | status | enum | No | running | Terminal publication rules match ReplayRun |
 | metrics | object | No | — | Aggregate results and diagnostic counts |
