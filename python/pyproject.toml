@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=83,<84", "wheel>=0.47,<1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "itchlab-research"
+version = "0.1.0"
+description = "Offline research package for ITCH-Lab"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+itchlab-research = "itchlab_research.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+itchlab_research = ["py.typed"]
+
+[tool.pytest.ini_options]
+addopts = ["--strict-config", "--strict-markers"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true

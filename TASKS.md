@@ -4,12 +4,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Current milestone — M0 Reproducible repository skeleton
 
-- [ ] TASK-001: Scaffold toolchains and repository boundaries
-  - Dependencies: None
-  - Acceptance criteria: C++/Python smoke CLIs build; presets and ignore rules work
-  - Tests: C++ smoke, Python import/CLI, ignore-rule check
-  - Documentation to update: README commands if implementation differs
-
 - [ ] TASK-002: Define domain primitives, errors and JSON schemas
   - Dependencies: TASK-001
   - Acceptance criteria: Fixed types/errors and strict config schemas; canonical hashes agree cross-language
@@ -200,7 +194,9 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Completed
 
-None.
+- [x] TASK-001: Scaffold toolchains and repository boundaries
+  - Completed: 2026-08-03
+  - Evidence: dev/release/sanitizers/coverage configure, build and test passed with three CTest cases per preset; Python wheel/sdist and clean-wheel CLI smoke passed; 15 pytest cases, Ruff, mypy, clang-format, pip dependency checks and Git ignore-rule checks passed.
 
 ## Blocked
 

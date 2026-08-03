@@ -1,0 +1,7 @@
+-r requirements-release.in
+
+build>=1.5,<2
+mypy>=2.3,<3
+pip-tools>=7.6,<8
+pytest>=9.1,<10
+ruff>=0.16,<1

@@ -4,7 +4,7 @@ ITCH-Lab is an offline quantitative-research platform that decodes Nasdaq TotalV
 
 ## Status
 
-Specification complete; implementation not started.
+Specification complete. The reproducible C++/Python repository foundation is implemented; market-data, replay, research and simulation functionality remains planned.
 
 Classification legend used throughout the documentation:
 
@@ -55,7 +55,7 @@ Classification legend used throughout the documentation:
     ├── schemas/
     └── tests/
 
-The repository structure above is proposed; the documentation pack does not contain application code.
+The repository structure is being implemented incrementally according to `TASKS.md`. The current foundation provides buildable version/help CLIs and toolchain smoke tests only.
 
 ## Local setup
 
@@ -77,9 +77,8 @@ After cloning the repository, run the following from its root:
     cmake --build --preset dev
     python3 -m venv .venv
     source .venv/bin/activate
-    python -m pip install --upgrade pip
     python -m pip install --require-hashes -r python/requirements-dev.lock
-    python -m pip install --no-deps -e ./python
+    python -m pip install --no-build-isolation --no-deps -e ./python
 
 Raw market data must be downloaded directly from the authorised source and placed beneath data/raw. It must not be committed.
 
@@ -98,12 +97,14 @@ Command-line arguments override environment variables; environment variables ove
 
 ## Development commands
 
+    cmake --preset dev
     cmake --build --preset dev
+    cmake --preset release
     cmake --build --preset release
     ./build/dev/itchlab --help
     python -m itchlab_research --help
 
-Example workflow:
+Planned workflow (the subcommands below are implemented by later tasks):
 
     ./build/release/itchlab inspect --input data/raw/sample.gz --limit 100
     ./build/release/itchlab replay --config configs/replay.example.json
@@ -115,12 +116,20 @@ Example workflow:
 ## Testing and quality commands
 
     ctest --preset dev
+    cmake --preset sanitizers
     cmake --build --preset sanitizers
     ctest --preset sanitizers
+    cmake --preset coverage
+    cmake --build --preset coverage
+    ctest --preset coverage
     python -m pytest python/tests
     python -m ruff check python
     python -m ruff format --check python
     python -m mypy python/src
+    python -m build --no-isolation python
+
+The release benchmark command is added by `TASK-029`:
+
     ./build/release/itchlab benchmark --fixture data/fixtures/performance.itch
 
 ## Documentation

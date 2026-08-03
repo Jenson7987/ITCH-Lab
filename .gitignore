@@ -1,0 +1,41 @@
+# Operating-system and editor files
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Local environment files
+.env
+.env.*
+.venv/
+
+# CMake and compiled output
+/build/
+/build-*/
+CMakeUserPresets.json
+compile_commands.json
+*.gcda
+*.gcno
+*.profdata
+*.profraw
+
+# Python caches and distributions
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+dist/
+
+# Licensed source data, bulk derived data and immutable local runs
+/data/raw/*
+!/data/raw/.gitkeep
+/data/derived/*
+!/data/derived/.gitkeep
+/runs/*
+!/runs/.gitkeep
+
