@@ -81,6 +81,8 @@ add_library(
   cpp/src/input/file_source.cpp
   cpp/src/input/framed_reader.cpp
   cpp/src/input/gzip_source.cpp
+  cpp/src/itch/byte_decode.cpp
+  cpp/src/itch/decoder.cpp
 )
 target_include_directories(itchlab_core PUBLIC cpp/include)
 target_link_libraries(itchlab_core PRIVATE nlohmann_json::nlohmann_json ZLIB::ZLIB)
@@ -106,8 +108,11 @@ if(BUILD_TESTING)
     tests/cpp/contract/canonical_hash_test.cpp
     tests/cpp/contract/replay_config_test.cpp
     tests/cpp/integration/framed_reader_integration_test.cpp
+    tests/cpp/integration/decoder_integration_test.cpp
     tests/cpp/property/framed_reader_property_test.cpp
+    tests/cpp/unit/byte_decode_test.cpp
     tests/cpp/unit/byte_source_test.cpp
+    tests/cpp/unit/decoder_test.cpp
     tests/cpp/unit/errors_test.cpp
     tests/cpp/unit/framed_reader_test.cpp
     tests/cpp/unit/sha256_test.cpp
@@ -116,7 +121,9 @@ if(BUILD_TESTING)
   target_compile_definitions(
     itchlab_core_tests PRIVATE ITCHLAB_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
   )
-  target_link_libraries(itchlab_core_tests PRIVATE itchlab_core Catch2::Catch2WithMain)
+  target_link_libraries(
+    itchlab_core_tests PRIVATE itchlab_core Catch2::Catch2WithMain nlohmann_json::nlohmann_json
+  )
   itchlab_configure_target(itchlab_core_tests)
 
   list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")

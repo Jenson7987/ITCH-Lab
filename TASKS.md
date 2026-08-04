@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-005: Decode S/R/A/D
-  - Dependencies: TASK-004
-  - Acceptance criteria: Exact length/endian/field behaviour
-  - Tests: UT-DEC-001, UT-DEC-002
-  - Documentation to update: 05-api-contracts.md if types differ
-
 - [ ] TASK-006: Implement minimal add/delete level-3 book
   - Dependencies: TASK-005
   - Acceptance criteria: FIFO/totals/top-N/digest and atomic errors
@@ -175,6 +169,13 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-005: Decode S/R/A/D
+  - Completed: 2026-08-04
+  - Evidence: Stateless typed decoding and bounded big-endian helpers implemented; exact golden
+    S/R/A/D diagnostics match plain/gzip fixtures; 41 CTest cases passed in dev, release and
+    ASan/UBSan presets and the opt-in official-data check passed separately; 23 fixture files
+    verified; 73 Python tests, Ruff, strict mypy and C++ formatting checks passed.
 
 - [x] TASK-004: Implement streaming byte sources and framed reader
   - Completed: 2026-08-04
