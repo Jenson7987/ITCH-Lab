@@ -257,6 +257,39 @@ Rules:
 - Official-data tests verify hashes from local configs and skip with a clear reason when absent.
 - No confidential/personal data is introduced.
 
+### Synthetic ITCH fixture corpus
+
+TASK-003 provides a standard-library-only builder in `tests/fixtures/`. It encodes fields from the
+Nasdaq TotalView-ITCH 5.0 layouts without importing the production reader, decoder or their
+constants. The two-byte big-endian outer framing remains a project assumption until TASK-004
+verifies it against an authorised official sample.
+
+| Fixture family | Purpose |
+| --- | --- |
+| `synthetic_minimal.itch[.gz]` | S/R/A/D first vertical slice with a complete add/delete lifecycle |
+| `synthetic_mixed.itch[.gz]` | Three symbols, every MVP type, partial/full mutations, trade/break, halt/resume and close |
+| `invalid_lifecycle/synthetic_invalid_*.itch` | Correctly framed duplicate, missing-reference, over-decrement and replacement conflicts |
+| `corrupt/synthetic_corrupt_*.itch[.gz]` | Zero/oversized/truncated frames, wrong known length, unknown type and damaged gzip members |
+
+`tests/golden/itch50/synthetic_expected.json` records exact payload hex, independently declared
+fields, message indices, frame/payload offsets and type counts. `fixture_sha256.json` pins the size
+and SHA-256 of every binary fixture. Gzip generation uses compression level 9, an empty embedded
+filename and modification time zero; its decompressed bytes must exactly equal the corresponding
+uncompressed fixture.
+
+Generate the fixed corpus atomically beneath the repository root:
+
+    python -m tests.fixtures.generate_itch50
+
+Verify committed bytes without writing:
+
+    python -m tests.fixtures.generate_itch50 --check
+
+Builder self-tests independently fix the 13 payload lengths and reviewed literal byte vectors.
+They exercise every shorter observed length from zero through expected−1 plus expected+1 for each
+MVP type without committing hundreds of redundant files. The committed corruption fixtures are
+small representatives for integration, CLI and fuzz-regression tests.
+
 ## Mocking strategy
 
 - Prefer in-memory ByteSource and real domain components over mocking.

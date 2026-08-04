@@ -1,0 +1,90 @@
+{
+  "files": {
+    "tests/fixtures/corrupt/synthetic_corrupt_gzip_checksum.itch.gz": {
+      "sha256": "8bdab01ee2cd3ee29f4660c568d6bffa1daf2adc766aeb32eadbbbaf94bb1a58",
+      "size_bytes": 150
+    },
+    "tests/fixtures/corrupt/synthetic_corrupt_oversized_frame.itch": {
+      "sha256": "25dfd29c09617dcc9852281c030e5b3037a338a4712a42a21c907f259c6412a0",
+      "size_bytes": 2
+    },
+    "tests/fixtures/corrupt/synthetic_corrupt_truncated_gzip.itch.gz": {
+      "sha256": "b6e5ae562d6ac6011a585008a8d6b194a88a00557414e52e4155776b9870b147",
+      "size_bytes": 142
+    },
+    "tests/fixtures/corrupt/synthetic_corrupt_truncated_length_prefix.itch": {
+      "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+      "size_bytes": 1
+    },
+    "tests/fixtures/corrupt/synthetic_corrupt_truncated_payload.itch": {
+      "sha256": "129158220b2911bb9a0db7ff7d30a739a7691a4062ad059d6c955b39f8ebdcc1",
+      "size_bytes": 13
+    },
+    "tests/fixtures/corrupt/synthetic_corrupt_unknown_type.itch": {
+      "sha256": "8ff1743868f0a45de54fd5c4a726b5e9c2f2fd8609b8e837f562879ab0a9a388",
+      "size_bytes": 14
+    },
+    "tests/fixtures/corrupt/synthetic_corrupt_wrong_known_length.itch": {
+      "sha256": "bda5ab30e72a99da316d1f8201c81ce85dfaac97ead832443f6dc05fa7a3d918",
+      "size_bytes": 13
+    },
+    "tests/fixtures/corrupt/synthetic_corrupt_zero_length_frame.itch": {
+      "sha256": "96a296d224f285c67bee93c30f8a309157f0daa35dc5b87e410b78630a09cfc7",
+      "size_bytes": 2
+    },
+    "tests/fixtures/invalid_lifecycle/synthetic_invalid_duplicate_add.itch": {
+      "sha256": "4a4418d4570bb3e2762e16a0dbbf44aecca41aa187fc60af41197ab04140d7c4",
+      "size_bytes": 131
+    },
+    "tests/fixtures/invalid_lifecycle/synthetic_invalid_missing_cancel.itch": {
+      "sha256": "7d256692d763433f170dd630c5a44f1ab743b81116c41ec8b8ca07bfc67b5279",
+      "size_bytes": 118
+    },
+    "tests/fixtures/invalid_lifecycle/synthetic_invalid_missing_delete.itch": {
+      "sha256": "8dfbfb8a7a289500c6e82503f8c11f2ddc78d2a8c387b95e87b64b3726e5303c",
+      "size_bytes": 114
+    },
+    "tests/fixtures/invalid_lifecycle/synthetic_invalid_missing_execute.itch": {
+      "sha256": "3531568dc8d88b945694b58a013e96a8123dff592f1e01e138a083aa69885419",
+      "size_bytes": 126
+    },
+    "tests/fixtures/invalid_lifecycle/synthetic_invalid_missing_execute_with_price.itch": {
+      "sha256": "99675f32166f7dc60385efb08e4b20b603fada29403eb8377e498e213894253f",
+      "size_bytes": 131
+    },
+    "tests/fixtures/invalid_lifecycle/synthetic_invalid_missing_replace.itch": {
+      "sha256": "39af01ce30afef8a927afc2f842eef99e3d001208997ef15f472c8fe29b750ac",
+      "size_bytes": 130
+    },
+    "tests/fixtures/invalid_lifecycle/synthetic_invalid_over_cancel.itch": {
+      "sha256": "3d463663c9e25a3e062d6ee6adcb89e43706e46bb84dd8566429597b4e8d1da9",
+      "size_bytes": 118
+    },
+    "tests/fixtures/invalid_lifecycle/synthetic_invalid_over_execute.itch": {
+      "sha256": "b5d2da918fc58bae26ad41528d5dc41ee590abc2cc57a5bb79990150e308d3d1",
+      "size_bytes": 126
+    },
+    "tests/fixtures/invalid_lifecycle/synthetic_invalid_replace_duplicate_new_reference.itch": {
+      "sha256": "9569c9f7077eb8173894ad404eb1bcd82209074f3e9cfc1e2a0bc539f53584d6",
+      "size_bytes": 168
+    },
+    "tests/fixtures/synthetic_minimal.itch": {
+      "sha256": "0c054033c33ccc11559d3973d723b7281ebe36ece59d4dfd0febc1c0d10e6922",
+      "size_bytes": 184
+    },
+    "tests/fixtures/synthetic_minimal.itch.gz": {
+      "sha256": "0005f6b65d20fe8919aff3759b04fd92518e3282baa87959b673e6aa1c68dc63",
+      "size_bytes": 150
+    },
+    "tests/fixtures/synthetic_mixed.itch": {
+      "sha256": "1369fbfae03406e29fe47f299804ac7c514a78bcf4b857f101413e14ca7f3104",
+      "size_bytes": 910
+    },
+    "tests/fixtures/synthetic_mixed.itch.gz": {
+      "sha256": "6cb8414011a6dac1d55b19a519e48b0b9c8d32ff7b6735b063b3bcd8451ac510",
+      "size_bytes": 508
+    }
+  },
+  "schema_version": 1,
+  "synthetic": true
+}

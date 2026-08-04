@@ -190,7 +190,7 @@ No background monitoring is needed.
 Command health checks:
 
     itchlab --version
-    itchlab inspect --input tests/fixtures/minimal.itch --all
+    itchlab inspect --input tests/fixtures/synthetic_minimal.itch --all
     itchlab validate --run tests/golden/replay-v1 --deep
     python -m itchlab_research doctor
 

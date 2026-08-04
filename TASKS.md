@@ -4,12 +4,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Current milestone — M0 Reproducible repository skeleton
 
-- [ ] TASK-003: Build independent synthetic ITCH fixture tooling
-  - Dependencies: TASK-002
-  - Acceptance criteria: Independent framed/gzip fixtures cover all required types and corruptions
-  - Tests: Builder self-tests and fixture hashes
-  - Documentation to update: 08-testing-strategy.md
-
 ## Queued
 
 - [ ] TASK-004: Implement streaming byte sources and framed reader
@@ -187,6 +181,10 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-003: Build independent synthetic ITCH fixture tooling
+  - Completed: 2026-08-04
+  - Evidence: 23 deterministic synthetic fixture/golden files generated and checked; 27 builder tests and 73 total Python tests passed; Ruff, strict mypy, dependency, package/wheel and C++ formatting checks passed; 15 CTest cases passed in dev, release and ASan/UBSan presets; every MVP type, plain/gzip equality, corruptions, invalid lifecycles and SHA-256 snapshots are covered.
 
 - [x] TASK-002: Define domain primitives, errors and JSON schemas
   - Completed: 2026-08-03
