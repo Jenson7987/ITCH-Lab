@@ -42,7 +42,7 @@ flowchart TD
 | Language standard | C++20 | Relevant systems signal; spans, variants and stronger type support |
 | Build | CMake with checked-in presets | Works on macOS/Linux and supports reproducible dev/release/sanitizer builds |
 | Compression | zlib-compatible streaming adapter | Official samples are gzip; avoids full decompression |
-| CLI parsing | CLI11, pinned | Clear subcommands/help without hand-written option parsing |
+| CLI parsing | Small project-owned C++20 adapter (ADR-006) | Current command surface is bounded; avoids an unnecessary dependency while keeping domain modules independent of argv/output |
 | Config/manifest | nlohmann/json plus JSON Schema validation at command boundary | One readable, canonical cross-language representation |
 | C++ tests | Catch2 | Unit and integration test ergonomics |
 | Microbenchmarks | Google Benchmark | Repeatable benchmark harness and counters |
@@ -51,7 +51,11 @@ flowchart TD
 | Baseline models | scikit-learn | Transparent, established baselines |
 | Reporting | Markdown plus optional static HTML and PNG/SVG plots | Reviewable in Git and usable offline |
 
-CMake uses find_package(ZLIB REQUIRED) for the platform zlib and FetchContent with immutable pinned revisions for CLI11, nlohmann/json, Catch2 and Google Benchmark. Python direct dependencies live in pyproject.toml and fully resolved hashed development/release requirements files are generated with pip-tools. Application runtime performs no dependency download.
+CMake uses find_package(ZLIB REQUIRED) for the platform zlib and FetchContent with immutable pinned
+revisions for nlohmann/json, Catch2 and, when TASK-029 adds benchmarks, Google Benchmark. Python
+direct dependencies live in pyproject.toml and fully resolved hashed development/release
+requirements files are generated with pip-tools. Application runtime performs no dependency
+download.
 
 ## Rejected alternatives
 
@@ -211,7 +215,7 @@ flowchart LR
 ## External dependencies
 
 - Nasdaq ITCH 5.0 format specification and user-obtained sample data.
-- C++ standard library, zlib, CLI11, nlohmann/json, Catch2 and Google Benchmark.
+- C++ standard library, zlib, nlohmann/json, Catch2 and Google Benchmark.
 - Python, NumPy, Polars, PyArrow, scikit-learn, Matplotlib and development tools.
 - Git and GitHub Actions for versioning/CI.
 

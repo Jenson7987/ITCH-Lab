@@ -82,16 +82,25 @@ add_library(
   cpp/src/input/file_source.cpp
   cpp/src/input/framed_reader.cpp
   cpp/src/input/gzip_source.cpp
+  cpp/src/input/source_factory.cpp
+  cpp/src/inspect/source_inspector.cpp
   cpp/src/itch/byte_decode.cpp
   cpp/src/itch/decoder.cpp
+  cpp/src/output/diagnostic_sinks.cpp
+  cpp/src/replay/replay_coordinator.cpp
 )
 target_include_directories(itchlab_core PUBLIC cpp/include)
 target_link_libraries(itchlab_core PRIVATE nlohmann_json::nlohmann_json ZLIB::ZLIB)
 itchlab_configure_target(itchlab_core)
 
+add_library(itchlab_cli cpp/apps/itchlab/cli.cpp)
+target_include_directories(itchlab_cli PUBLIC cpp/apps)
+target_compile_definitions(itchlab_cli PRIVATE ITCHLAB_VERSION="${PROJECT_VERSION}")
+target_link_libraries(itchlab_cli PRIVATE itchlab_core nlohmann_json::nlohmann_json)
+itchlab_configure_target(itchlab_cli)
+
 add_executable(itchlab cpp/apps/itchlab/main.cpp)
-target_compile_definitions(itchlab PRIVATE ITCHLAB_VERSION="${PROJECT_VERSION}")
-target_link_libraries(itchlab PRIVATE itchlab_core)
+target_link_libraries(itchlab PRIVATE itchlab_cli)
 itchlab_configure_target(itchlab)
 
 include(CTest)
@@ -111,6 +120,8 @@ if(BUILD_TESTING)
     tests/cpp/integration/framed_reader_integration_test.cpp
     tests/cpp/integration/decoder_integration_test.cpp
     tests/cpp/integration/book_integration_test.cpp
+    tests/cpp/integration/task007_cli_integration_test.cpp
+    tests/cpp/integration/task007_replay_integration_test.cpp
     tests/cpp/property/order_book_property_test.cpp
     tests/cpp/property/framed_reader_property_test.cpp
     tests/cpp/unit/byte_decode_test.cpp
@@ -126,7 +137,8 @@ if(BUILD_TESTING)
     itchlab_core_tests PRIVATE ITCHLAB_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
   )
   target_link_libraries(
-    itchlab_core_tests PRIVATE itchlab_core Catch2::Catch2WithMain nlohmann_json::nlohmann_json
+    itchlab_core_tests
+    PRIVATE itchlab_cli itchlab_core Catch2::Catch2WithMain nlohmann_json::nlohmann_json
   )
   itchlab_configure_target(itchlab_core_tests)
 
@@ -150,5 +162,17 @@ if(BUILD_TESTING)
   set_tests_properties(
     TASK_001_cpp_cli_rejects_unsupported_argument
     PROPERTIES WILL_FAIL TRUE
+  )
+
+  add_test(NAME TASK_007_cpp_cli_inspect_help COMMAND itchlab inspect --help)
+  set_tests_properties(
+    TASK_007_cpp_cli_inspect_help
+    PROPERTIES PASS_REGULAR_EXPRESSION "Inspect source framing"
+  )
+
+  add_test(NAME TASK_007_cpp_cli_replay_help COMMAND itchlab replay --help)
+  set_tests_properties(
+    TASK_007_cpp_cli_replay_help
+    PROPERTIES PASS_REGULAR_EXPRESSION "provisional TASK-007"
   )
 endif()

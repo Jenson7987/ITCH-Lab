@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-007: Deliver minimal inspect and replay commands
-  - Dependencies: TASK-004–006
-  - Acceptance criteria: One symbol reaches deterministic diagnostic output
-  - Tests: CLI and integration smoke
-  - Documentation to update: README examples
-
 - [ ] TASK-008: Lock first E2E golden slice
   - Dependencies: TASK-007
   - Acceptance criteria: Clean repeated minimal run; corrupt input fails safely
@@ -163,6 +157,15 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-007: Deliver minimal inspect and replay commands
+  - Completed: 2026-08-04
+  - Evidence: Bounded plain/gzip inspection and strict one-symbol S/R/A/D replay produce exact
+    provisional diagnostic event/snapshot goldens with stable human/JSON channels and exit codes;
+    the documented synthetic commands completed successfully. Across dev, release, ASan/UBSan and
+    coverage presets, all 61 runnable CTest entries passed and the authorised external-data entry
+    skipped as designed; 73 Python tests, fixture verification, Ruff, strict mypy, C++ formatting
+    and the Python wheel/sdist build passed.
 
 - [x] TASK-006: Implement minimal add/delete level-3 book
   - Completed: 2026-08-04

@@ -5,8 +5,10 @@ ITCH-Lab is an offline quantitative-research platform that decodes Nasdaq TotalV
 ## Status
 
 Specification complete. The reproducible C++/Python foundation, bounded plain/gzip framed-input
-layer, stateless S/R/A/D decoder and deterministic minimal add/delete level-3 book are implemented;
-the remaining ITCH types, full lifecycle, replay, research and simulation remain planned.
+layer, stateless S/R/A/D decoder, deterministic minimal add/delete level-3 book and first
+inspect/replay command slice are implemented. Replay currently writes explicitly provisional JSONL
+diagnostics for one synthetic symbol; production interchange, manifests, the remaining ITCH types,
+full lifecycle, research and simulation remain planned.
 
 Classification legend used throughout the documentation:
 
@@ -61,9 +63,10 @@ The repository structure is being implemented incrementally according to `TASKS.
 foundation provides buildable version/help CLIs, fixed C++ domain/error types, strict validated
 configuration contracts with canonical cross-language hashes, and bounded streaming of verified
 `itch-length-v1` plain/gzip sources. It also decodes the first S/R/A/D vertical slice with exact
-length and big-endian validation, and applies add/delete events to a deterministic level-3 book
-with FIFO queues, aggregate levels and canonical state digests. The remaining message types, full
-order lifecycle, replay, research and simulation commands are implemented by later tasks.
+length and big-endian validation, applies add/delete events to a deterministic level-3 book, and
+exposes bounded inspect plus one-symbol diagnostic replay commands. Production binary replay
+artefacts and manifests, the remaining message types, full order lifecycle, research and simulation
+commands are implemented by later tasks.
 
 ## Local setup
 
@@ -113,10 +116,22 @@ Command-line arguments override environment variables; environment variables ove
     ./build/dev/itchlab --help
     python -m itchlab_research --help
 
-Planned workflow (the subcommands below are implemented by later tasks):
+The implemented synthetic vertical slice can be exercised without licensed market data:
 
-    ./build/release/itchlab inspect --input data/raw/sample.gz --limit 100
-    ./build/release/itchlab replay --config configs/replay.example.json
+    ./build/dev/itchlab inspect \
+        --input tests/fixtures/synthetic_minimal.itch \
+        --all \
+        --symbols AAPL
+    ./build/dev/itchlab replay \
+        --config configs/replay.diagnostic.example.json \
+        --output-root runs/task-007-example
+
+The replay command above requires a fresh output root and writes deterministic
+`diagnostic-events.jsonl` and `diagnostic-snapshots.jsonl`. These files are labelled provisional;
+they are not `events.ilb`, `snapshots.ilb` or a completed replay manifest.
+
+Planned research workflow (implemented by later tasks):
+
     python -m itchlab_research convert --config configs/dataset.example.json
     python -m itchlab_research train --config configs/experiment.example.json
     python -m itchlab_research simulate --config configs/simulation.example.json
