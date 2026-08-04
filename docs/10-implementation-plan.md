@@ -53,7 +53,8 @@
 - Covers: FR-001, FR-003; NFR-002, NFR-008; SEC-001, SEC-012.
 - Expected files/components: input/byte_source.*, input/file_source.*, input/gzip_source.*, input/framed_reader.*.
 - Acceptance criteria: bounded streaming works for gzip/uncompressed fixtures; clean EOF is distinct from truncation; frame length validated before buffer use; source offset/message index are correct; cancellation check is possible between frames; official sample framing assumption is locally verified and recorded.
-- Required tests: IT-001, IT-002, short-read/truncation/property tests, sanitizer run.
+- Required tests: IT-001/IT-002 reader portions, short-read/truncation/property tests, sanitizer
+  run. TASK-005 extends IT-001/IT-002 through typed decoding.
 - Completion evidence: inspect-style diagnostic over synthetic fixture plus a short framing-verification note.
 - Complexity: Large.
 
@@ -63,7 +64,8 @@
 - Covers: FR-002, FR-003; SEC-001, SEC-002.
 - Expected files/components: itch/messages.hpp, itch/byte_decode.*, itch/decoder.*, per-type decoders for S/R/A/D.
 - Acceptance criteria: exact-length validation precedes access; big-endian/timestamp/Price4 fields match independent fixtures; decoder is stateless; unknown types return typed errors.
-- Required tests: UT-DEC-001, UT-DEC-002 and boundary fixtures for S/R/A/D.
+- Required tests: UT-DEC-001, UT-DEC-002, the typed-decoder portions of IT-001/IT-002 and boundary
+  fixtures for S/R/A/D.
 - Completion evidence: JSON diagnostic output exactly matches golden expected fields.
 - Complexity: Medium.
 

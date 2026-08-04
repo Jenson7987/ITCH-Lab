@@ -351,6 +351,12 @@ struct Frame {
   std::span<const std::byte> payload;
 };
 
+struct ReadResult {
+  std::size_t bytes_read;
+  bool end_of_file;
+  std::optional<SourceError> error;
+};
+
 class ByteSource {
 public:
   virtual ReadResult read(std::span<std::byte> destination) = 0;
@@ -358,17 +364,27 @@ public:
   virtual ~ByteSource() = default;
 };
 
+struct FrameReadResult {
+  std::optional<Frame> frame;
+  std::optional<FrameError> error;
+};
+
 class FramedMessageReader {
 public:
-  Result<std::optional<Frame>, FrameError> next();
+  FrameReadResult next();
 };
 ```
 
 Contract:
 
 - next returns null optional only at a clean frame boundary at EOF.
+- A zero or over-512 length returns ERR_FRAMING; an incomplete prefix or payload returns
+  ERR_TRUNCATED_MESSAGE.
 - Returned payload remains valid until the next call.
-- Frame length is capped at 512 payload bytes before buffer growth.
+- Frame length is capped at 512 payload bytes before payload access or allocation.
+- source_offset is the zero-based position of the frame-length prefix in the uncompressed stream.
+- gzip EOF is clean only after the gzip member trailer has been validated.
+- File/gzip opening and source reads return typed errors; expected input failures do not throw.
 
 ```cpp
 using ItchMessage = std::variant<

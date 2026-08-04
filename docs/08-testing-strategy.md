@@ -106,8 +106,8 @@ Each failing generated case is reduced and committed as a regression fixture whe
 
 | ID | Scenario | Expected evidence |
 | --- | --- | --- |
-| IT-001 | Uncompressed framed fixture through decoder | Exact message counts and typed sequence |
-| IT-002 | gzip fixture through decoder | Same semantic digest as uncompressed fixture |
+| IT-001 | Uncompressed fixture through reader, then decoder from TASK-005 | TASK-004 proves exact frames/offsets; decoder tests add typed sequence |
+| IT-002 | gzip fixture through reader, then decoder from TASK-005 | TASK-004 proves identical framed payload digest; decoder tests add semantic digest |
 | IT-003 | Full order lifecycle through replay/book | Golden per-event book states |
 | IT-004 | Replay through event/snapshot writers | Exact headers, counts, records and hashes |
 | IT-005 | Interrupt replay during write | Partial suffix only; no completed manifest |
@@ -261,8 +261,8 @@ Rules:
 
 TASK-003 provides a standard-library-only builder in `tests/fixtures/`. It encodes fields from the
 Nasdaq TotalView-ITCH 5.0 layouts without importing the production reader, decoder or their
-constants. The two-byte big-endian outer framing remains a project assumption until TASK-004
-verifies it against an authorised official sample.
+constants. ADR-005 records TASK-004 verification of the two-byte big-endian outer framing and
+complete-frame EOF behaviour against an authorised official sample.
 
 | Fixture family | Purpose |
 | --- | --- |

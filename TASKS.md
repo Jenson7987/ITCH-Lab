@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-004: Implement streaming byte sources and framed reader
-  - Dependencies: TASK-003
-  - Acceptance criteria: Bounded gzip/plain reads, exact offsets, safe EOF/truncation, verified sample framing
-  - Tests: IT-001, IT-002, sanitizer/property tests
-  - Documentation to update: ADR if framing differs
-
 - [ ] TASK-005: Decode S/R/A/D
   - Dependencies: TASK-004
   - Acceptance criteria: Exact length/endian/field behaviour
@@ -181,6 +175,10 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-004: Implement streaming byte sources and framed reader
+  - Completed: 2026-08-04
+  - Evidence: Bounded plain/gzip byte sources and `itch-length-v1` reader implemented; ADR-005 records official-sample framing and termination evidence; 32 CTest cases passed in dev, release and ASan/UBSan presets; the opt-in official-sample test, 73 Python tests, Ruff, strict mypy and C++ formatting checks passed.
 
 - [x] TASK-003: Build independent synthetic ITCH fixture tooling
   - Completed: 2026-08-04

@@ -87,7 +87,9 @@ Responsibilities:
 - Return an immutable payload span and zero-based offset in the uncompressed framed stream.
 - Assign the monotonic project message index.
 
-The assumed sample framing must be verified in TASK-004.
+ADR-005 fixes this as project framing `itch-length-v1` after verification against the public
+Nasdaq 2019-12-30 TotalView-ITCH 5.0 sample. A complete payload followed by physical EOF is clean;
+zero length remains invalid despite the older BinaryFILE terminator wording.
 
 ### ItchDecoder
 

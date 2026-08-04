@@ -123,7 +123,8 @@ The MVP succeeds when:
 
 - The primary development machine is an Apple M2 Pro MacBook, with Linux CI.
 - The developer can obtain the selected data directly from Nasdaq and has enough storage.
-- Official sample files use a two-byte big-endian message-length framing around ITCH payloads; TASK-004 must verify this against a source file before making it a fixed contract.
+- Official sample files use the verified `itch-length-v1` contract in ADR-005: positive two-byte
+  big-endian payload lengths and clean EOF only after a complete payload.
 - Research uses public sample data and does not require confidential or personal information.
 - Three or more full trading days are sufficient to demonstrate method, but not to support a deployable trading claim.
 - The project owner prefers a technically rigorous portfolio project over a polished consumer interface.

@@ -23,6 +23,7 @@ FetchContent_Declare(
   GIT_SHALLOW FALSE
 )
 FetchContent_MakeAvailable(nlohmann_json)
+find_package(ZLIB REQUIRED)
 
 function(itchlab_configure_target target_name)
   target_compile_features(${target_name} PRIVATE cxx_std_20)
@@ -76,9 +77,13 @@ add_library(
   cpp/src/config/replay_config.cpp
   cpp/src/core/errors.cpp
   cpp/src/core/sha256.cpp
+  cpp/src/input/byte_source.cpp
+  cpp/src/input/file_source.cpp
+  cpp/src/input/framed_reader.cpp
+  cpp/src/input/gzip_source.cpp
 )
 target_include_directories(itchlab_core PUBLIC cpp/include)
-target_link_libraries(itchlab_core PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(itchlab_core PRIVATE nlohmann_json::nlohmann_json ZLIB::ZLIB)
 itchlab_configure_target(itchlab_core)
 
 add_executable(itchlab cpp/apps/itchlab/main.cpp)
@@ -100,7 +105,11 @@ if(BUILD_TESTING)
     itchlab_core_tests
     tests/cpp/contract/canonical_hash_test.cpp
     tests/cpp/contract/replay_config_test.cpp
+    tests/cpp/integration/framed_reader_integration_test.cpp
+    tests/cpp/property/framed_reader_property_test.cpp
+    tests/cpp/unit/byte_source_test.cpp
     tests/cpp/unit/errors_test.cpp
+    tests/cpp/unit/framed_reader_test.cpp
     tests/cpp/unit/sha256_test.cpp
     tests/cpp/unit/types_test.cpp
   )

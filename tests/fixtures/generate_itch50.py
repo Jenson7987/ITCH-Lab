@@ -190,7 +190,10 @@ def render_outputs() -> dict[Path, bytes]:
         "framing": {
             "length_bytes": 2,
             "length_byte_order": "big",
-            "status": "Project assumption pending official-sample verification in TASK-004.",
+            "status": (
+                "Verified against the public Nasdaq 2019-12-30 TotalView-ITCH 5.0 sample; "
+                "complete-frame EOF and zero-length rejection are fixed by ADR-005."
+            ),
         },
         "invalid_lifecycles": invalid_documents,
         "schema_version": 1,

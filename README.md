@@ -4,7 +4,8 @@ ITCH-Lab is an offline quantitative-research platform that decodes Nasdaq TotalV
 
 ## Status
 
-Specification complete. The reproducible C++/Python repository foundation is implemented; market-data, replay, research and simulation functionality remains planned.
+Specification complete. The reproducible C++/Python foundation and bounded plain/gzip framed-input
+layer are implemented; ITCH decoding, replay, research and simulation remain planned.
 
 Classification legend used throughout the documentation:
 
@@ -55,7 +56,11 @@ Classification legend used throughout the documentation:
     ├── schemas/
     └── tests/
 
-The repository structure is being implemented incrementally according to `TASKS.md`. The current foundation provides buildable version/help CLIs, fixed C++ domain/error types and strict validated configuration contracts with canonical cross-language hashes. Replay, research and simulation commands are implemented by later tasks.
+The repository structure is being implemented incrementally according to `TASKS.md`. The current
+foundation provides buildable version/help CLIs, fixed C++ domain/error types, strict validated
+configuration contracts with canonical cross-language hashes, and bounded streaming of verified
+`itch-length-v1` plain/gzip sources. Decoding, replay, research and simulation commands are
+implemented by later tasks.
 
 ## Local setup
 
@@ -64,6 +69,7 @@ The repository structure is being implemented incrementally according to `TASKS.
 - macOS 13+ on Apple Silicon or a current x86-64 Linux distribution.
 - CMake 3.25 or later.
 - A C++20 compiler: Apple Clang 15+, Clang 16+, or GCC 13+.
+- zlib development headers and library.
 - Python 3.11 or later.
 - Git.
 - Enough local storage for the chosen ITCH files. Full-day compressed samples can be several gigabytes each.

@@ -456,7 +456,8 @@ A task is not done merely because code compiles. It must:
 ## Key assumptions and open decisions
 
 - Primary machine is an M2 Pro MacBook; Linux is supported through CI.
-- Official sample framing must be verified in TASK-004.
+- ADR-005 records TASK-004 verification of `itch-length-v1` against the public Nasdaq 2019-12-30
+  TotalView-ITCH 5.0 sample.
 - At least three days/symbols demonstrate method but cannot establish deployable alpha.
 - Exact published dates/symbols are chosen before viewing final test results.
 - Primary horizon is fixed at 100 qualifying updates for the MVP; changing it creates a new experiment family.

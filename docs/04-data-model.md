@@ -71,7 +71,7 @@ Stored inside a replay manifest.
 | sha256 | 64-char hex | No | — | Computed before or during replay |
 | size_bytes | uint64 | No | — | Filesystem |
 | compression | enum | No | detected | gzip or none |
-| framing | string | No | itch-length-v1 | Verified by FramedMessageReader |
+| framing | string | No | itch-length-v1 | ADR-005; positive two-byte big-endian length and complete-frame EOF |
 | trading_date | ISO date | No | — | Required config; not silently inferred |
 | exchange_timezone | string | No | America/New_York | Fixed IANA zone for Nasdaq MVP |
 | source_uri | string | Yes | null | Optional public landing page, never a signed URL |

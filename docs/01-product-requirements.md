@@ -272,7 +272,8 @@ Acceptance criteria:
 | --- | --- | --- |
 | Source path | Must resolve to a readable regular file; output must not alias it | ERR_INPUT_PATH |
 | Compression | gzip or uncompressed framing; unsupported formats fail explicitly | ERR_UNSUPPORTED_COMPRESSION |
-| Message length | Outer frame is 1–512 bytes; a known type must then equal its exact specified length before decoding | ERR_MESSAGE_LENGTH |
+| Message framing | Outer frame is 1–512 bytes; boundary EOF is clean, while zero, oversized and partial frames fail before decoding | ERR_FRAMING or ERR_TRUNCATED_MESSAGE |
+| Message length | A safely framed known type must equal its exact specified length before field access | ERR_MESSAGE_LENGTH |
 | Unknown message | Strict mode fails; permissive mode may skip using the outer length frame and count it | ERR_UNKNOWN_MESSAGE |
 | Symbol | Must exactly match a symbol announced by Stock Directory after trimming right padding | ERR_UNKNOWN_SYMBOL |
 | Trading date | ISO 8601 date supplied by config; filename inference may suggest but never silently confirm it | ERR_TRADING_DATE |
