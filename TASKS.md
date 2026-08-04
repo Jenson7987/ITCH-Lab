@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-006: Implement minimal add/delete level-3 book
-  - Dependencies: TASK-005
-  - Acceptance criteria: FIFO/totals/top-N/digest and atomic errors
-  - Tests: UT-BOOK-003 and invariants
-  - Documentation to update: ADR-001 only if representation changes materially
-
 - [ ] TASK-007: Deliver minimal inspect and replay commands
   - Dependencies: TASK-004–006
   - Acceptance criteria: One symbol reaches deterministic diagnostic output
@@ -169,6 +163,14 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-006: Implement minimal add/delete level-3 book
+  - Completed: 2026-08-04
+  - Evidence: Deterministic add/delete level-3 books preserve FIFO priority, checked aggregate
+    totals, explicit top-N depth and canonical SHA-256 state digests; duplicate/missing references
+    and invalid mutations leave state unchanged. All 51 runnable CTest entries passed in dev,
+    release, ASan/UBSan and coverage builds (the existing official-data test remained opt-in and
+    skipped); 73 Python tests, Ruff, strict mypy and C++ formatting checks passed.
 
 - [x] TASK-005: Decode S/R/A/D
   - Completed: 2026-08-04

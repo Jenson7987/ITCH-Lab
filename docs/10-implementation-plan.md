@@ -119,7 +119,7 @@
 - Covers: FR-004, FR-005.
 - Expected files/components: full OrderBook mutations and InvariantChecker.
 - Acceptance criteria: partial/full E/C/X, D and U semantics match golden lifecycle; replacement resets priority; level/order invariants pass after every fixture mutation; rejected mutations leave digest unchanged.
-- Required tests: UT-BOOK-001, UT-BOOK-002, lifecycle property tests.
+- Required tests: UT-BOOK-001, UT-BOOK-002, UT-BOOK-004, lifecycle property tests.
 - Completion evidence: per-event golden state trace.
 - Complexity: Large.
 

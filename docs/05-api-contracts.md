@@ -407,10 +407,14 @@ Contract:
 - Unknown messages return ERR_UNKNOWN_MESSAGE with observed type/length.
 
 ```cpp
+using BookMessage = std::variant<BookAdd, BookDelete>; // Expanded by TASK-010.
+
 class OrderBook {
 public:
-  Result<BookDelta, BookError> apply(const BookMessage& message);
+  explicit OrderBook(StockLocate stock_locate);
+  BookApplyResult apply(const BookMessage& message);
   TopLevels top_levels(std::uint16_t depth) const;
+  std::optional<PriceLevelView> level(Side side, Price4 price4) const;
   BookDigest digest() const;
   InvariantReport check_invariants() const;
 };
@@ -420,7 +424,15 @@ Contract:
 
 - apply is atomic from the caller's perspective: on error, book state is unchanged.
 - TopLevels contains explicit validity for unoccupied levels.
+- level returns a read-only copy of aggregate quantity and FIFO order state.
 - No mutable internal container is exposed.
+- BookDigest is SHA-256 over canonical state beginning with the ASCII domain
+  `itchlab-book-state-v1` and a NUL byte. The remaining fields are explicit big-endian integers:
+  owning StockLocate as u16; then bid and ask sections identified by ASCII `B` and `S`. Each
+  section contains a u64 level count and levels in best-to-worst order. Each level contains Price4
+  u32, aggregate quantity u64, order count u64, then FIFO orders as reference u64, remaining
+  quantity u64 and priority MessageIndex u64. Container capacities, iterators, addresses and hash
+  bucket layout are excluded.
 
 ```cpp
 class ReplayEngine {

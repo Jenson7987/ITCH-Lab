@@ -1,0 +1,91 @@
+{
+  "fixture": "synthetic_minimal.itch",
+  "schema_version": 1,
+  "states": [
+    {
+      "asks": [null, null],
+      "bids": [null, null],
+      "digest": "47213ce72b18bbb9fb839f064fb00c71d810d21c19e1fe74a9ed61162c0d2a6c",
+      "message_index": 0,
+      "order_count": 0,
+      "type": "S"
+    },
+    {
+      "asks": [null, null],
+      "bids": [null, null],
+      "digest": "47213ce72b18bbb9fb839f064fb00c71d810d21c19e1fe74a9ed61162c0d2a6c",
+      "message_index": 1,
+      "order_count": 0,
+      "type": "R"
+    },
+    {
+      "asks": [null, null],
+      "bids": [null, null],
+      "digest": "47213ce72b18bbb9fb839f064fb00c71d810d21c19e1fe74a9ed61162c0d2a6c",
+      "message_index": 2,
+      "order_count": 0,
+      "type": "S"
+    },
+    {
+      "asks": [null, null],
+      "bids": [null, null],
+      "digest": "47213ce72b18bbb9fb839f064fb00c71d810d21c19e1fe74a9ed61162c0d2a6c",
+      "message_index": 3,
+      "order_count": 0,
+      "type": "S"
+    },
+    {
+      "asks": [null, null],
+      "bids": [
+        {
+          "fifo": [
+            {
+              "order_reference": 1001,
+              "priority_sequence": 4,
+              "remaining": 100
+            }
+          ],
+          "price4": 1000000,
+          "total_quantity": 100
+        },
+        null
+      ],
+      "digest": "7758963fe17316429adf944c70727208f076ae68102565b8c388d758af48085a",
+      "message_index": 4,
+      "order_count": 1,
+      "type": "A"
+    },
+    {
+      "asks": [null, null],
+      "bids": [null, null],
+      "digest": "47213ce72b18bbb9fb839f064fb00c71d810d21c19e1fe74a9ed61162c0d2a6c",
+      "message_index": 5,
+      "order_count": 0,
+      "type": "D"
+    },
+    {
+      "asks": [null, null],
+      "bids": [null, null],
+      "digest": "47213ce72b18bbb9fb839f064fb00c71d810d21c19e1fe74a9ed61162c0d2a6c",
+      "message_index": 6,
+      "order_count": 0,
+      "type": "S"
+    },
+    {
+      "asks": [null, null],
+      "bids": [null, null],
+      "digest": "47213ce72b18bbb9fb839f064fb00c71d810d21c19e1fe74a9ed61162c0d2a6c",
+      "message_index": 7,
+      "order_count": 0,
+      "type": "S"
+    },
+    {
+      "asks": [null, null],
+      "bids": [null, null],
+      "digest": "47213ce72b18bbb9fb839f064fb00c71d810d21c19e1fe74a9ed61162c0d2a6c",
+      "message_index": 8,
+      "order_count": 0,
+      "type": "S"
+    }
+  ]
+}

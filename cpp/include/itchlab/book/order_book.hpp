@@ -1,0 +1,128 @@
+#pragma once
+
+#include "itchlab/book/order.hpp"
+#include "itchlab/book/price_level.hpp"
+#include "itchlab/core/errors.hpp"
+#include "itchlab/core/types.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <list>
+#include <map>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+namespace itchlab {
+
+using BookDigest = ContentHash;
+
+enum class BookMutationKind : std::uint8_t {
+  add = 1,
+  delete_order = 2,
+};
+
+struct BookDelta {
+  BookMutationKind kind{BookMutationKind::add};
+  MessageIndex message_index{};
+  StockLocate stock_locate{};
+  OrderReference order_reference{};
+  Side side{Side::not_applicable};
+  Price4 price4{};
+  Shares previous_remaining{};
+  Shares remaining{};
+
+  friend bool operator==(const BookDelta&, const BookDelta&) = default;
+};
+
+struct BookError {
+  ErrorCode code{ErrorCode::invariant};
+  std::optional<OrderReference> order_reference;
+  std::string message;
+
+  friend bool operator==(const BookError&, const BookError&) = default;
+};
+
+struct BookApplyResult {
+  std::optional<BookDelta> delta;
+  std::optional<BookError> error;
+
+  [[nodiscard]] static BookApplyResult success(BookDelta book_delta) noexcept;
+  [[nodiscard]] static BookApplyResult failure(BookError book_error);
+  [[nodiscard]] bool valid() const noexcept { return delta.has_value() && !error.has_value(); }
+};
+
+struct InvariantViolation {
+  ErrorCode code{ErrorCode::invariant};
+  std::optional<OrderReference> order_reference;
+  std::optional<Price4> price4;
+  std::string message;
+
+  friend bool operator==(const InvariantViolation&, const InvariantViolation&) = default;
+};
+
+struct InvariantReport {
+  std::size_t order_count{};
+  std::size_t bid_level_count{};
+  std::size_t ask_level_count{};
+  std::vector<InvariantViolation> violations;
+
+  [[nodiscard]] bool valid() const noexcept { return violations.empty(); }
+};
+
+class OrderBook {
+public:
+  explicit OrderBook(StockLocate stock_locate) noexcept;
+
+  OrderBook(const OrderBook&) = delete;
+  OrderBook& operator=(const OrderBook&) = delete;
+  OrderBook(OrderBook&&) noexcept = default;
+  OrderBook& operator=(OrderBook&&) noexcept = default;
+  ~OrderBook() = default;
+
+  // Expected domain errors are returned without changing the book.
+  [[nodiscard]] BookApplyResult apply(const BookMessage& message);
+
+  // Returns exactly depth explicitly valid/empty slots per side, best price first.
+  [[nodiscard]] TopLevels top_levels(std::uint16_t depth) const;
+  [[nodiscard]] std::optional<PriceLevelView> level(Side side, Price4 price4) const;
+
+  // SHA-256 over the documented canonical logical state, independent of container layout.
+  [[nodiscard]] BookDigest digest() const;
+  [[nodiscard]] InvariantReport check_invariants() const;
+
+  [[nodiscard]] StockLocate stock_locate() const noexcept { return stock_locate_; }
+  [[nodiscard]] std::size_t order_count() const noexcept { return orders_.size(); }
+
+private:
+  using OrderQueue = std::list<OrderReference>;
+
+  struct StoredPriceLevel {
+    Shares total_quantity{};
+    OrderQueue fifo;
+  };
+
+  struct StoredOrder {
+    StockLocate stock_locate{};
+    Side side{Side::not_applicable};
+    Price4 price4{};
+    std::uint32_t remaining{};
+    MessageIndex priority_sequence{};
+    OrderQueue::iterator level_iterator;
+  };
+
+  using BidLevels = std::map<Price4, StoredPriceLevel, std::greater<Price4>>;
+  using AskLevels = std::map<Price4, StoredPriceLevel>;
+
+  [[nodiscard]] BookApplyResult apply_add(const BookAdd& add);
+  [[nodiscard]] BookApplyResult apply_delete(const BookDelete& delete_order);
+
+  StockLocate stock_locate_{};
+  BidLevels bids_;
+  AskLevels asks_;
+  std::unordered_map<OrderReference, StoredOrder> orders_;
+};
+
+} // namespace itchlab

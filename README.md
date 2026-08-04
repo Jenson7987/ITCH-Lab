@@ -5,8 +5,8 @@ ITCH-Lab is an offline quantitative-research platform that decodes Nasdaq TotalV
 ## Status
 
 Specification complete. The reproducible C++/Python foundation, bounded plain/gzip framed-input
-layer and stateless S/R/A/D decoder are implemented; the remaining ITCH types, books, replay,
-research and simulation remain planned.
+layer, stateless S/R/A/D decoder and deterministic minimal add/delete level-3 book are implemented;
+the remaining ITCH types, full lifecycle, replay, research and simulation remain planned.
 
 Classification legend used throughout the documentation:
 
@@ -61,8 +61,9 @@ The repository structure is being implemented incrementally according to `TASKS.
 foundation provides buildable version/help CLIs, fixed C++ domain/error types, strict validated
 configuration contracts with canonical cross-language hashes, and bounded streaming of verified
 `itch-length-v1` plain/gzip sources. It also decodes the first S/R/A/D vertical slice with exact
-length and big-endian validation. The remaining message types, replay, research and simulation
-commands are implemented by later tasks.
+length and big-endian validation, and applies add/delete events to a deterministic level-3 book
+with FIFO queues, aggregate levels and canonical state digests. The remaining message types, full
+order lifecycle, replay, research and simulation commands are implemented by later tasks.
 
 ## Local setup
 

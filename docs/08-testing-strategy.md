@@ -362,7 +362,8 @@ A task is done only when:
 | UT-DEC-002 | Bounds | Every truncated known message returns ERR_MESSAGE_LENGTH before access |
 | UT-BOOK-001 | Lifecycle | Add→partial execute→cancel→delete produces expected states |
 | UT-BOOK-002 | Replace | Old ref disappears; new ref joins back of new level |
-| UT-BOOK-003 | Atomic error | Over-cancel returns error and state digest is unchanged |
+| UT-BOOK-003 | Atomic reference error | Duplicate add and missing delete return errors and the state digest is unchanged |
+| UT-BOOK-004 | Atomic quantity error | Over-cancel returns error and state digest is unchanged |
 | UT-OUT-001 | Binary writer | Event v1 record matches golden 72 bytes |
 | UT-OUT-002 | Snapshot writer | Record size is 48 + 28×depth and null flags round-trip |
 | UT-CFG-001 | Config | Unknown key and overlapping dates fail |

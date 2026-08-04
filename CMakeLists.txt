@@ -73,6 +73,7 @@ endfunction()
 
 add_library(
   itchlab_core
+  cpp/src/book/order_book.cpp
   cpp/src/config/canonical_json.cpp
   cpp/src/config/replay_config.cpp
   cpp/src/core/errors.cpp
@@ -109,12 +110,15 @@ if(BUILD_TESTING)
     tests/cpp/contract/replay_config_test.cpp
     tests/cpp/integration/framed_reader_integration_test.cpp
     tests/cpp/integration/decoder_integration_test.cpp
+    tests/cpp/integration/book_integration_test.cpp
+    tests/cpp/property/order_book_property_test.cpp
     tests/cpp/property/framed_reader_property_test.cpp
     tests/cpp/unit/byte_decode_test.cpp
     tests/cpp/unit/byte_source_test.cpp
     tests/cpp/unit/decoder_test.cpp
     tests/cpp/unit/errors_test.cpp
     tests/cpp/unit/framed_reader_test.cpp
+    tests/cpp/unit/order_book_test.cpp
     tests/cpp/unit/sha256_test.cpp
     tests/cpp/unit/types_test.cpp
   )
