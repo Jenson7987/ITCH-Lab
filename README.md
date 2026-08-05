@@ -5,10 +5,10 @@ ITCH-Lab is an offline quantitative-research platform that decodes Nasdaq TotalV
 ## Status
 
 Specification complete. The reproducible C++/Python foundation, bounded plain/gzip framed-input
-layer, stateless S/R/A/D decoder, deterministic minimal add/delete level-3 book and first
+layer, stateless full-MVP decoder, deterministic minimal add/delete level-3 book and first
 inspect/replay command slice are implemented. Replay currently writes explicitly provisional JSONL
-diagnostics for one synthetic symbol; production interchange, manifests, the remaining ITCH types,
-full lifecycle, research and simulation remain planned.
+diagnostics for one synthetic symbol and applies only the initial A/D lifecycle; production
+interchange, manifests, the full lifecycle, research and simulation remain planned.
 
 Classification legend used throughout the documentation:
 
@@ -62,11 +62,11 @@ Classification legend used throughout the documentation:
 The repository structure is being implemented incrementally according to `TASKS.md`. The current
 foundation provides buildable version/help CLIs, fixed C++ domain/error types, strict validated
 configuration contracts with canonical cross-language hashes, and bounded streaming of verified
-`itch-length-v1` plain/gzip sources. It also decodes the first S/R/A/D vertical slice with exact
-length and big-endian validation, applies add/delete events to a deterministic level-3 book, and
-exposes bounded inspect plus one-symbol diagnostic replay commands. Production binary replay
-artefacts and manifests, the remaining message types, full order lifecycle, research and simulation
-commands are implemented by later tasks.
+`itch-length-v1` plain/gzip sources. It decodes S/R/H/A/F/E/C/X/D/U/P/Q/B with exact length,
+big-endian and timestamp validation, applies the initial add/delete events to a deterministic
+level-3 book, and exposes bounded inspect plus one-symbol diagnostic replay commands. Production
+binary replay artefacts and manifests, the full order lifecycle, research and simulation commands
+are implemented by later tasks.
 
 ## Local setup
 

@@ -106,11 +106,12 @@ Purpose: create normalised events, snapshots and a completed replay manifest.
 
 Incremental TASK-007 availability is deliberately narrower than the final contract below. The
 implemented command accepts one symbol, strict mode, `require_trading_state=false` and a null input
-SHA-256; it decodes S/R/A/D and writes `diagnostic-events.jsonl` plus
+SHA-256; its provisional replay path applies S/R/A/D and writes `diagnostic-events.jsonl` plus
 `diagnostic-snapshots.jsonl` beneath a fresh output root. Rows identify
 `itchlab-task-007-diagnostic-v1`, and success summaries use
 `artefact_status=provisional_diagnostic` without a production run ID. These files are diagnostic
-JSON Lines, not the version-1 interchange files or a completed replay run. TASK-009 through
+JSON Lines, not the version-1 interchange files or a completed replay run. The underlying decoder
+supports every MVP type, but the remaining lifecycle is deliberately deferred. TASK-010 through
 TASK-014 replace these temporary restrictions with the full contract; `--force-new-run` is rejected
 until immutable production run publication exists.
 
@@ -415,6 +416,10 @@ Contract:
 - Decoder has no mutable global state.
 - Exact type length is checked before field access.
 - Unknown messages return ERR_UNKNOWN_MESSAGE with observed type/length.
+- `OrderExecutedWithPrice.execution_price4` is the execution price from C; it does not replace the
+  display price established by the order's A/F message.
+- `Trade.buy_sell_indicator` is the raw P-message field and is not an inferred aggressor side.
+- Trade, CrossTrade and BrokenTrade are observations with no visible-book mutation interface.
 
 ```cpp
 using BookMessage = std::variant<BookAdd, BookDelete>; // Expanded by TASK-010.

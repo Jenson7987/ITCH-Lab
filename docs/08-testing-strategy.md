@@ -39,6 +39,24 @@ For each MVP message type S, R, H, A, F, E, C, X, D, U, P, Q and B:
 - Space-padded symbol/attribution handling.
 - Unknown type behaviour in strict/permissive policy.
 
+Implemented decoder coverage:
+
+| Type | Payload bytes | Typed message | Executable evidence |
+| --- | ---: | --- | --- |
+| S | 12 | SystemEvent | UT-DEC-001/002, IT-001/002 |
+| R | 39 | StockDirectory | UT-DEC-001/002, IT-001/002 |
+| H | 25 | TradingAction | UT-DEC-001/002, TASK-009 mixed-stream golden |
+| A | 36 | AddOrder | UT-DEC-001/002, IT-001/002 |
+| F | 40 | AddOrderWithAttribution | UT-DEC-001/002, TASK-009 mixed-stream golden |
+| E | 31 | OrderExecuted | UT-DEC-001/002, TASK-009 mixed-stream golden |
+| C | 36 | OrderExecutedWithPrice | UT-DEC-001/002, TASK-009 mixed-stream golden |
+| X | 23 | OrderCancel | UT-DEC-001/002, TASK-009 mixed-stream golden |
+| D | 19 | OrderDelete | UT-DEC-001/002, IT-001/002 |
+| U | 35 | OrderReplace | UT-DEC-001/002, TASK-009 mixed-stream golden |
+| P | 44 | Trade | UT-DEC-001/002, TASK-009 mixed-stream golden |
+| Q | 40 | CrossTrade | UT-DEC-001/002, TASK-009 mixed-stream golden |
+| B | 19 | BrokenTrade | UT-DEC-001/002, TASK-009 mixed-stream golden |
+
 ### C++ order book
 
 - Add first order, add at existing level and add better/worse level.

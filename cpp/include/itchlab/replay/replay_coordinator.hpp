@@ -43,7 +43,7 @@ struct ReplayResult {
 
 class ReplayCoordinator {
 public:
-  // TASK-007 supports one strict S/R/A/D symbol and provisional diagnostic sinks only.
+  // The provisional diagnostic replay mutates only A/D messages for one strict symbol.
   [[nodiscard]] ReplayResult run(ByteSource& source, const ReplayConfig& config,
                                  DiagnosticSink& diagnostics) const;
 };

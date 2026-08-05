@@ -47,7 +47,7 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
   }
   if (config.selection.require_trading_state) {
     return failure(ErrorCode::config_schema,
-                   "TASK-007 diagnostic replay cannot require trading state before H decoding.");
+                   "Provisional diagnostic replay does not yet apply trading-state filtering.");
   }
   if (config.input.sha256) {
     return failure(ErrorCode::config_schema,

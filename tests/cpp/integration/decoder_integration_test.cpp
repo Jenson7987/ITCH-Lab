@@ -1,3 +1,4 @@
+#include "itchlab/book/order_book.hpp"
 #include "itchlab/input/file_source.hpp"
 #include "itchlab/input/framed_reader.hpp"
 #include "itchlab/input/gzip_source.hpp"
@@ -13,6 +14,7 @@
 #include <fstream>
 #include <string>
 #include <string_view>
+#include <type_traits>
 
 namespace {
 
@@ -27,6 +29,10 @@ std::filesystem::path repository_path(const std::string_view relative_path) {
 std::string alpha_string(const auto& field) { return std::string{itchlab::trimmed_alpha(field)}; }
 
 std::string alpha_char(const char value) { return std::string(1, value); }
+
+std::string trimmed_alpha_char(const char value) {
+  return value == ' ' ? std::string{} : alpha_char(value);
+}
 
 nlohmann::json header_fields(const itchlab::MessageHeader& header) {
   return {
@@ -65,6 +71,16 @@ nlohmann::json message_fields(const itchlab::ItchMessage& message) {
             });
             return fields;
           },
+          [](const itchlab::TradingAction& action) {
+            auto fields = header_fields(action.header);
+            fields.update({
+                {"stock", alpha_string(action.stock)},
+                {"trading_state", alpha_char(action.trading_state)},
+                {"reserved", trimmed_alpha_char(action.reserved)},
+                {"reason", alpha_string(action.reason)},
+            });
+            return fields;
+          },
           [](const itchlab::AddOrder& order) {
             auto fields = header_fields(order.header);
             fields.update({
@@ -76,9 +92,87 @@ nlohmann::json message_fields(const itchlab::ItchMessage& message) {
             });
             return fields;
           },
+          [](const itchlab::AddOrderWithAttribution& order) {
+            auto fields = header_fields(order.header);
+            fields.update({
+                {"order_reference", order.order_reference},
+                {"side", alpha_char(order.side == itchlab::Side::buy ? 'B' : 'S')},
+                {"shares", order.shares},
+                {"stock", alpha_string(order.stock)},
+                {"price4", order.price4},
+                {"attribution", alpha_string(order.attribution)},
+            });
+            return fields;
+          },
+          [](const itchlab::OrderExecuted& execution) {
+            auto fields = header_fields(execution.header);
+            fields.update({
+                {"order_reference", execution.order_reference},
+                {"executed_shares", execution.executed_shares},
+                {"match_number", execution.match_number},
+            });
+            return fields;
+          },
+          [](const itchlab::OrderExecutedWithPrice& execution) {
+            auto fields = header_fields(execution.header);
+            fields.update({
+                {"order_reference", execution.order_reference},
+                {"executed_shares", execution.executed_shares},
+                {"match_number", execution.match_number},
+                {"printable", alpha_char(execution.printable)},
+                {"execution_price4", execution.execution_price4},
+            });
+            return fields;
+          },
+          [](const itchlab::OrderCancel& cancellation) {
+            auto fields = header_fields(cancellation.header);
+            fields.update({
+                {"order_reference", cancellation.order_reference},
+                {"cancelled_shares", cancellation.cancelled_shares},
+            });
+            return fields;
+          },
           [](const itchlab::OrderDelete& order) {
             auto fields = header_fields(order.header);
             fields["order_reference"] = order.order_reference;
+            return fields;
+          },
+          [](const itchlab::OrderReplace& replacement) {
+            auto fields = header_fields(replacement.header);
+            fields.update({
+                {"original_order_reference", replacement.original_order_reference},
+                {"new_order_reference", replacement.new_order_reference},
+                {"shares", replacement.shares},
+                {"price4", replacement.price4},
+            });
+            return fields;
+          },
+          [](const itchlab::Trade& trade) {
+            auto fields = header_fields(trade.header);
+            fields.update({
+                {"order_reference", trade.order_reference},
+                {"side", alpha_char(trade.buy_sell_indicator == itchlab::Side::buy ? 'B' : 'S')},
+                {"shares", trade.shares},
+                {"stock", alpha_string(trade.stock)},
+                {"price4", trade.price4},
+                {"match_number", trade.match_number},
+            });
+            return fields;
+          },
+          [](const itchlab::CrossTrade& trade) {
+            auto fields = header_fields(trade.header);
+            fields.update({
+                {"shares", trade.shares},
+                {"stock", alpha_string(trade.stock)},
+                {"cross_price4", trade.cross_price4},
+                {"match_number", trade.match_number},
+                {"cross_type", alpha_char(trade.cross_type)},
+            });
+            return fields;
+          },
+          [](const itchlab::BrokenTrade& trade) {
+            auto fields = header_fields(trade.header);
+            fields["match_number"] = trade.match_number;
             return fields;
           },
       },
@@ -112,14 +206,14 @@ nlohmann::json decode_diagnostics(itchlab::ByteSource& source) {
   return diagnostics;
 }
 
-nlohmann::json expected_minimal_diagnostics() {
+nlohmann::json expected_diagnostics(const std::string_view stream_name) {
   std::ifstream input{repository_path("tests/golden/itch50/synthetic_expected.json")};
   REQUIRE(input.good());
   nlohmann::json expected;
   input >> expected;
 
   for (const auto& stream : expected.at("streams")) {
-    if (stream.at("name") == "synthetic_minimal") {
+    if (stream.at("name") == stream_name) {
       nlohmann::json diagnostics = nlohmann::json::array();
       for (const auto& message : stream.at("messages")) {
         diagnostics.push_back({
@@ -134,7 +228,7 @@ nlohmann::json expected_minimal_diagnostics() {
       return diagnostics;
     }
   }
-  FAIL("synthetic_minimal golden stream is missing");
+  FAIL("requested golden stream is missing");
   return nlohmann::json::array();
 }
 
@@ -144,7 +238,7 @@ TEST_CASE("IT-001 uncompressed S R A D diagnostics match independent golden fiel
           "[TASK-005][IT-001][integration][decoder]") {
   auto opened = itchlab::open_file_source(repository_path("tests/fixtures/synthetic_minimal.itch"));
   REQUIRE(opened.valid());
-  REQUIRE(decode_diagnostics(*opened.source) == expected_minimal_diagnostics());
+  REQUIRE(decode_diagnostics(*opened.source) == expected_diagnostics("synthetic_minimal"));
 }
 
 TEST_CASE("IT-002 gzip and plain S R A D streams decode to identical typed diagnostics",
@@ -158,7 +252,29 @@ TEST_CASE("IT-002 gzip and plain S R A D streams decode to identical typed diagn
   const auto plain_diagnostics = decode_diagnostics(*plain.source);
   const auto gzip_diagnostics = decode_diagnostics(*gzip.source);
   REQUIRE(gzip_diagnostics == plain_diagnostics);
-  REQUIRE(gzip_diagnostics == expected_minimal_diagnostics());
+  REQUIRE(gzip_diagnostics == expected_diagnostics("synthetic_minimal"));
+}
+
+TEST_CASE("TASK-009 full mixed stream decodes every MVP type to exact independent fields",
+          "[TASK-009][FR-002][integration][decoder][golden]") {
+  auto plain = itchlab::open_file_source(repository_path("tests/fixtures/synthetic_mixed.itch"));
+  auto gzip = itchlab::open_gzip_source(repository_path("tests/fixtures/synthetic_mixed.itch.gz"));
+  REQUIRE(plain.valid());
+  REQUIRE(gzip.valid());
+
+  const auto plain_diagnostics = decode_diagnostics(*plain.source);
+  const auto gzip_diagnostics = decode_diagnostics(*gzip.source);
+  const auto expected = expected_diagnostics("synthetic_mixed");
+  REQUIRE(plain_diagnostics.size() == 31);
+  REQUIRE(plain_diagnostics == expected);
+  REQUIRE(gzip_diagnostics == plain_diagnostics);
+}
+
+TEST_CASE("TASK-009 trade observations have no visible-book mutation route",
+          "[TASK-009][FR-002][integration][decoder][book]") {
+  STATIC_REQUIRE_FALSE(std::is_constructible_v<itchlab::BookMessage, itchlab::Trade>);
+  STATIC_REQUIRE_FALSE(std::is_constructible_v<itchlab::BookMessage, itchlab::CrossTrade>);
+  STATIC_REQUIRE_FALSE(std::is_constructible_v<itchlab::BookMessage, itchlab::BrokenTrade>);
 }
 
 TEST_CASE("TASK-005 committed decoder corruptions return documented typed errors",

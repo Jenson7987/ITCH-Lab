@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-009: Decode remaining MVP message types
-  - Dependencies: TASK-008
-  - Acceptance criteria: H/F/E/C/X/U/P/Q/B complete
-  - Tests: Per-type boundary fixtures
-  - Documentation to update: Decoder coverage table
-
 - [ ] TASK-010: Complete lifecycle, priority and aggregation
   - Dependencies: TASK-009
   - Acceptance criteria: Full lifecycle and atomic invariants
@@ -151,6 +145,17 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-009: Decode remaining MVP message types
+  - Completed: 2026-08-05
+  - Evidence: The stateless typed decoder now covers S/R/H/A/F/E/C/X/D/U/P/Q/B with exact
+    pre-access length checks, big-endian field preservation and per-type integer/timestamp
+    boundaries; the 31-message plain/gzip mixed golden matches exactly, C keeps display and
+    execution-price semantics separate, P does not claim aggressor truth, and P/Q/B have no book
+    mutation route. All 68 runnable CTest entries passed in dev, release, ASan/UBSan and coverage
+    presets; the authorised official-data entry skipped as designed. The 23-file fixture check,
+    reduced E2E smoke, all 73 Python tests, Ruff, strict mypy, C++ formatting and the Python
+    wheel/sdist build passed.
 
 - [x] TASK-008: Lock first E2E golden slice
   - Completed: 2026-08-05
