@@ -122,6 +122,7 @@ if(BUILD_TESTING)
     tests/cpp/integration/book_integration_test.cpp
     tests/cpp/integration/task007_cli_integration_test.cpp
     tests/cpp/integration/task007_replay_integration_test.cpp
+    tests/cpp/integration/task008_e2e_integration_test.cpp
     tests/cpp/property/order_book_property_test.cpp
     tests/cpp/property/framed_reader_property_test.cpp
     tests/cpp/unit/byte_decode_test.cpp

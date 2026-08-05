@@ -1,0 +1,1 @@
+{"command":"replay","error":{"action":"Verify the local source file and its framing.","code":"ERR_FRAMING","context":{"message_index":0,"source_offset":0},"message":"Invalid or incomplete gzip stream."},"schema_version":1,"status":"failed"}

@@ -139,6 +139,12 @@ Planned research workflow (implemented by later tasks):
 
 ## Testing and quality commands
 
+The first synthetic inspect/replay slice has a clean-checkout smoke command. It configures and
+builds the development preset, verifies the fixed fixture corpus, checks repeatable golden output
+and confirms that a corrupt gzip source cannot publish final diagnostic files:
+
+    ./scripts/ci/task008-smoke.sh
+
     ctest --preset dev
     cmake --preset sanitizers
     cmake --build --preset sanitizers

@@ -2,15 +2,9 @@
 
 Authoritative task details and evidence requirements are in docs/10-implementation-plan.md. Work on one item at a time.
 
-## Current milestone — M0 Reproducible repository skeleton
+## Current milestone — M2 Full MVP message lifecycle and validated artefacts
 
 ## Queued
-
-- [ ] TASK-008: Lock first E2E golden slice
-  - Dependencies: TASK-007
-  - Acceptance criteria: Clean repeated minimal run; corrupt input fails safely
-  - Tests: Reduced E2E-001/E2E-002
-  - Documentation to update: TASKS evidence
 
 - [ ] TASK-009: Decode remaining MVP message types
   - Dependencies: TASK-008
@@ -157,6 +151,16 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-008: Lock first E2E golden slice
+  - Completed: 2026-08-05
+  - Evidence: A fresh source-tree smoke configured and built the dev preset, verified all 23
+    synthetic fixture files, reproduced exact inspect/replay envelopes, byte-identical repeated
+    diagnostic events/snapshots and the pinned final book digest, and proved a CRC-corrupt gzip
+    exits with ERR_FRAMING without publishing final diagnostic names. All 63 runnable CTest entries
+    passed in dev, release, ASan/UBSan and coverage presets; the authorised external-data entry
+    skipped as designed. All 73 Python tests, Ruff, strict mypy, C++ formatting, shell syntax,
+    fixture verification and the Python wheel/sdist build passed.
 
 - [x] TASK-007: Deliver minimal inspect and replay commands
   - Completed: 2026-08-04
