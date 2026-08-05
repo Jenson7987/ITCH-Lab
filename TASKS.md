@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-010: Complete lifecycle, priority and aggregation
-  - Dependencies: TASK-009
-  - Acceptance criteria: Full lifecycle and atomic invariants
-  - Tests: UT-BOOK-001/002 and properties
-  - Documentation to update: 04-data-model.md if semantics change
-
 - [ ] TASK-011: Add directory, session/state and filtering
   - Dependencies: TASK-009–010
   - Acceptance criteria: Correct locate resolution and selected/tradable session output
@@ -145,6 +139,17 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-010: Complete lifecycle, priority and aggregation
+  - Completed: 2026-08-05
+  - Evidence: The OrderBook now applies the complete A/F/E/C/X/D/U visible lifecycle with checked
+    partial/full reductions, atomic replacement, retained F attribution, new U priority and exact
+    FIFO/aggregate invariants. UT-BOOK-001/002/004, the independent lifecycle property model and
+    IT-003's 14-state plain/gzip reader-decoder-book golden trace passed; every committed invalid
+    lifecycle fixture preserved the digest and valid invariants. All 75 runnable CTest entries
+    passed in dev, release, ASan/UBSan and coverage presets; the authorised official-data entry
+    skipped as designed. The 23-file fixture check, reduced E2E smoke, all 73 Python tests, Ruff,
+    strict mypy, C++ formatting and the Python wheel/sdist build passed.
 
 - [x] TASK-009: Decode remaining MVP message types
   - Completed: 2026-08-05

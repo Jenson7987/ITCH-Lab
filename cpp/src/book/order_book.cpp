@@ -68,7 +68,10 @@ OrderBook::OrderBook(const StockLocate stock_locate) noexcept : stock_locate_{st
 BookApplyResult OrderBook::apply(const BookMessage& message) {
   return std::visit(
       Overloaded{[this](const BookAdd& add) { return apply_add(add); },
-                 [this](const BookDelete& delete_order) { return apply_delete(delete_order); }},
+                 [this](const BookExecute& execute) { return apply_execute(execute); },
+                 [this](const BookCancel& cancel) { return apply_cancel(cancel); },
+                 [this](const BookDelete& delete_order) { return apply_delete(delete_order); },
+                 [this](const BookReplace& replace) { return apply_replace(replace); }},
       message);
 }
 
@@ -129,7 +132,7 @@ BookApplyResult OrderBook::apply_add(const BookAdd& add) {
     try {
       const auto insertion = orders_.emplace(
           add.order_reference, StoredOrder{add.stock_locate, add.side, add.price4, *remaining,
-                                           add.message_index, queue_position});
+                                           add.message_index, add.attribution, queue_position});
       if (!insertion.second) {
         if (inserted_level) {
           levels.erase(level);
@@ -153,13 +156,121 @@ BookApplyResult OrderBook::apply_add(const BookAdd& add) {
     }
     return BookApplyResult::success(BookDelta{BookMutationKind::add, add.message_index,
                                               add.stock_locate, add.order_reference, add.side,
-                                              add.price4, 0, add.shares});
+                                              add.price4, 0, add.shares, std::nullopt});
   };
 
   if (add.side == Side::buy) {
     return add_to_side(bids_);
   }
   return add_to_side(asks_);
+}
+
+BookApplyResult OrderBook::apply_execute(const BookExecute& execute) {
+  return apply_reduction(execute.message_index, execute.stock_locate, execute.order_reference,
+                         execute.executed_shares, BookMutationKind::execute);
+}
+
+BookApplyResult OrderBook::apply_cancel(const BookCancel& cancel) {
+  return apply_reduction(cancel.message_index, cancel.stock_locate, cancel.order_reference,
+                         cancel.cancelled_shares, BookMutationKind::cancel);
+}
+
+BookApplyResult OrderBook::apply_reduction(const MessageIndex message_index,
+                                           const StockLocate stock_locate,
+                                           const OrderReference order_reference,
+                                           const Shares shares, const BookMutationKind kind) {
+  const auto* mutation_name =
+      kind == BookMutationKind::execute ? "Order execution" : "Order cancel";
+  if (stock_locate != stock_locate_) {
+    return fail(ErrorCode::invariant, order_reference,
+                std::string{mutation_name} + " stock locate does not match the owning book.");
+  }
+
+  const auto order = orders_.find(order_reference);
+  if (order == orders_.end()) {
+    return fail(ErrorCode::order_reference, order_reference,
+                std::string{mutation_name} + " reference is not live.");
+  }
+  if (message_index <= order->second.priority_sequence) {
+    return fail(ErrorCode::invariant, order_reference,
+                std::string{mutation_name} + " source position does not follow the live order.");
+  }
+
+  const auto decrement = checked_integral_cast<std::uint32_t>(shares);
+  if (!decrement || *decrement == 0) {
+    return fail(ErrorCode::quantity, order_reference,
+                std::string{mutation_name} +
+                    " quantity must fit the positive ITCH source quantity domain.");
+  }
+  if (*decrement > order->second.remaining) {
+    return fail(ErrorCode::quantity, order_reference,
+                std::string{mutation_name} + " quantity exceeds the live order remainder.");
+  }
+
+  const auto reduce_on_side = [this, message_index, stock_locate, order_reference, decrement, kind,
+                               &order, mutation_name](auto& levels) -> BookApplyResult {
+    auto level = levels.find(order->second.price4);
+    if (level == levels.end() || level->second.fifo.empty() ||
+        order->second.level_iterator == level->second.fifo.end() ||
+        *order->second.level_iterator != order_reference) {
+      return fail(ErrorCode::invariant, order_reference,
+                  std::string{mutation_name} + " found inconsistent level-3 ownership.");
+    }
+
+    const auto previous_remaining = static_cast<Shares>(order->second.remaining);
+    const auto next_remaining = static_cast<Shares>(order->second.remaining - *decrement);
+    const auto updated_total =
+        checked_subtract(level->second.total_quantity, static_cast<Shares>(*decrement));
+    if (!updated_total) {
+      return fail(ErrorCode::invariant, order_reference,
+                  std::string{mutation_name} +
+                      " found an aggregate quantity below the requested decrement.");
+    }
+    const bool removes_order = next_remaining == 0;
+    if (removes_order && ((level->second.fifo.size() == 1) != (*updated_total == 0))) {
+      return fail(ErrorCode::invariant, order_reference,
+                  std::string{mutation_name} + " would leave an inconsistent empty price level.");
+    }
+    if (!removes_order && *updated_total == 0) {
+      return fail(ErrorCode::invariant, order_reference,
+                  std::string{mutation_name} +
+                      " would leave a live order at a zero-quantity price level.");
+    }
+
+    const BookDelta delta{kind,
+                          message_index,
+                          stock_locate,
+                          order_reference,
+                          order->second.side,
+                          order->second.price4,
+                          previous_remaining,
+                          next_remaining,
+                          std::nullopt};
+
+    if (!removes_order) {
+      order->second.remaining = static_cast<std::uint32_t>(next_remaining);
+      level->second.total_quantity = *updated_total;
+      return BookApplyResult::success(delta);
+    }
+
+    level->second.fifo.erase(order->second.level_iterator);
+    orders_.erase(order);
+    if (level->second.fifo.empty()) {
+      levels.erase(level);
+    } else {
+      level->second.total_quantity = *updated_total;
+    }
+    return BookApplyResult::success(delta);
+  };
+
+  if (order->second.side == Side::buy) {
+    return reduce_on_side(bids_);
+  }
+  if (order->second.side == Side::sell) {
+    return reduce_on_side(asks_);
+  }
+  return fail(ErrorCode::invariant, order_reference,
+              std::string{mutation_name} + " found an invalid live-order side.");
 }
 
 BookApplyResult OrderBook::apply_delete(const BookDelete& delete_order) {
@@ -205,7 +316,8 @@ BookApplyResult OrderBook::apply_delete(const BookDelete& delete_order) {
                           order->second.side,
                           order->second.price4,
                           previous_remaining,
-                          0};
+                          0,
+                          std::nullopt};
 
     level->second.fifo.erase(order->second.level_iterator);
     orders_.erase(order);
@@ -225,6 +337,168 @@ BookApplyResult OrderBook::apply_delete(const BookDelete& delete_order) {
   }
   return fail(ErrorCode::invariant, delete_order.order_reference,
               "Order Delete found an invalid live-order side.");
+}
+
+BookApplyResult OrderBook::apply_replace(const BookReplace& replace) {
+  if (replace.stock_locate != stock_locate_) {
+    return fail(ErrorCode::invariant, replace.original_order_reference,
+                "Order Replace stock locate does not match the owning book.");
+  }
+  if (replace.original_order_reference == replace.new_order_reference) {
+    return fail(ErrorCode::order_reference, replace.new_order_reference,
+                "Order Replace requires a distinct new reference.");
+  }
+
+  const auto original = orders_.find(replace.original_order_reference);
+  if (original == orders_.end()) {
+    return fail(ErrorCode::order_reference, replace.original_order_reference,
+                "Order Replace original reference is not live.");
+  }
+  if (orders_.contains(replace.new_order_reference)) {
+    return fail(ErrorCode::order_reference, replace.new_order_reference,
+                "Order Replace new reference is already live.");
+  }
+  if (replace.message_index <= original->second.priority_sequence) {
+    return fail(ErrorCode::invariant, replace.original_order_reference,
+                "Order Replace source position does not follow the live order.");
+  }
+
+  const auto replacement_remaining = checked_integral_cast<std::uint32_t>(replace.shares);
+  if (!replacement_remaining || *replacement_remaining == 0) {
+    return fail(ErrorCode::quantity, replace.new_order_reference,
+                "Order Replace quantity must fit the positive ITCH source quantity domain.");
+  }
+
+  const auto replace_on_side = [this, &replace, replacement_remaining,
+                                &original](auto& levels) -> BookApplyResult {
+    const auto original_side = original->second.side;
+    const auto original_price4 = original->second.price4;
+    const auto original_remaining = original->second.remaining;
+    const auto original_attribution = original->second.attribution;
+    const auto original_queue_position = original->second.level_iterator;
+
+    auto source_level = levels.find(original_price4);
+    if (source_level == levels.end() || source_level->second.fifo.empty() ||
+        original_queue_position == source_level->second.fifo.end() ||
+        *original_queue_position != replace.original_order_reference) {
+      return fail(ErrorCode::invariant, replace.original_order_reference,
+                  "Order Replace found inconsistent level-3 ownership.");
+    }
+
+    const auto source_total_without_original = checked_subtract(
+        source_level->second.total_quantity, static_cast<Shares>(original_remaining));
+    if (!source_total_without_original) {
+      return fail(ErrorCode::invariant, replace.original_order_reference,
+                  "Order Replace found an aggregate below the original order remainder.");
+    }
+    if ((source_level->second.fifo.size() == 1) != (*source_total_without_original == 0)) {
+      return fail(ErrorCode::invariant, replace.original_order_reference,
+                  "Order Replace found inconsistent source-level quantity state.");
+    }
+
+    auto target_level = levels.find(replace.price4);
+    const bool same_level = target_level == source_level;
+    Shares updated_target_total{};
+    if (same_level) {
+      const auto total =
+          checked_add(*source_total_without_original, static_cast<Shares>(*replacement_remaining));
+      if (!total) {
+        return fail(ErrorCode::quantity, replace.new_order_reference,
+                    "Order Replace would overflow the price-level aggregate quantity.");
+      }
+      updated_target_total = *total;
+    } else if (target_level == levels.end()) {
+      updated_target_total = static_cast<Shares>(*replacement_remaining);
+    } else {
+      const auto total = checked_add(target_level->second.total_quantity,
+                                     static_cast<Shares>(*replacement_remaining));
+      if (!total) {
+        return fail(ErrorCode::quantity, replace.new_order_reference,
+                    "Order Replace would overflow the price-level aggregate quantity.");
+      }
+      updated_target_total = *total;
+    }
+
+    if (target_level != levels.end() && !target_level->second.fifo.empty()) {
+      const auto tail_reference = target_level->second.fifo.back();
+      if (tail_reference != replace.original_order_reference) {
+        const auto tail = orders_.find(tail_reference);
+        if (tail == orders_.end() || tail->second.priority_sequence >= replace.message_index) {
+          return fail(ErrorCode::invariant, replace.new_order_reference,
+                      "Order Replace source priority is not later than the target FIFO tail.");
+        }
+      }
+    }
+
+    bool inserted_target_level = false;
+    if (target_level == levels.end()) {
+      auto insertion = levels.emplace(replace.price4, StoredPriceLevel{});
+      if (!insertion.second) {
+        return fail(ErrorCode::invariant, replace.new_order_reference,
+                    "Target price level could not be created for Order Replace.");
+      }
+      target_level = insertion.first;
+      inserted_target_level = true;
+    }
+
+    try {
+      target_level->second.fifo.push_back(replace.new_order_reference);
+    } catch (...) {
+      if (inserted_target_level) {
+        levels.erase(target_level);
+      }
+      throw;
+    }
+    const auto replacement_queue_position = std::prev(target_level->second.fifo.end());
+    try {
+      const auto insertion = orders_.emplace(
+          replace.new_order_reference,
+          StoredOrder{replace.stock_locate, original_side, replace.price4, *replacement_remaining,
+                      replace.message_index, original_attribution, replacement_queue_position});
+      if (!insertion.second) {
+        target_level->second.fifo.pop_back();
+        if (inserted_target_level) {
+          levels.erase(target_level);
+        }
+        return fail(ErrorCode::invariant, replace.new_order_reference,
+                    "Order Replace new-reference insertion conflicted after validation.");
+      }
+    } catch (...) {
+      target_level->second.fifo.pop_back();
+      if (inserted_target_level) {
+        levels.erase(target_level);
+      }
+      throw;
+    }
+
+    source_level->second.fifo.erase(original_queue_position);
+    orders_.erase(replace.original_order_reference);
+    if (same_level) {
+      source_level->second.total_quantity = updated_target_total;
+    } else {
+      target_level->second.total_quantity = updated_target_total;
+      if (source_level->second.fifo.empty()) {
+        levels.erase(source_level);
+      } else {
+        source_level->second.total_quantity = *source_total_without_original;
+      }
+    }
+
+    return BookApplyResult::success(
+        BookDelta{BookMutationKind::replace, replace.message_index, replace.stock_locate,
+                  replace.original_order_reference, original_side, replace.price4,
+                  static_cast<Shares>(original_remaining),
+                  static_cast<Shares>(*replacement_remaining), replace.new_order_reference});
+  };
+
+  if (original->second.side == Side::buy) {
+    return replace_on_side(bids_);
+  }
+  if (original->second.side == Side::sell) {
+    return replace_on_side(asks_);
+  }
+  return fail(ErrorCode::invariant, replace.original_order_reference,
+              "Order Replace found an invalid live-order side.");
 }
 
 TopLevels OrderBook::top_levels(const std::uint16_t depth) const {
@@ -268,7 +542,8 @@ std::optional<PriceLevelView> OrderBook::level(const Side side, const Price4 pri
         return std::nullopt;
       }
       view.fifo_orders.push_back(OrderView{reference, static_cast<Shares>(order->second.remaining),
-                                           order->second.priority_sequence});
+                                           order->second.priority_sequence,
+                                           order->second.attribution});
     }
     return view;
   };

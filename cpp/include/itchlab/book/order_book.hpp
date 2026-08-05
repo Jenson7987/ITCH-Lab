@@ -22,6 +22,9 @@ using BookDigest = ContentHash;
 enum class BookMutationKind : std::uint8_t {
   add = 1,
   delete_order = 2,
+  execute = 3,
+  cancel = 4,
+  replace = 5,
 };
 
 struct BookDelta {
@@ -33,6 +36,7 @@ struct BookDelta {
   Price4 price4{};
   Shares previous_remaining{};
   Shares remaining{};
+  std::optional<OrderReference> new_order_reference;
 
   friend bool operator==(const BookDelta&, const BookDelta&) = default;
 };
@@ -110,6 +114,7 @@ private:
     Price4 price4{};
     std::uint32_t remaining{};
     MessageIndex priority_sequence{};
+    std::optional<BookAttribution> attribution;
     OrderQueue::iterator level_iterator;
   };
 
@@ -117,7 +122,14 @@ private:
   using AskLevels = std::map<Price4, StoredPriceLevel>;
 
   [[nodiscard]] BookApplyResult apply_add(const BookAdd& add);
+  [[nodiscard]] BookApplyResult apply_execute(const BookExecute& execute);
+  [[nodiscard]] BookApplyResult apply_cancel(const BookCancel& cancel);
   [[nodiscard]] BookApplyResult apply_delete(const BookDelete& delete_order);
+  [[nodiscard]] BookApplyResult apply_replace(const BookReplace& replace);
+  [[nodiscard]] BookApplyResult apply_reduction(MessageIndex message_index,
+                                                StockLocate stock_locate,
+                                                OrderReference order_reference, Shares shares,
+                                                BookMutationKind kind);
 
   StockLocate stock_locate_{};
   BidLevels bids_;

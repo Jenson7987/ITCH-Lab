@@ -111,8 +111,9 @@ SHA-256; its provisional replay path applies S/R/A/D and writes `diagnostic-even
 `itchlab-task-007-diagnostic-v1`, and success summaries use
 `artefact_status=provisional_diagnostic` without a production run ID. These files are diagnostic
 JSON Lines, not the version-1 interchange files or a completed replay run. The underlying decoder
-supports every MVP type, but the remaining lifecycle is deliberately deferred. TASK-010 through
-TASK-014 replace these temporary restrictions with the full contract; `--force-new-run` is rejected
+supports every MVP type and the OrderBook supports the complete visible lifecycle, but this
+provisional coordinator deliberately continues to route only A/D. TASK-011 through TASK-014
+replace these temporary command restrictions with the full contract; `--force-new-run` is rejected
 until immutable production run publication exists.
 
     itchlab replay +      --config <replay-config.json> +      [--output-root <directory>] +      [--format human|json] +      [--force-new-run]
@@ -422,7 +423,8 @@ Contract:
 - Trade, CrossTrade and BrokenTrade are observations with no visible-book mutation interface.
 
 ```cpp
-using BookMessage = std::variant<BookAdd, BookDelete>; // Expanded by TASK-010.
+using BookMessage = std::variant<
+  BookAdd, BookExecute, BookCancel, BookDelete, BookReplace>;
 
 class OrderBook {
 public:
@@ -438,6 +440,14 @@ public:
 Contract:
 
 - apply is atomic from the caller's perspective: on error, book state is unchanged.
+- A/F create positive live orders; optional F attribution remains attached across replacement.
+- E and C both apply BookExecute to the original display level. C execution-price/print fields stay
+  on the decoded message and never reprice the visible order.
+- E/C/X decrement positive quantities and remove the order and empty level when remaining reaches
+  zero; D removes the complete remainder.
+- U removes the original reference and creates the distinct new reference with its declared total
+  quantity and display price. It retains side/attribution and joins the target FIFO at the U source
+  MessageIndex.
 - TopLevels contains explicit validity for unoccupied levels.
 - level returns a read-only copy of aggregate quantity and FIFO order state.
 - No mutable internal container is exposed.
@@ -447,7 +457,8 @@ Contract:
   section contains a u64 level count and levels in best-to-worst order. Each level contains Price4
   u32, aggregate quantity u64, order count u64, then FIFO orders as reference u64, remaining
   quantity u64 and priority MessageIndex u64. Container capacities, iterators, addresses and hash
-  bucket layout are excluded.
+  bucket layout are excluded. Attribution is retained book state but is not part of this fixed
+  version-1 digest byte contract.
 
 ```cpp
 class ReplayEngine {

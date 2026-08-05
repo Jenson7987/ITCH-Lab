@@ -1,0 +1,334 @@
+{
+  "fixture": "synthetic_mixed.itch",
+  "schema_version": 1,
+  "states": [
+    {
+      "asks": [null, null],
+      "bids": [
+        {
+          "fifo": [
+            {
+              "order_reference": 1001,
+              "priority_sequence": 9,
+              "remaining": 100
+            }
+          ],
+          "price4": 1000000,
+          "total_quantity": 100
+        },
+        null
+      ],
+      "digest": "003479768cd0c3af6db2603d0cffc2b9d7300994a233f9abacc33ac21705f16e",
+      "message_index": 9,
+      "order_count": 1,
+      "stock_locate": 1,
+      "symbol": "AAPL",
+      "type": "A"
+    },
+    {
+      "asks": [
+        {
+          "fifo": [
+            {
+              "attribution": "TEST",
+              "order_reference": 1002,
+              "priority_sequence": 10,
+              "remaining": 200
+            }
+          ],
+          "price4": 1001000,
+          "total_quantity": 200
+        },
+        null
+      ],
+      "bids": [
+        {
+          "fifo": [
+            {
+              "order_reference": 1001,
+              "priority_sequence": 9,
+              "remaining": 100
+            }
+          ],
+          "price4": 1000000,
+          "total_quantity": 100
+        },
+        null
+      ],
+      "digest": "aabfcbe68306fcb5f59d091756fbbc3b339d061d2664639c8ce431164eb656b0",
+      "message_index": 10,
+      "order_count": 2,
+      "stock_locate": 1,
+      "symbol": "AAPL",
+      "type": "F"
+    },
+    {
+      "asks": [null, null],
+      "bids": [
+        {
+          "fifo": [
+            {
+              "order_reference": 2001,
+              "priority_sequence": 11,
+              "remaining": 150
+            }
+          ],
+          "price4": 2000000,
+          "total_quantity": 150
+        },
+        null
+      ],
+      "digest": "7269c95e5089de06fde45754b98e9ac7695202800c6c20544f667fea66d307d2",
+      "message_index": 11,
+      "order_count": 1,
+      "stock_locate": 2,
+      "symbol": "MSFT",
+      "type": "A"
+    },
+    {
+      "asks": [
+        {
+          "fifo": [
+            {
+              "order_reference": 3001,
+              "priority_sequence": 12,
+              "remaining": 80
+            }
+          ],
+          "price4": 3000000,
+          "total_quantity": 80
+        },
+        null
+      ],
+      "bids": [null, null],
+      "digest": "a82b674b8334facd7351ff52516780328ddae66c0226ddb6c4cd1f5a70756b6d",
+      "message_index": 12,
+      "order_count": 1,
+      "stock_locate": 3,
+      "symbol": "AMZN",
+      "type": "A"
+    },
+    {
+      "asks": [
+        {
+          "fifo": [
+            {
+              "attribution": "TEST",
+              "order_reference": 1002,
+              "priority_sequence": 10,
+              "remaining": 200
+            }
+          ],
+          "price4": 1001000,
+          "total_quantity": 200
+        },
+        null
+      ],
+      "bids": [
+        {
+          "fifo": [
+            {
+              "order_reference": 1001,
+              "priority_sequence": 9,
+              "remaining": 60
+            }
+          ],
+          "price4": 1000000,
+          "total_quantity": 60
+        },
+        null
+      ],
+      "digest": "74a52af4c67d4fd5f9ae7da0f2882600b85f14fda5d3ca3b232a4c36c2ff1ada",
+      "message_index": 13,
+      "order_count": 2,
+      "stock_locate": 1,
+      "symbol": "AAPL",
+      "type": "E"
+    },
+    {
+      "asks": [
+        {
+          "fifo": [
+            {
+              "attribution": "TEST",
+              "order_reference": 1002,
+              "priority_sequence": 10,
+              "remaining": 200
+            }
+          ],
+          "price4": 1001000,
+          "total_quantity": 200
+        },
+        null
+      ],
+      "bids": [
+        {
+          "fifo": [
+            {
+              "order_reference": 1001,
+              "priority_sequence": 9,
+              "remaining": 50
+            }
+          ],
+          "price4": 1000000,
+          "total_quantity": 50
+        },
+        null
+      ],
+      "digest": "e8cf24a3e803a93ac83d5084d908a1caff4990c7485826863501ffb40901fa5a",
+      "message_index": 14,
+      "order_count": 2,
+      "stock_locate": 1,
+      "symbol": "AAPL",
+      "type": "X"
+    },
+    {
+      "asks": [
+        {
+          "fifo": [
+            {
+              "attribution": "TEST",
+              "order_reference": 1002,
+              "priority_sequence": 10,
+              "remaining": 200
+            }
+          ],
+          "price4": 1001000,
+          "total_quantity": 200
+        },
+        null
+      ],
+      "bids": [null, null],
+      "digest": "59cbb7a954fa1673414ae86ffc676d3082c2e7f3106ef187a0850999fa30e801",
+      "message_index": 15,
+      "order_count": 1,
+      "stock_locate": 1,
+      "symbol": "AAPL",
+      "type": "D"
+    },
+    {
+      "asks": [
+        {
+          "fifo": [
+            {
+              "attribution": "TEST",
+              "order_reference": 1002,
+              "priority_sequence": 10,
+              "remaining": 150
+            }
+          ],
+          "price4": 1001000,
+          "total_quantity": 150
+        },
+        null
+      ],
+      "bids": [null, null],
+      "digest": "4bb9939316e5722735d26b7e3dc1b6aa820f7afacf2c5c82f826f53f7ba0e1fb",
+      "message_index": 16,
+      "order_count": 1,
+      "stock_locate": 1,
+      "symbol": "AAPL",
+      "type": "C"
+    },
+    {
+      "asks": [
+        {
+          "fifo": [
+            {
+              "attribution": "TEST",
+              "order_reference": 1003,
+              "priority_sequence": 17,
+              "remaining": 125
+            }
+          ],
+          "price4": 1001100,
+          "total_quantity": 125
+        },
+        null
+      ],
+      "bids": [null, null],
+      "digest": "add03b1b57da166f5bc935f2449e72944e165fc1a45205c4d8b0826d7459d81e",
+      "message_index": 17,
+      "order_count": 1,
+      "stock_locate": 1,
+      "symbol": "AAPL",
+      "type": "U"
+    },
+    {
+      "asks": [null, null],
+      "bids": [null, null],
+      "digest": "47213ce72b18bbb9fb839f064fb00c71d810d21c19e1fe74a9ed61162c0d2a6c",
+      "message_index": 18,
+      "order_count": 0,
+      "stock_locate": 1,
+      "symbol": "AAPL",
+      "type": "E"
+    },
+    {
+      "asks": [null, null],
+      "bids": [null, null],
+      "digest": "ac3461f74e31ef4d8b64e31ba693882b93778a8dba28ed718ecd6586341daf5b",
+      "message_index": 19,
+      "order_count": 0,
+      "stock_locate": 2,
+      "symbol": "MSFT",
+      "type": "D"
+    },
+    {
+      "asks": [
+        {
+          "fifo": [
+            {
+              "order_reference": 3002,
+              "priority_sequence": 20,
+              "remaining": 60
+            }
+          ],
+          "price4": 2999900,
+          "total_quantity": 60
+        },
+        null
+      ],
+      "bids": [null, null],
+      "digest": "26e89bb6cab2919bb5e6842105bee4d819e6ad2d9833a86fe0cde40b45ab77ad",
+      "message_index": 20,
+      "order_count": 1,
+      "stock_locate": 3,
+      "symbol": "AMZN",
+      "type": "U"
+    },
+    {
+      "asks": [
+        {
+          "fifo": [
+            {
+              "order_reference": 3002,
+              "priority_sequence": 20,
+              "remaining": 50
+            }
+          ],
+          "price4": 2999900,
+          "total_quantity": 50
+        },
+        null
+      ],
+      "bids": [null, null],
+      "digest": "68209d6d1bb12daab3c64b9c104d1c5be973e50983362fe68bbf1139c16154a7",
+      "message_index": 21,
+      "order_count": 1,
+      "stock_locate": 3,
+      "symbol": "AMZN",
+      "type": "X"
+    },
+    {
+      "asks": [null, null],
+      "bids": [null, null],
+      "digest": "25a108860cb8c17be4e8f008e292fed2bc66ecaa3957327dacad16d8b9765d1c",
+      "message_index": 22,
+      "order_count": 0,
+      "stock_locate": 3,
+      "symbol": "AMZN",
+      "type": "E"
+    }
+  ]
+}

@@ -68,6 +68,12 @@ Implemented decoder coverage:
 - Atomic state unchanged after rejected mutation.
 - Digest stable regardless of unordered-map bucket layout.
 
+Implemented lifecycle evidence includes UT-BOOK-001 for partial/full E/C/X and D, UT-BOOK-002 for
+same/different-price replacement and retained priority fields, UT-BOOK-004 for atomic quantity
+errors, a deterministic full-lifecycle reference-model property test, and IT-003's 14-state
+plain/gzip golden trace. Every committed invalid-lifecycle fixture checks its documented error,
+unchanged digest and valid post-rejection invariants.
+
 ### Serialisation/manifests
 
 - Header offsets, record sizes and little-endian bytes.
@@ -126,7 +132,7 @@ Each failing generated case is reduced and committed as a regression fixture whe
 | --- | --- | --- |
 | IT-001 | Uncompressed fixture through reader, then decoder from TASK-005 | TASK-004 proves exact frames/offsets; decoder tests add typed sequence |
 | IT-002 | gzip fixture through reader, then decoder from TASK-005 | TASK-004 proves identical framed payload digest; decoder tests add semantic digest |
-| IT-003 | Full order lifecycle through replay/book | Golden per-event book states |
+| IT-003 | Full order lifecycle through reader/decoder/book | Exact 14-state plain/gzip golden trace |
 | IT-004 | Replay through event/snapshot writers | Exact headers, counts, records and hashes |
 | IT-005 | Interrupt replay during write | Partial suffix only; no completed manifest |
 | IT-006 | C++ binary artefacts into Python readers | Exact round-trip typed records |

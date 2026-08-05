@@ -149,7 +149,8 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
         event_quantity = add->shares;
         book_message = BookAdd{frame.message_index,  add->header.stock_locate,
                                add->order_reference, add->side,
-                               add->shares,          add->price4};
+                               add->shares,          add->price4,
+                               std::nullopt};
       }
     } else if (const auto* delete_order = std::get_if<OrderDelete>(&*decoded.message)) {
       if (selected_locate && delete_order->header.stock_locate == *selected_locate) {
