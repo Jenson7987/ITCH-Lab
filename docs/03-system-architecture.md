@@ -113,6 +113,17 @@ Responsibilities:
 - Reject contradictory directory records.
 - Avoid assuming locate codes persist across days.
 
+### SessionState
+
+Responsibilities:
+
+- Retain valid global `S` events in source order for later manifest publication.
+- Track `H`, `P`, `Q` and `T` states independently for each selected daily stock locate.
+- Treat a selected instrument not declared trading by the pre-opening `H` spin as halted once the
+  start-of-system-hours `S` event arrives.
+- Close selected instruments at the end-of-market-hours `M` event and expose an exact tradable
+  predicate to snapshot filtering.
+
 ### ReplayCoordinator
 
 Responsibilities:

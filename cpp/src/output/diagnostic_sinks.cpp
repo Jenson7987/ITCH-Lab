@@ -20,7 +20,7 @@ namespace {
 
 using Json = nlohmann::json;
 
-constexpr std::string_view kDiagnosticFormat{"itchlab-task-007-diagnostic-v1"};
+constexpr std::string_view kDiagnosticFormat{"itchlab-task-011-diagnostic-v1"};
 constexpr std::string_view kEventFilename{"diagnostic-events.jsonl"};
 constexpr std::string_view kSnapshotFilename{"diagnostic-snapshots.jsonl"};
 
@@ -73,18 +73,12 @@ std::optional<DiagnosticWriteError> JsonlDiagnosticSink::write_event(const Diagn
   if (published_) {
     return write_error("Cannot write an event after diagnostic publication.");
   }
-  const Json value{
+  Json value{
       {"book_digest", content_hash_to_hex(event.book_digest)},
       {"diagnostic_format", kDiagnosticFormat},
       {"event_kind", event.event_kind},
       {"in_session", event.in_session},
       {"message_index", event.message_index},
-      {"order_reference", event.order_reference},
-      {"previous_remaining", event.previous_remaining},
-      {"price4", event.price4},
-      {"quantity", event.quantity},
-      {"remaining_quantity", event.remaining_quantity},
-      {"side", static_cast<std::int8_t>(event.side)},
       {"source_offset", event.source_offset},
       {"source_type", std::string(1, event.source_type)},
       {"stock_locate", event.stock_locate},
@@ -92,6 +86,36 @@ std::optional<DiagnosticWriteError> JsonlDiagnosticSink::write_event(const Diagn
       {"symbol_id", event.symbol_id},
       {"timestamp_ns", event.timestamp_ns},
   };
+  if (event.primary_reference) {
+    value["primary_reference"] = *event.primary_reference;
+  }
+  if (event.secondary_reference) {
+    value["secondary_reference"] = *event.secondary_reference;
+  }
+  if (event.side) {
+    value["side"] = static_cast<std::int8_t>(*event.side);
+  }
+  if (event.price4) {
+    value["price4"] = *event.price4;
+  }
+  if (event.execution_price4) {
+    value["execution_price4"] = *event.execution_price4;
+  }
+  if (event.quantity) {
+    value["quantity"] = *event.quantity;
+  }
+  if (event.previous_remaining) {
+    value["previous_remaining"] = *event.previous_remaining;
+  }
+  if (event.remaining_quantity) {
+    value["remaining_quantity"] = *event.remaining_quantity;
+  }
+  if (event.aux_code) {
+    value["aux_code"] = *event.aux_code;
+  }
+  if (event.event_subtype) {
+    value["event_subtype"] = std::string(1, *event.event_subtype);
+  }
   return write_json_line(event_stream_, value);
 }
 
@@ -100,7 +124,7 @@ JsonlDiagnosticSink::write_snapshot(const DiagnosticSnapshot& snapshot) {
   if (published_) {
     return write_error("Cannot write a snapshot after diagnostic publication.");
   }
-  const Json value{
+  Json value{
       {"asks", level_array(snapshot.top_levels.asks)},
       {"bids", level_array(snapshot.top_levels.bids)},
       {"book_digest", content_hash_to_hex(snapshot.book_digest)},
@@ -113,7 +137,14 @@ JsonlDiagnosticSink::write_snapshot(const DiagnosticSnapshot& snapshot) {
       {"symbol_id", snapshot.symbol_id},
       {"timestamp_ns", snapshot.timestamp_ns},
       {"top_n_changed", snapshot.top_n_changed},
+      {"trading_state", trading_state_name(snapshot.trading_state)},
   };
+  if (snapshot.event_price4) {
+    value["event_price4"] = *snapshot.event_price4;
+  }
+  if (snapshot.event_quantity) {
+    value["event_quantity"] = *snapshot.event_quantity;
+  }
   return write_json_line(snapshot_stream_, value);
 }
 

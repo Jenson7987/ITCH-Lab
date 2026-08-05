@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-011: Add directory, session/state and filtering
-  - Dependencies: TASK-009–010
-  - Acceptance criteria: Correct locate resolution and selected/tradable session output
-  - Tests: Multi-symbol halt/resume integration
-  - Documentation to update: 01-product-requirements.md if policy changes
-
 - [ ] TASK-012: Implement error policy, progress and cancellation
   - Dependencies: TASK-011
   - Acceptance criteria: Strict/permissive/error budget and safe exit 130
@@ -139,6 +133,20 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-011: Add directory, session/state and filtering
+  - Completed: 2026-08-05
+  - Evidence: Daily directory resolution now assigns requested-order SymbolIds, rejects
+    contradictory records and filters unselected locates before book construction. Selected
+    pre-session messages warm per-symbol books, H/P/Q/T and O/S/Q/M/E/C state is retained, the
+    half-open session and optional tradable-state snapshot gate are enforced, and summaries expose
+    complete global metadata plus exact all/selected/category count reconciliation. The independent
+    25-message plain/gzip session fixture covers two selected symbols, filtered AMZN activity,
+    warm-up, halt-time activity, resume and the exclusive end boundary; nine TASK-011 CTest cases
+    passed 286 assertions. All 84 runnable CTest entries passed in dev, release, ASan/UBSan and
+    coverage presets; the authorised external-data entry skipped as designed. The 25-file fixture
+    check, reduced E2E smoke, all 75 Python tests, Ruff, strict mypy, C++ formatting and the Python
+    wheel/sdist build passed.
 
 - [x] TASK-010: Complete lifecycle, priority and aggregation
   - Completed: 2026-08-05

@@ -34,6 +34,7 @@ from tests.fixtures.itch50_definitions import (
     INVALID_LIFECYCLES,
     MINIMAL_STREAM,
     MIXED_STREAM,
+    SESSION_STREAM,
     VALID_STREAMS,
 )
 
@@ -234,6 +235,27 @@ def test_task_003_mixed_stream_covers_every_required_type_and_complete_lifecycle
 def test_task_003_minimal_stream_is_limited_to_the_first_vertical_slice() -> None:
     minimal = build_stream(MINIMAL_STREAM.messages)
     assert set(minimal.counts_by_type) == {"S", "R", "A", "D"}
+
+
+def test_task_011_session_stream_covers_selection_warmup_state_and_boundaries() -> None:
+    session = build_stream(SESSION_STREAM.messages)
+    names = {item.definition.name for item in session.messages}
+
+    assert {
+        "warm_aapl_bid",
+        "warm_msft_ask",
+        "warm_unselected_amzn_bid",
+        "session_start_aapl_ask",
+        "halt_aapl",
+        "add_aapl_during_halt",
+        "cancel_msft_while_aapl_halted",
+        "trade_aapl_during_halt",
+        "resume_aapl",
+        "cross_msft",
+        "session_end_aapl_delete",
+        "end_messages",
+    } <= names
+    assert len(session.messages) == 25
 
 
 def test_task_003_wrong_length_mutator_covers_every_short_length_and_one_long_length() -> None:

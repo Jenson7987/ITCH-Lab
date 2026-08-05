@@ -126,11 +126,13 @@ The implemented synthetic vertical slice can be exercised without licensed marke
         --symbols AAPL
     ./build/dev/itchlab replay \
         --config configs/replay.diagnostic.example.json \
-        --output-root runs/task-007-example
+        --output-root runs/task-011-example
 
-The replay command above requires a fresh output root and writes deterministic
-`diagnostic-events.jsonl` and `diagnostic-snapshots.jsonl`. These files are labelled provisional;
-they are not `events.ilb`, `snapshots.ilb` or a completed replay manifest.
+The replay command accepts one or more configured symbols, applies selected pre-session events to
+warm each book, and limits snapshots to the configured half-open session and optional tradable-state
+filter. It requires a fresh output root and writes deterministic `diagnostic-events.jsonl` and
+`diagnostic-snapshots.jsonl`. These files are labelled provisional; they are not `events.ilb`,
+`snapshots.ilb` or a completed replay manifest.
 
 Planned research workflow (implemented by later tasks):
 

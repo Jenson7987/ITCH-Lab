@@ -74,6 +74,20 @@ errors, a deterministic full-lifecycle reference-model property test, and IT-003
 plain/gzip golden trace. Every committed invalid-lifecycle fixture checks its documented error,
 unchanged digest and valid post-rejection invariants.
 
+### C++ directory, session and replay filtering
+
+- Directory unit tests fix `SymbolId` assignment to requested order, accept exact repeats and reject
+  contradictory locate, symbol and metadata mappings without partial mutation.
+- Session unit tests cover the global O/S/Q/M/E/C sequence, H/P/Q/T instrument states, default halt
+  at system open, end-of-market close and invalid transitions.
+- The independent `synthetic_session` plain/gzip fixture selects MSFT and AAPL while filtering AMZN;
+  it includes pre-session warm-up, a half-open boundary, halt-time book/trade activity and resume.
+- TASK-011 integration tests assert no unrequested or out-of-session snapshot, mandatory halt/resume
+  snapshots, optional halt-time snapshot gating, requested-order identities, full global metadata
+  and exact all/selected/category count reconciliation.
+- The `synthetic_mixed` integration test routes every supported selected-instrument source type
+  through the coordinator, while the CLI test proves byte-identical plain/gzip diagnostics.
+
 ### Serialisation/manifests
 
 - Header offsets, record sizes and little-endian bytes.

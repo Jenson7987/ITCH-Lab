@@ -104,17 +104,28 @@ Idempotency: read-only and idempotent.
 
 Purpose: create normalised events, snapshots and a completed replay manifest.
 
-Incremental TASK-007 availability is deliberately narrower than the final contract below. The
-implemented command accepts one symbol, strict mode, `require_trading_state=false` and a null input
-SHA-256; its provisional replay path applies S/R/A/D and writes `diagnostic-events.jsonl` plus
-`diagnostic-snapshots.jsonl` beneath a fresh output root. Rows identify
-`itchlab-task-007-diagnostic-v1`, and success summaries use
-`artefact_status=provisional_diagnostic` without a production run ID. These files are diagnostic
-JSON Lines, not the version-1 interchange files or a completed replay run. The underlying decoder
-supports every MVP type and the OrderBook supports the complete visible lifecycle, but this
-provisional coordinator deliberately continues to route only A/D. TASK-011 through TASK-014
-replace these temporary command restrictions with the full contract; `--force-new-run` is rejected
-until immutable production run publication exists.
+Incremental TASK-011 availability remains narrower than the final contract below. The implemented
+command accepts one or more configured symbols, strict mode, either value of
+`require_trading_state` and a null input SHA-256. It resolves daily identities from Stock Directory
+messages, assigns `SymbolId` values in requested-symbol order and routes H/A/F/E/C/X/D/U/P/Q/B for
+selected locates. Selected events before `session_start_ns` warm the book and are emitted with
+`in_session=false`; selected events at or after `session_end_ns` are not applied or emitted. Global
+S events continue to be retained after that boundary so later manifest publication has complete
+session metadata.
+
+The command writes `diagnostic-events.jsonl` and `diagnostic-snapshots.jsonl` beneath a fresh output
+root. Rows identify `itchlab-task-011-diagnostic-v1`, and success summaries use
+`artefact_status=provisional_diagnostic` without a production run ID. Snapshot timestamps are
+limited to the configured half-open session. Every in-session selected trading-state change emits a
+snapshot. Ordinary top-N changes and configured P/Q trade snapshots additionally require the
+instrument to be trading when `require_trading_state=true`. The success summary exposes requested
+instruments, their daily metadata/final state/digest, global session events and all/selected type
+counts with global, directory, selected and filtered reconciliation totals.
+
+These files are diagnostic JSON Lines, not the version-1 interchange files or a completed replay
+run. Production binary writers, hashes, manifests, permissive error policy, progress/cancellation
+and immutable run identity remain assigned to TASK-012 through TASK-014. `--force-new-run` is
+rejected until immutable production run publication exists.
 
     itchlab replay +      --config <replay-config.json> +      [--output-root <directory>] +      [--format human|json] +      [--force-new-run]
 

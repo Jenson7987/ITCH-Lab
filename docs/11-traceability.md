@@ -8,12 +8,12 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | --- | --- | --- | --- |
 | FR-001 | 02 UF-001; 05 inspect | TASK-004, TASK-007 | IT-001, IT-002, CLI inspect contract |
 | FR-002 | 03 ItchDecoder; 05 decoder | TASK-005, TASK-009 | UT-DEC-001, UT-DEC-002, per-type fixtures |
-| FR-003 | 02 UF-002; 03 InstrumentDirectory | TASK-004, TASK-007, TASK-011 | Multi-symbol/session/filter integration |
+| FR-003 | 02 UF-002; 03 InstrumentDirectory/SessionState | TASK-004, TASK-007, TASK-011 | TASK-011 directory unit and multi-symbol/session/filter CLI/integration tests |
 | FR-004 | 03 OrderBook; 04 transient entities | TASK-006, TASK-010 | UT-BOOK-001, UT-BOOK-002, UT-BOOK-003, UT-BOOK-004, IT-003 |
 | FR-005 | 03 OrderBook; 04 PriceLevel/Snapshot | TASK-006, TASK-010 | IT-003, book aggregation/order property tests |
 | FR-006 | 02 UF-002/UF-006; 03 errors | TASK-002 (catalogue/config), TASK-012 (runtime policy) | UT-CFG-001, E2E-003, strict/permissive error-budget tests |
 | FR-007 | 04 NormalisedEvent/event v1; 05 replay | TASK-007 (provisional diagnostic slice), TASK-013 (production interchange) | TASK-007 CLI/golden integration, UT-OUT-001, CT-BIN-001 |
-| FR-008 | 04 BookSnapshot/snapshot v1 | TASK-007 (provisional diagnostic slice), TASK-011, TASK-014 (production snapshots) | TASK-007 CLI/golden integration, UT-OUT-002, IT-004 |
+| FR-008 | 04 BookSnapshot/snapshot v1 | TASK-007 (provisional diagnostic slice), TASK-011, TASK-014 (production snapshots) | TASK-007 CLI/golden integration, TASK-011 halt/resume and trading-state-gating integration, UT-OUT-002, IT-004 |
 | FR-009 | 04 ReplayRun; 03 ManifestBuilder | TASK-002 (config contract), TASK-014 (manifest) | UT-CFG-001, CT-JSON-001, IT-004 |
 | FR-010 | 03 Python conversion; 05 convert | TASK-016, TASK-017 | CT-BIN-001, IT-006, IT-007 |
 | FR-011 | 04 DatasetRun; 05 build-dataset | TASK-018 | UT-FEAT-001, hand-calculated features |

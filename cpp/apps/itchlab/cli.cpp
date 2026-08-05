@@ -180,7 +180,7 @@ void print_global_help(std::ostream& output) {
          << "Usage: itchlab <command> [options]\n\n"
          << "Commands:\n"
          << "  inspect    Inspect bounded source framing and message composition.\n"
-         << "  replay     Replay one S/R/A/D symbol to provisional diagnostics.\n\n"
+         << "  replay     Replay selected symbols to provisional diagnostics.\n\n"
          << "Global options:\n"
          << "  --help       Show this help text.\n"
          << "  --version    Show the application version.\n\n"
@@ -210,7 +210,8 @@ void print_inspect_help(std::ostream& output) {
 }
 
 void print_replay_help(std::ostream& output) {
-  output << "Replay one S/R/A/D symbol to provisional TASK-007 JSONL diagnostics.\n\n"
+  output << "Replay selected symbols with session and trading-state filtering to provisional "
+            "TASK-011 JSONL diagnostics.\n\n"
          << "Usage: itchlab replay --config <replay-config.json> [options]\n\n"
          << "Required:\n"
          << "  --config <path>             Version-1 replay configuration.\n\n"
@@ -218,7 +219,7 @@ void print_replay_help(std::ostream& output) {
          << "  --output-root <directory>   Diagnostic destination (default $ITCHLAB_RUNS_DIR or "
             "runs).\n"
          << "  --format <human|json>       Result format (default human).\n"
-         << "  --force-new-run             Reserved for production replay; rejected by TASK-007.\n"
+         << "  --force-new-run             Reserved for production replay; rejected by TASK-011.\n"
          << "  --quiet                     Suppress non-error progress.\n"
          << "  --log-format <human|jsonl>  Diagnostic log format (default human).\n"
          << "  --ascii                     Restrict presentation to ASCII.\n"
@@ -226,7 +227,7 @@ void print_replay_help(std::ostream& output) {
          << "  --help                      Show this help text.\n\n"
          << "Example:\n"
          << "  itchlab replay --config configs/replay.diagnostic.example.json --output-root "
-            "runs/task-007\n\n"
+            "runs/task-011\n\n"
          << "The output is not events.ilb, snapshots.ilb, or a completed replay manifest.\n"
          << "Exit categories: 0 success, 2 config, 3 input/framing, 4 decode, 5 book, 6 output.\n";
 }
@@ -606,20 +607,46 @@ void render_inspection_human(std::ostream& output, const InspectionSummary& summ
 
 [[nodiscard]] Json replay_summary_json(const ReplaySummary& summary,
                                        const JsonlDiagnosticSink& sink) {
+  auto instruments = Json::array();
+  for (const auto& item : summary.instruments) {
+    instruments.push_back({
+        {"final_book_digest", content_hash_to_hex(item.final_book_digest)},
+        {"final_order_count", item.final_order_count},
+        {"final_trading_state", trading_state_name(item.final_trading_state)},
+        {"financial_status", std::string(1, item.instrument.financial_status)},
+        {"market_category", std::string(1, item.instrument.market_category)},
+        {"round_lot_size", item.instrument.round_lot_size},
+        {"round_lots_only", item.instrument.round_lots_only},
+        {"stock_locate", item.instrument.stock_locate},
+        {"symbol", item.instrument.symbol},
+        {"symbol_id", item.instrument.symbol_id},
+    });
+  }
+  auto global_session_events = Json::array();
+  for (const auto& event : summary.global_session_events) {
+    global_session_events.push_back({
+        {"event_code", std::string(1, event.event_code)},
+        {"message_index", event.message_index},
+        {"timestamp_ns", event.timestamp_ns},
+    });
+  }
   return Json{
       {"artefact_status", "provisional_diagnostic"},
+      {"all_counts_by_type", summary.all_counts_by_type},
       {"decoded_messages", summary.decoded_messages},
+      {"directory_messages", summary.directory_messages},
       {"event_path", display_path(sink.event_path())},
-      {"final_book_digest", content_hash_to_hex(summary.final_book_digest)},
-      {"final_order_count", summary.final_order_count},
+      {"filtered_instrument_messages", summary.filtered_instrument_messages},
+      {"global_session_events", std::move(global_session_events)},
+      {"global_system_messages", summary.global_system_messages},
+      {"instruments", std::move(instruments)},
       {"messages_processed", summary.messages_processed},
       {"selected_events", summary.selected_events},
+      {"selected_counts_by_type", summary.selected_counts_by_type},
+      {"selected_instrument_messages", summary.selected_instrument_messages},
       {"snapshot_path", display_path(sink.snapshot_path())},
       {"snapshots_written", summary.snapshots_written},
       {"source_bytes_consumed", summary.source_progress.source_bytes_consumed},
-      {"stock_locate", summary.stock_locate},
-      {"symbol", summary.symbol},
-      {"symbol_id", summary.symbol_id},
       {"uncompressed_bytes_delivered", summary.source_progress.uncompressed_bytes_delivered},
   };
 }
@@ -628,15 +655,22 @@ void render_replay_human(std::ostream& output, const ReplaySummary& summary,
                          const JsonlDiagnosticSink& sink) {
   output << "Diagnostic replay completed.\n"
          << "Artefact status: provisional diagnostic\n"
-         << "Symbol: " << summary.symbol << '\n'
-         << "Stock locate: " << summary.stock_locate << '\n'
          << "Messages processed: " << summary.messages_processed << '\n'
+         << "Global system messages: " << summary.global_system_messages << '\n'
+         << "Stock Directory messages: " << summary.directory_messages << '\n'
+         << "Selected instrument messages: " << summary.selected_instrument_messages << '\n'
+         << "Filtered instrument messages: " << summary.filtered_instrument_messages << '\n'
          << "Selected events: " << summary.selected_events << '\n'
          << "Snapshots written: " << summary.snapshots_written << '\n'
-         << "Final order count: " << summary.final_order_count << '\n'
-         << "Final book digest: " << content_hash_to_hex(summary.final_book_digest) << '\n'
          << "Diagnostic events: " << display_path(sink.event_path()) << '\n'
          << "Diagnostic snapshots: " << display_path(sink.snapshot_path()) << '\n';
+  for (const auto& item : summary.instruments) {
+    output << "Instrument: " << item.instrument.symbol << " (id " << item.instrument.symbol_id
+           << ", locate " << item.instrument.stock_locate << ")\n"
+           << "  Final trading state: " << trading_state_name(item.final_trading_state) << '\n'
+           << "  Final order count: " << item.final_order_count << '\n'
+           << "  Final book digest: " << content_hash_to_hex(item.final_book_digest) << '\n';
+  }
 }
 
 void render_success_json(std::ostream& output, const std::string_view command, Json summary,
@@ -807,7 +841,7 @@ int run_replay(const std::span<const std::string_view> arguments, std::ostream& 
   const auto& options = *parsed.value;
   if (options.force_new_run) {
     const auto failure =
-        usage_error("--force-new-run is unavailable for TASK-007 provisional diagnostic replay.");
+        usage_error("--force-new-run is unavailable for TASK-011 provisional diagnostic replay.");
     return render_error(output, error, "replay", options.format, options.log_format, failure);
   }
 
@@ -825,13 +859,11 @@ int run_replay(const std::span<const std::string_view> arguments, std::ostream& 
                         config_issues_error(config_result.issues));
   }
   const auto& config = *config_result.config;
-  if (config.selection.symbols.size() != 1 || config.validation.mode != ValidationMode::strict ||
-      config.selection.require_trading_state || config.input.sha256) {
+  if (config.validation.mode != ValidationMode::strict || config.input.sha256) {
     const CommandError failure{
-        ErrorCode::config_schema,
-        "TASK-007 replay requires one symbol, strict mode, require_trading_state=false and a null "
-        "input SHA-256.",
-        "Use the diagnostic example config or wait for the production replay tasks."};
+        ErrorCode::config_schema, "TASK-011 replay requires strict mode and a null input SHA-256.",
+        "Use strict validation with a null source hash until production replay publication is "
+        "implemented."};
     return render_error(output, error, "replay", options.format, options.log_format, failure);
   }
 
@@ -861,7 +893,7 @@ int run_replay(const std::span<const std::string_view> arguments, std::ostream& 
   }
 
   const std::vector<std::string> warnings{
-      "TASK-007 files are provisional JSONL diagnostics, not production interchange or a completed "
+      "TASK-011 files are provisional JSONL diagnostics, not production interchange or a completed "
       "replay manifest."};
   if (options.format == OutputFormat::json) {
     render_success_json(output, "replay", replay_summary_json(*replayed.summary, *diagnostics.sink),

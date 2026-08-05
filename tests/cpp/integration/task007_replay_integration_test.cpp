@@ -82,22 +82,32 @@ TEST_CASE("TASK-007 replay resolves AAPL and emits deterministic S R A D diagnos
   const auto gzip_trace = replay_minimal(*gzip.source);
   REQUIRE(plain_trace.summary.messages_processed == 9);
   REQUIRE(plain_trace.summary.decoded_messages == 9);
+  REQUIRE(plain_trace.summary.global_system_messages == 6);
+  REQUIRE(plain_trace.summary.directory_messages == 1);
+  REQUIRE(plain_trace.summary.selected_instrument_messages == 2);
+  REQUIRE(plain_trace.summary.filtered_instrument_messages == 0);
   REQUIRE(plain_trace.summary.selected_events == 2);
   REQUIRE(plain_trace.summary.snapshots_written == 2);
-  REQUIRE(plain_trace.summary.symbol == "AAPL");
-  REQUIRE(plain_trace.summary.symbol_id == 1);
-  REQUIRE(plain_trace.summary.stock_locate == 1);
-  REQUIRE(plain_trace.summary.final_order_count == 0);
-  REQUIRE(itchlab::content_hash_to_hex(plain_trace.summary.final_book_digest) ==
+  REQUIRE(plain_trace.summary.instruments.size() == 1);
+  const auto& instrument = plain_trace.summary.instruments.front();
+  REQUIRE(instrument.instrument.symbol == "AAPL");
+  REQUIRE(instrument.instrument.symbol_id == 1);
+  REQUIRE(instrument.instrument.stock_locate == 1);
+  REQUIRE(instrument.final_trading_state == itchlab::TradingState::closed);
+  REQUIRE(instrument.final_order_count == 0);
+  REQUIRE(itchlab::content_hash_to_hex(instrument.final_book_digest) ==
           "47213ce72b18bbb9fb839f064fb00c71d810d21c19e1fe74a9ed61162c0d2a6c");
+  REQUIRE(plain_trace.summary.global_session_events.size() == 6);
 
   REQUIRE(plain_trace.diagnostics.events.size() == 2);
   REQUIRE(plain_trace.diagnostics.events[0].event_kind == "add");
   REQUIRE(plain_trace.diagnostics.events[0].message_index == 4);
-  REQUIRE(plain_trace.diagnostics.events[0].remaining_quantity == 100);
+  REQUIRE(plain_trace.diagnostics.events[0].remaining_quantity ==
+          std::optional<itchlab::Shares>{100});
   REQUIRE(plain_trace.diagnostics.events[1].event_kind == "delete");
   REQUIRE(plain_trace.diagnostics.events[1].message_index == 5);
-  REQUIRE(plain_trace.diagnostics.events[1].remaining_quantity == 0);
+  REQUIRE(plain_trace.diagnostics.events[1].remaining_quantity ==
+          std::optional<itchlab::Shares>{0});
   REQUIRE(plain_trace.diagnostics.snapshots.size() == 2);
   REQUIRE(plain_trace.diagnostics.snapshots[0].top_levels.bids[0]->price4 == 1'000'000);
   REQUIRE_FALSE(plain_trace.diagnostics.snapshots[1].top_levels.bids[0].has_value());

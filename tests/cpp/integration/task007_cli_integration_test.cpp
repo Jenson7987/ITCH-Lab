@@ -88,6 +88,32 @@ std::filesystem::path write_replay_config(const std::filesystem::path& destinati
   return destination;
 }
 
+std::filesystem::path write_session_replay_config(const std::filesystem::path& destination,
+                                                  const std::filesystem::path& input) {
+  auto config = Json::parse(read_file(repository_path("configs/replay.diagnostic.example.json")));
+  config["input"]["path"] = input.string();
+  config["selection"]["symbols"] = Json::array({"MSFT", "AAPL"});
+  config["selection"]["session_start_ns"] = 34'200'000'000'000ULL;
+  config["selection"]["session_end_ns"] = 34'200'000'010'000ULL;
+  config["selection"]["require_trading_state"] = true;
+  config["output"]["emit_unchanged_trade_snapshots"] = true;
+  std::ofstream stream{destination, std::ios::binary};
+  REQUIRE(stream.good());
+  stream << config.dump(2) << '\n';
+  stream.close();
+  REQUIRE_FALSE(stream.fail());
+  return destination;
+}
+
+std::vector<Json> read_jsonl(const std::filesystem::path& path) {
+  std::istringstream stream{read_file(path)};
+  std::vector<Json> rows;
+  for (std::string line; std::getline(stream, line);) {
+    rows.push_back(Json::parse(line));
+  }
+  return rows;
+}
+
 } // namespace
 
 TEST_CASE("TASK-007 inspect JSON reports exact bounded source statistics",
@@ -196,11 +222,20 @@ TEST_CASE("TASK-007 CLI replay publishes exact deterministic provisional diagnos
   const auto envelope = Json::parse(plain.output);
   REQUIRE(envelope.at("summary").at("artefact_status") == "provisional_diagnostic");
   REQUIRE(envelope.at("summary").at("messages_processed") == 9);
+  REQUIRE(envelope.at("summary").at("global_system_messages") == 6);
+  REQUIRE(envelope.at("summary").at("directory_messages") == 1);
+  REQUIRE(envelope.at("summary").at("selected_instrument_messages") == 2);
+  REQUIRE(envelope.at("summary").at("filtered_instrument_messages") == 0);
   REQUIRE(envelope.at("summary").at("selected_events") == 2);
   REQUIRE(envelope.at("summary").at("snapshots_written") == 2);
-  REQUIRE(envelope.at("summary").at("final_order_count") == 0);
-  REQUIRE(envelope.at("summary").at("final_book_digest") ==
+  REQUIRE(envelope.at("summary").at("instruments").size() == 1);
+  const auto& instrument = envelope.at("summary").at("instruments").front();
+  REQUIRE(instrument.at("symbol") == "AAPL");
+  REQUIRE(instrument.at("final_order_count") == 0);
+  REQUIRE(instrument.at("final_trading_state") == "closed");
+  REQUIRE(instrument.at("final_book_digest") ==
           "47213ce72b18bbb9fb839f064fb00c71d810d21c19e1fe74a9ed61162c0d2a6c");
+  REQUIRE(envelope.at("summary").at("global_session_events").size() == 6);
   REQUIRE(envelope.at("warnings").size() == 1);
 
   const auto expected_events =
@@ -242,4 +277,57 @@ TEST_CASE("TASK-007 CLI replay failures never publish final diagnostic names",
                                   std::filesystem::current_path().string(), "--format", "json"});
   REQUIRE(broad.exit_code == 6);
   REQUIRE(Json::parse(broad.output).at("error").at("code") == "ERR_OUTPUT_PATH");
+}
+
+TEST_CASE("TASK-011 CLI replay publishes deterministic filtered multi-symbol diagnostics",
+          "[TASK-011][CLI][replay][session]") {
+  TemporaryDirectory plain_root;
+  TemporaryDirectory gzip_root;
+  const auto plain_config = write_session_replay_config(
+      plain_root.path() / "replay.json", repository_path("tests/fixtures/synthetic_session.itch"));
+  const auto gzip_config =
+      write_session_replay_config(gzip_root.path() / "replay.json",
+                                  repository_path("tests/fixtures/synthetic_session.itch.gz"));
+  const auto plain_output = plain_root.path() / "output";
+  const auto gzip_output = gzip_root.path() / "output";
+
+  const auto plain = run_command({"replay", "--config", plain_config.string(), "--output-root",
+                                  plain_output.string(), "--format", "json"});
+  const auto gzip = run_command({"replay", "--config", gzip_config.string(), "--output-root",
+                                 gzip_output.string(), "--format", "json"});
+  REQUIRE(plain.exit_code == 0);
+  REQUIRE(gzip.exit_code == 0);
+  REQUIRE(plain.error.empty());
+  REQUIRE(gzip.error.empty());
+
+  const auto envelope = Json::parse(plain.output);
+  const auto& summary = envelope.at("summary");
+  REQUIRE(summary.at("messages_processed") == 25);
+  REQUIRE(summary.at("selected_instrument_messages") == 13);
+  REQUIRE(summary.at("filtered_instrument_messages") == 3);
+  REQUIRE(summary.at("selected_events") == 12);
+  REQUIRE(summary.at("snapshots_written") == 6);
+  REQUIRE(summary.at("instruments").at(0).at("symbol") == "MSFT");
+  REQUIRE(summary.at("instruments").at(0).at("symbol_id") == 1);
+  REQUIRE(summary.at("instruments").at(1).at("symbol") == "AAPL");
+  REQUIRE(summary.at("instruments").at(1).at("symbol_id") == 2);
+  REQUIRE(summary.at("global_session_events").size() == 6);
+
+  REQUIRE(read_file(plain_output / "diagnostic-events.jsonl") ==
+          read_file(gzip_output / "diagnostic-events.jsonl"));
+  REQUIRE(read_file(plain_output / "diagnostic-snapshots.jsonl") ==
+          read_file(gzip_output / "diagnostic-snapshots.jsonl"));
+  const auto events = read_jsonl(plain_output / "diagnostic-events.jsonl");
+  const auto snapshots = read_jsonl(plain_output / "diagnostic-snapshots.jsonl");
+  REQUIRE(events.size() == 12);
+  REQUIRE(snapshots.size() == 6);
+  for (const auto& event : events) {
+    REQUIRE(event.at("symbol") != "AMZN");
+    REQUIRE(event.at("timestamp_ns").get<std::uint64_t>() < 34'200'000'010'000ULL);
+  }
+  for (const auto& snapshot : snapshots) {
+    REQUIRE(snapshot.at("symbol") != "AMZN");
+    REQUIRE(snapshot.at("timestamp_ns").get<std::uint64_t>() >= 34'200'000'000'000ULL);
+    REQUIRE(snapshot.at("timestamp_ns").get<std::uint64_t>() < 34'200'000'010'000ULL);
+  }
 }

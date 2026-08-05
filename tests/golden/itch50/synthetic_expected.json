@@ -897,6 +897,486 @@
       ],
       "name": "synthetic_mixed",
       "purpose": "Three-symbol complete day containing every MVP type, partial and full mutations, trades, a halt/resume and close."
+    },
+    {
+      "counts_by_type": {
+        "A": 4,
+        "D": 3,
+        "F": 1,
+        "H": 5,
+        "P": 1,
+        "Q": 1,
+        "R": 3,
+        "S": 6,
+        "X": 1
+      },
+      "fixture": "tests/fixtures/synthetic_session.itch",
+      "gzip_fixture": "tests/fixtures/synthetic_session.itch.gz",
+      "message_count": 25,
+      "messages": [
+        {
+          "fields": {
+            "event_code": "O",
+            "stock_locate": 0,
+            "timestamp_ns": 1000,
+            "tracking_number": 1
+          },
+          "frame_offset": 0,
+          "message_index": 0,
+          "name": "start_messages",
+          "payload_hex": "53000000010000000003e84f",
+          "payload_length": 12,
+          "payload_offset": 2,
+          "type": "S"
+        },
+        {
+          "fields": {
+            "authenticity": "P",
+            "etp_flag": "N",
+            "etp_leverage_factor": 1,
+            "financial_status": "N",
+            "inverse_indicator": "N",
+            "ipo_flag": "N",
+            "issue_classification": "C",
+            "issue_sub_type": "",
+            "luld_reference_price_tier": "1",
+            "market_category": "Q",
+            "round_lot_size": 100,
+            "round_lots_only": "N",
+            "short_sale_threshold_indicator": "N",
+            "stock": "AAPL",
+            "stock_locate": 1,
+            "timestamp_ns": 2000,
+            "tracking_number": 2
+          },
+          "frame_offset": 14,
+          "message_index": 1,
+          "name": "directory_aapl",
+          "payload_hex": "52000100020000000007d04141504c20202020514e000000644e432020504e4e314e000000014e",
+          "payload_length": 39,
+          "payload_offset": 16,
+          "type": "R"
+        },
+        {
+          "fields": {
+            "authenticity": "P",
+            "etp_flag": "N",
+            "etp_leverage_factor": 1,
+            "financial_status": "N",
+            "inverse_indicator": "N",
+            "ipo_flag": "N",
+            "issue_classification": "C",
+            "issue_sub_type": "",
+            "luld_reference_price_tier": "1",
+            "market_category": "Q",
+            "round_lot_size": 100,
+            "round_lots_only": "N",
+            "short_sale_threshold_indicator": "N",
+            "stock": "MSFT",
+            "stock_locate": 2,
+            "timestamp_ns": 3000,
+            "tracking_number": 3
+          },
+          "frame_offset": 55,
+          "message_index": 2,
+          "name": "directory_msft",
+          "payload_hex": "5200020003000000000bb84d53465420202020514e000000644e432020504e4e314e000000014e",
+          "payload_length": 39,
+          "payload_offset": 57,
+          "type": "R"
+        },
+        {
+          "fields": {
+            "authenticity": "P",
+            "etp_flag": "N",
+            "etp_leverage_factor": 1,
+            "financial_status": "N",
+            "inverse_indicator": "N",
+            "ipo_flag": "N",
+            "issue_classification": "C",
+            "issue_sub_type": "",
+            "luld_reference_price_tier": "1",
+            "market_category": "Q",
+            "round_lot_size": 100,
+            "round_lots_only": "N",
+            "short_sale_threshold_indicator": "N",
+            "stock": "AMZN",
+            "stock_locate": 3,
+            "timestamp_ns": 4000,
+            "tracking_number": 4
+          },
+          "frame_offset": 96,
+          "message_index": 3,
+          "name": "directory_amzn",
+          "payload_hex": "5200030004000000000fa0414d5a4e20202020514e000000644e432020504e4e314e000000014e",
+          "payload_length": 39,
+          "payload_offset": 98,
+          "type": "R"
+        },
+        {
+          "fields": {
+            "reason": "",
+            "reserved": "",
+            "stock": "AAPL",
+            "stock_locate": 1,
+            "timestamp_ns": 28799999997000,
+            "tracking_number": 5,
+            "trading_state": "T"
+          },
+          "frame_offset": 137,
+          "message_index": 4,
+          "name": "aapl_preopen_trading",
+          "payload_hex": "48000100051a3185c4f4484141504c20202020542020202020",
+          "payload_length": 25,
+          "payload_offset": 139,
+          "type": "H"
+        },
+        {
+          "fields": {
+            "reason": "",
+            "reserved": "",
+            "stock": "MSFT",
+            "stock_locate": 2,
+            "timestamp_ns": 28799999998000,
+            "tracking_number": 6,
+            "trading_state": "T"
+          },
+          "frame_offset": 164,
+          "message_index": 5,
+          "name": "msft_preopen_trading",
+          "payload_hex": "48000200061a3185c4f8304d53465420202020542020202020",
+          "payload_length": 25,
+          "payload_offset": 166,
+          "type": "H"
+        },
+        {
+          "fields": {
+            "reason": "",
+            "reserved": "",
+            "stock": "AMZN",
+            "stock_locate": 3,
+            "timestamp_ns": 28799999999000,
+            "tracking_number": 7,
+            "trading_state": "T"
+          },
+          "frame_offset": 191,
+          "message_index": 6,
+          "name": "amzn_preopen_trading",
+          "payload_hex": "48000300071a3185c4fc18414d5a4e20202020542020202020",
+          "payload_length": 25,
+          "payload_offset": 193,
+          "type": "H"
+        },
+        {
+          "fields": {
+            "event_code": "S",
+            "stock_locate": 0,
+            "timestamp_ns": 28800000000000,
+            "tracking_number": 8
+          },
+          "frame_offset": 218,
+          "message_index": 7,
+          "name": "start_system_hours",
+          "payload_hex": "53000000081a3185c5000053",
+          "payload_length": 12,
+          "payload_offset": 220,
+          "type": "S"
+        },
+        {
+          "fields": {
+            "order_reference": 11001,
+            "price4": 1000000,
+            "shares": 100,
+            "side": "B",
+            "stock": "AAPL",
+            "stock_locate": 1,
+            "timestamp_ns": 34199999995000,
+            "tracking_number": 9
+          },
+          "frame_offset": 232,
+          "message_index": 8,
+          "name": "warm_aapl_bid",
+          "payload_hex": "41000100091f1aced9dc780000000000002af942000000644141504c20202020000f4240",
+          "payload_length": 36,
+          "payload_offset": 234,
+          "type": "A"
+        },
+        {
+          "fields": {
+            "attribution": "TEST",
+            "order_reference": 21001,
+            "price4": 2001000,
+            "shares": 200,
+            "side": "S",
+            "stock": "MSFT",
+            "stock_locate": 2,
+            "timestamp_ns": 34199999996000,
+            "tracking_number": 10
+          },
+          "frame_offset": 270,
+          "message_index": 9,
+          "name": "warm_msft_ask",
+          "payload_hex": "460002000a1f1aced9e060000000000000520953000000c84d53465420202020001e886854455354",
+          "payload_length": 40,
+          "payload_offset": 272,
+          "type": "F"
+        },
+        {
+          "fields": {
+            "order_reference": 31001,
+            "price4": 3000000,
+            "shares": 300,
+            "side": "B",
+            "stock": "AMZN",
+            "stock_locate": 3,
+            "timestamp_ns": 34199999997000,
+            "tracking_number": 11
+          },
+          "frame_offset": 312,
+          "message_index": 10,
+          "name": "warm_unselected_amzn_bid",
+          "payload_hex": "410003000b1f1aced9e4480000000000007919420000012c414d5a4e20202020002dc6c0",
+          "payload_length": 36,
+          "payload_offset": 314,
+          "type": "A"
+        },
+        {
+          "fields": {
+            "event_code": "Q",
+            "stock_locate": 0,
+            "timestamp_ns": 34200000000000,
+            "tracking_number": 12
+          },
+          "frame_offset": 350,
+          "message_index": 11,
+          "name": "start_market_hours",
+          "payload_hex": "530000000c1f1aced9f00051",
+          "payload_length": 12,
+          "payload_offset": 352,
+          "type": "S"
+        },
+        {
+          "fields": {
+            "order_reference": 11002,
+            "price4": 1001000,
+            "shares": 120,
+            "side": "S",
+            "stock": "AAPL",
+            "stock_locate": 1,
+            "timestamp_ns": 34200000000000,
+            "tracking_number": 13
+          },
+          "frame_offset": 364,
+          "message_index": 12,
+          "name": "session_start_aapl_ask",
+          "payload_hex": "410001000d1f1aced9f0000000000000002afa53000000784141504c20202020000f4628",
+          "payload_length": 36,
+          "payload_offset": 366,
+          "type": "A"
+        },
+        {
+          "fields": {
+            "order_reference": 31001,
+            "stock_locate": 3,
+            "timestamp_ns": 34200000001000,
+            "tracking_number": 14
+          },
+          "frame_offset": 402,
+          "message_index": 13,
+          "name": "delete_unselected_amzn",
+          "payload_hex": "440003000e1f1aced9f3e80000000000007919",
+          "payload_length": 19,
+          "payload_offset": 404,
+          "type": "D"
+        },
+        {
+          "fields": {
+            "reason": "LUDP",
+            "reserved": "",
+            "stock": "AAPL",
+            "stock_locate": 1,
+            "timestamp_ns": 34200000002000,
+            "tracking_number": 15,
+            "trading_state": "H"
+          },
+          "frame_offset": 423,
+          "message_index": 14,
+          "name": "halt_aapl",
+          "payload_hex": "480001000f1f1aced9f7d04141504c2020202048204c554450",
+          "payload_length": 25,
+          "payload_offset": 425,
+          "type": "H"
+        },
+        {
+          "fields": {
+            "order_reference": 11003,
+            "price4": 1000200,
+            "shares": 50,
+            "side": "B",
+            "stock": "AAPL",
+            "stock_locate": 1,
+            "timestamp_ns": 34200000003000,
+            "tracking_number": 16
+          },
+          "frame_offset": 450,
+          "message_index": 15,
+          "name": "add_aapl_during_halt",
+          "payload_hex": "41000100101f1aced9fbb80000000000002afb42000000324141504c20202020000f4308",
+          "payload_length": 36,
+          "payload_offset": 452,
+          "type": "A"
+        },
+        {
+          "fields": {
+            "cancelled_shares": 50,
+            "order_reference": 21001,
+            "stock_locate": 2,
+            "timestamp_ns": 34200000004000,
+            "tracking_number": 17
+          },
+          "frame_offset": 488,
+          "message_index": 16,
+          "name": "cancel_msft_while_aapl_halted",
+          "payload_hex": "58000200111f1aced9ffa0000000000000520900000032",
+          "payload_length": 23,
+          "payload_offset": 490,
+          "type": "X"
+        },
+        {
+          "fields": {
+            "match_number": 61001,
+            "order_reference": 0,
+            "price4": 1000100,
+            "shares": 25,
+            "side": "B",
+            "stock": "AAPL",
+            "stock_locate": 1,
+            "timestamp_ns": 34200000005000,
+            "tracking_number": 18
+          },
+          "frame_offset": 513,
+          "message_index": 17,
+          "name": "trade_aapl_during_halt",
+          "payload_hex": "50000100121f1aceda0388000000000000000042000000194141504c20202020000f42a4000000000000ee49",
+          "payload_length": 44,
+          "payload_offset": 515,
+          "type": "P"
+        },
+        {
+          "fields": {
+            "reason": "",
+            "reserved": "",
+            "stock": "AAPL",
+            "stock_locate": 1,
+            "timestamp_ns": 34200000006000,
+            "tracking_number": 19,
+            "trading_state": "T"
+          },
+          "frame_offset": 559,
+          "message_index": 18,
+          "name": "resume_aapl",
+          "payload_hex": "48000100131f1aceda07704141504c20202020542020202020",
+          "payload_length": 25,
+          "payload_offset": 561,
+          "type": "H"
+        },
+        {
+          "fields": {
+            "order_reference": 11003,
+            "stock_locate": 1,
+            "timestamp_ns": 34200000007000,
+            "tracking_number": 20
+          },
+          "frame_offset": 586,
+          "message_index": 19,
+          "name": "delete_halt_time_aapl_bid",
+          "payload_hex": "44000100141f1aceda0b580000000000002afb",
+          "payload_length": 19,
+          "payload_offset": 588,
+          "type": "D"
+        },
+        {
+          "fields": {
+            "cross_price4": 2000500,
+            "cross_type": "O",
+            "match_number": 71001,
+            "shares": 1000,
+            "stock": "MSFT",
+            "stock_locate": 2,
+            "timestamp_ns": 34200000008000,
+            "tracking_number": 21
+          },
+          "frame_offset": 607,
+          "message_index": 20,
+          "name": "cross_msft",
+          "payload_hex": "51000200151f1aceda0f4000000000000003e84d53465420202020001e867400000000000115594f",
+          "payload_length": 40,
+          "payload_offset": 609,
+          "type": "Q"
+        },
+        {
+          "fields": {
+            "order_reference": 11001,
+            "stock_locate": 1,
+            "timestamp_ns": 34200000010000,
+            "tracking_number": 22
+          },
+          "frame_offset": 649,
+          "message_index": 21,
+          "name": "session_end_aapl_delete",
+          "payload_hex": "44000100161f1aceda17100000000000002af9",
+          "payload_length": 19,
+          "payload_offset": 651,
+          "type": "D"
+        },
+        {
+          "fields": {
+            "event_code": "M",
+            "stock_locate": 0,
+            "timestamp_ns": 34200000010000,
+            "tracking_number": 23
+          },
+          "frame_offset": 670,
+          "message_index": 22,
+          "name": "end_market_hours",
+          "payload_hex": "53000000171f1aceda17104d",
+          "payload_length": 12,
+          "payload_offset": 672,
+          "type": "S"
+        },
+        {
+          "fields": {
+            "event_code": "E",
+            "stock_locate": 0,
+            "timestamp_ns": 72000000000000,
+            "tracking_number": 24
+          },
+          "frame_offset": 684,
+          "message_index": 23,
+          "name": "end_system_hours",
+          "payload_hex": "5300000018417bce6c800045",
+          "payload_length": 12,
+          "payload_offset": 686,
+          "type": "S"
+        },
+        {
+          "fields": {
+            "event_code": "C",
+            "stock_locate": 0,
+            "timestamp_ns": 72000000001000,
+            "tracking_number": 25
+          },
+          "frame_offset": 698,
+          "message_index": 24,
+          "name": "end_messages",
+          "payload_hex": "5300000019417bce6c83e843",
+          "payload_length": 12,
+          "payload_offset": 700,
+          "type": "S"
+        }
+      ],
+      "name": "synthetic_session",
+      "purpose": "Three-symbol replay-selection stream with pre-session warm-up, one unselected symbol, halt-time activity, resume, trade snapshots and exact session boundaries."
     }
   ],
   "synthetic": true

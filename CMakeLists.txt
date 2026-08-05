@@ -87,7 +87,9 @@ add_library(
   cpp/src/itch/byte_decode.cpp
   cpp/src/itch/decoder.cpp
   cpp/src/output/diagnostic_sinks.cpp
+  cpp/src/replay/instrument_directory.cpp
   cpp/src/replay/replay_coordinator.cpp
+  cpp/src/replay/session_state.cpp
 )
 target_include_directories(itchlab_core PUBLIC cpp/include)
 target_link_libraries(itchlab_core PRIVATE nlohmann_json::nlohmann_json ZLIB::ZLIB)
@@ -123,6 +125,7 @@ if(BUILD_TESTING)
     tests/cpp/integration/task007_cli_integration_test.cpp
     tests/cpp/integration/task007_replay_integration_test.cpp
     tests/cpp/integration/task008_e2e_integration_test.cpp
+    tests/cpp/integration/task011_replay_integration_test.cpp
     tests/cpp/property/order_book_property_test.cpp
     tests/cpp/property/framed_reader_property_test.cpp
     tests/cpp/unit/byte_decode_test.cpp
@@ -131,6 +134,8 @@ if(BUILD_TESTING)
     tests/cpp/unit/errors_test.cpp
     tests/cpp/unit/framed_reader_test.cpp
     tests/cpp/unit/order_book_test.cpp
+    tests/cpp/unit/instrument_directory_test.cpp
+    tests/cpp/unit/session_state_test.cpp
     tests/cpp/unit/sha256_test.cpp
     tests/cpp/unit/types_test.cpp
   )
@@ -174,6 +179,6 @@ if(BUILD_TESTING)
   add_test(NAME TASK_007_cpp_cli_replay_help COMMAND itchlab replay --help)
   set_tests_properties(
     TASK_007_cpp_cli_replay_help
-    PROPERTIES PASS_REGULAR_EXPRESSION "provisional TASK-007"
+    PROPERTIES PASS_REGULAR_EXPRESSION "provisional TASK-011"
   )
 endif()

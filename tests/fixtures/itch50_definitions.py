@@ -349,6 +349,145 @@ MIXED_STREAM: Final = SyntheticStreamDefinition(
 )
 
 
+SESSION_STREAM: Final = SyntheticStreamDefinition(
+    name="synthetic_session",
+    purpose=(
+        "Three-symbol replay-selection stream with pre-session warm-up, one unselected symbol, "
+        "halt-time activity, resume, trade snapshots and exact session boundaries."
+    ),
+    messages=(
+        _system_event("start_messages", 1, 1_000, "O"),
+        _directory("directory_aapl", 2, 2_000, 1, "AAPL"),
+        _directory("directory_msft", 3, 3_000, 2, "MSFT"),
+        _directory("directory_amzn", 4, 4_000, 3, "AMZN"),
+        _trading_action("aapl_preopen_trading", 5, 28_799_999_997_000, 1, "AAPL", "T"),
+        _trading_action("msft_preopen_trading", 6, 28_799_999_998_000, 2, "MSFT", "T"),
+        _trading_action("amzn_preopen_trading", 7, 28_799_999_999_000, 3, "AMZN", "T"),
+        _system_event("start_system_hours", 8, 28_800_000_000_000, "S"),
+        _add(
+            "warm_aapl_bid",
+            9,
+            34_199_999_995_000,
+            1,
+            11_001,
+            "B",
+            100,
+            "AAPL",
+            1_000_000,
+        ),
+        _add(
+            "warm_msft_ask",
+            10,
+            34_199_999_996_000,
+            2,
+            21_001,
+            "S",
+            200,
+            "MSFT",
+            2_001_000,
+            "TEST",
+        ),
+        _add(
+            "warm_unselected_amzn_bid",
+            11,
+            34_199_999_997_000,
+            3,
+            31_001,
+            "B",
+            300,
+            "AMZN",
+            3_000_000,
+        ),
+        _system_event("start_market_hours", 12, 34_200_000_000_000, "Q"),
+        _add(
+            "session_start_aapl_ask",
+            13,
+            34_200_000_000_000,
+            1,
+            11_002,
+            "S",
+            120,
+            "AAPL",
+            1_001_000,
+        ),
+        message(
+            "delete_unselected_amzn",
+            "D",
+            stock_locate=3,
+            tracking_number=14,
+            timestamp_ns=34_200_000_001_000,
+            order_reference=31_001,
+        ),
+        _trading_action("halt_aapl", 15, 34_200_000_002_000, 1, "AAPL", "H", "LUDP"),
+        _add(
+            "add_aapl_during_halt",
+            16,
+            34_200_000_003_000,
+            1,
+            11_003,
+            "B",
+            50,
+            "AAPL",
+            1_000_200,
+        ),
+        message(
+            "cancel_msft_while_aapl_halted",
+            "X",
+            stock_locate=2,
+            tracking_number=17,
+            timestamp_ns=34_200_000_004_000,
+            order_reference=21_001,
+            cancelled_shares=50,
+        ),
+        message(
+            "trade_aapl_during_halt",
+            "P",
+            stock_locate=1,
+            tracking_number=18,
+            timestamp_ns=34_200_000_005_000,
+            order_reference=0,
+            side="B",
+            shares=25,
+            stock="AAPL",
+            price4=1_000_100,
+            match_number=61_001,
+        ),
+        _trading_action("resume_aapl", 19, 34_200_000_006_000, 1, "AAPL", "T"),
+        message(
+            "delete_halt_time_aapl_bid",
+            "D",
+            stock_locate=1,
+            tracking_number=20,
+            timestamp_ns=34_200_000_007_000,
+            order_reference=11_003,
+        ),
+        message(
+            "cross_msft",
+            "Q",
+            stock_locate=2,
+            tracking_number=21,
+            timestamp_ns=34_200_000_008_000,
+            shares=1_000,
+            stock="MSFT",
+            cross_price4=2_000_500,
+            match_number=71_001,
+            cross_type="O",
+        ),
+        message(
+            "session_end_aapl_delete",
+            "D",
+            stock_locate=1,
+            tracking_number=22,
+            timestamp_ns=34_200_000_010_000,
+            order_reference=11_001,
+        ),
+        _system_event("end_market_hours", 23, 34_200_000_010_000, "M"),
+        _system_event("end_system_hours", 24, 72_000_000_000_000, "E"),
+        _system_event("end_messages", 25, 72_000_000_001_000, "C"),
+    ),
+)
+
+
 def _invalid_preamble() -> tuple[MessageDefinition, ...]:
     return (
         _system_event("start_messages", 1, 1_000, "O"),
@@ -524,13 +663,14 @@ INVALID_LIFECYCLES: Final[tuple[InvalidLifecycleDefinition, ...]] = (
     ),
 )
 
-VALID_STREAMS: Final = (MINIMAL_STREAM, MIXED_STREAM)
+VALID_STREAMS: Final = (MINIMAL_STREAM, MIXED_STREAM, SESSION_STREAM)
 
 
 __all__ = [
     "INVALID_LIFECYCLES",
     "MINIMAL_STREAM",
     "MIXED_STREAM",
+    "SESSION_STREAM",
     "VALID_STREAMS",
     "InvalidLifecycleDefinition",
     "SyntheticStreamDefinition",

@@ -83,6 +83,14 @@
     "tests/fixtures/synthetic_mixed.itch.gz": {
       "sha256": "6cb8414011a6dac1d55b19a519e48b0b9c8d32ff7b6735b063b3bcd8451ac510",
       "size_bytes": 508
+    },
+    "tests/fixtures/synthetic_session.itch": {
+      "sha256": "57eee7c28a584fe4fc2a3e56cc41d3114263efa526b89bcac81246c3c129ef74",
+      "size_bytes": 712
+    },
+    "tests/fixtures/synthetic_session.itch.gz": {
+      "sha256": "793607a2813527f3c0eb0af03aeaaccdf67cc200989e8542051ccced7a8225be",
+      "size_bytes": 409
     }
   },
   "schema_version": 1,

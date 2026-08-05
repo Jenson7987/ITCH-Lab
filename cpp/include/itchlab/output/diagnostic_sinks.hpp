@@ -3,6 +3,7 @@
 #include "itchlab/book/price_level.hpp"
 #include "itchlab/core/errors.hpp"
 #include "itchlab/core/types.hpp"
+#include "itchlab/replay/session_state.hpp"
 
 #include <cstdint>
 #include <filesystem>
@@ -22,12 +23,16 @@ struct DiagnosticEvent {
   std::string symbol;
   std::string event_kind;
   char source_type{};
-  OrderReference order_reference{};
-  Side side{Side::not_applicable};
-  Price4 price4{};
-  Shares quantity{};
-  Shares previous_remaining{};
-  Shares remaining_quantity{};
+  std::optional<OrderReference> primary_reference;
+  std::optional<OrderReference> secondary_reference;
+  std::optional<Side> side;
+  std::optional<Price4> price4;
+  std::optional<Price4> execution_price4;
+  std::optional<Shares> quantity;
+  std::optional<Shares> previous_remaining;
+  std::optional<Shares> remaining_quantity;
+  std::optional<std::string> aux_code;
+  std::optional<char> event_subtype;
   bool in_session{};
   ContentHash book_digest{};
 };
@@ -41,6 +46,9 @@ struct DiagnosticSnapshot {
   std::string event_kind;
   std::uint16_t depth{};
   bool top_n_changed{};
+  std::optional<Price4> event_price4;
+  std::optional<Shares> event_quantity;
+  TradingState trading_state{TradingState::unknown};
   TopLevels top_levels;
   ContentHash book_digest{};
 };
