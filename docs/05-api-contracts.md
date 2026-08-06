@@ -104,7 +104,7 @@ Idempotency: read-only and idempotent.
 
 Purpose: create normalised events, snapshots and a completed replay manifest.
 
-Incremental TASK-012 availability remains narrower than the final contract below. The implemented
+Incremental TASK-013 availability remains narrower than the final contract below. The implemented
 command accepts one or more configured symbols, strict or permissive mode, either value of
 `require_trading_state` and a null input SHA-256. It resolves daily identities from Stock Directory
 messages, assigns `SymbolId` values in requested-symbol order and routes H/A/F/E/C/X/D/U/P/Q/B for
@@ -126,9 +126,11 @@ counts with global, directory, selected and filtered reconciliation totals, and 
 by stable error code.
 
 These files are diagnostic JSON Lines, not the version-1 interchange files or a completed replay
-run. Production binary writers, hashes, manifests and immutable run identity remain assigned to
-TASK-013 and TASK-014. `--force-new-run` is rejected until immutable production run publication
-exists.
+run. The production event-v1 writer now emits deterministic staged 104-byte headers, requested-order
+16-byte symbol entries and source-ordered 72-byte records for an owning coordinator, but it does not
+publish a final path. Snapshot writing, source/output hash coordination, manifests, immutable run
+identity and atomic completed publication remain assigned to TASK-014. `--force-new-run` is rejected
+until immutable production run publication exists.
 
     itchlab replay +      --config <replay-config.json> +      [--output-root <directory>] +      [--format human|json] +      [--log-format human|jsonl] +      [--quiet] +      [--force-new-run]
 

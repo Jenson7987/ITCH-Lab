@@ -87,7 +87,9 @@ add_library(
   cpp/src/inspect/source_inspector.cpp
   cpp/src/itch/byte_decode.cpp
   cpp/src/itch/decoder.cpp
+  cpp/src/output/binary_encode.cpp
   cpp/src/output/diagnostic_sinks.cpp
+  cpp/src/output/event_writer.cpp
   cpp/src/replay/instrument_directory.cpp
   cpp/src/replay/error_policy.cpp
   cpp/src/replay/progress_reporter.cpp
@@ -135,14 +137,17 @@ if(BUILD_TESTING)
     tests/cpp/integration/task011_replay_integration_test.cpp
     tests/cpp/integration/task012_cancellation_e2e_test.cpp
     tests/cpp/integration/task012_replay_integration_test.cpp
+    tests/cpp/integration/task013_event_writer_integration_test.cpp
     tests/cpp/property/order_book_property_test.cpp
     tests/cpp/property/framed_reader_property_test.cpp
     tests/cpp/unit/byte_decode_test.cpp
     tests/cpp/unit/byte_source_test.cpp
+    tests/cpp/unit/binary_encode_test.cpp
     tests/cpp/unit/cancellation_test.cpp
     tests/cpp/unit/decoder_test.cpp
     tests/cpp/unit/errors_test.cpp
     tests/cpp/unit/error_policy_test.cpp
+    tests/cpp/unit/event_writer_test.cpp
     tests/cpp/unit/framed_reader_test.cpp
     tests/cpp/unit/order_book_test.cpp
     tests/cpp/unit/progress_reporter_test.cpp

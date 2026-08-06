@@ -97,6 +97,13 @@ unchanged digest and valid post-rejection invariants.
 - Partial publication and hash mismatch.
 - Unknown schema/flag rejection.
 
+TASK-013 fixes event-v1 with an independently generated 856-byte synthetic golden containing the
+104-byte header, two requested-order dictionary entries and all ten 72-byte event kinds. Unit tests
+cover every validity bit, valid numeric zeroes, reserved bytes, checked 32-bit remaining quantity,
+monotonic ordering and injected reservation/record/seek/patch/flush/close failures. A mixed-stream
+integration test routes all selected events through the real replay coordinator and confirms exact
+source message-index order while leaving only `events.ilb.partial`.
+
 ### Python datasets/models
 
 - Price4 conversions avoid binary-float values until presentation.
@@ -405,7 +412,7 @@ A task is done only when:
 | UT-BOOK-002 | Replace | Old ref disappears; new ref joins back of new level |
 | UT-BOOK-003 | Atomic reference error | Duplicate add and missing delete return errors and the state digest is unchanged |
 | UT-BOOK-004 | Atomic quantity error | Over-cancel returns error and state digest is unchanged |
-| UT-OUT-001 | Binary writer | Event v1 record matches golden 72 bytes |
+| UT-OUT-001 | Binary writer | Event-v1 header, dictionary and all ten 72-byte kinds match the independent golden |
 | UT-OUT-002 | Snapshot writer | Record size is 48 + 28×depth and null flags round-trip |
 | UT-CFG-001 | Config | Unknown key and overlapping dates fail |
 | UT-FEAT-001 | Causality | Future mutation cannot alter previous feature values |

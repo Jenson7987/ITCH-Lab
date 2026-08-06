@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-013: Implement normalised event writer
-  - Dependencies: TASK-010, TASK-012
-  - Acceptance criteria: Golden 104-byte header and 72-byte records
-  - Tests: UT-OUT-001 and write failures
-  - Documentation to update: 04-data-model.md on schema change
-
 - [ ] TASK-014: Implement snapshot writer and replay manifest
   - Dependencies: TASK-011–013
   - Acceptance criteria: Golden snapshots; atomic completed manifest; safe paths
@@ -127,6 +121,20 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-013: Implement normalised event writer
+  - Completed: 2026-08-06
+  - Evidence: The event-v1 writer explicitly encodes little-endian 104-byte headers, requested-order
+    16-byte symbol dictionaries and source-ordered 72-byte records with checked field bounds,
+    validity flags and zeroed reserved bytes. Finalisation patches verified metadata and closes only
+    the staged `.partial` path; publication remains assigned to TASK-014. UT-OUT-001 matches an
+    independently generated 856-byte golden covering every event kind and validity bit, while
+    validation, real-replay ordering and injected reservation/record/seek/patch/flush/close failure
+    tests cover atomic rejection and terminal write errors. All 104 runnable CTest entries passed in
+    dev, release, ASan/UBSan and clean coverage presets; the authorised external-data entry skipped
+    as designed. The independent golden and 25-file fixture checks, reduced E2E smoke, all 75 Python
+    tests, Ruff, strict mypy, changed C++ formatting, diff checks and the Python wheel/sdist build
+    passed.
 
 - [x] TASK-012: Implement error policy, progress and cancellation
   - Completed: 2026-08-06

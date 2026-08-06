@@ -317,7 +317,11 @@ The header is followed by symbol_count fixed 16-byte entries:
 | 4 | 8 | Space-padded ASCII symbol |
 | 12 | 4 | Round-lot size |
 
-The source hash covers the exact source-file bytes as stored, including gzip bytes when compressed. A writer may place zeroes in record-count/source-hash fields while the file has a partial suffix, then seek back and patch them before hashing and atomic publication. A final reader rejects zero/placeholder identity fields.
+The source hash covers the exact source-file bytes as stored, including gzip bytes when compressed.
+A writer may place zeroes in record-count/source-hash fields while the file has a partial suffix,
+then seek back and patch them before hashing and atomic publication. A final reader rejects
+placeholder identity hashes or an incomplete dictionary. A finalised file may legitimately have a
+zero record count; the `.partial` suffix, not record count alone, identifies staged output.
 
 ### Event record v1: 72 bytes
 
@@ -340,6 +344,10 @@ The source hash covers the exact source-file bytes as stored, including gzip byt
 | 60 | 4 | Auxiliary ASCII code |
 | 64 | 1 | Event subtype |
 | 65 | 7 | Reserved zero |
+
+`remaining_quantity` is conceptually widened to the `Shares` domain type, but event-v1 stores the
+source-bounded visible remainder as an unsigned 32-bit integer at offset 44. The writer rejects a
+value above `uint32` rather than truncating it; readers widen valid values back to `Shares`.
 
 Event-kind codes are:
 

@@ -8,8 +8,9 @@ Specification complete. The reproducible C++/Python foundation, bounded plain/gz
 layer, stateless full-MVP decoder, deterministic full-lifecycle level-3 book and selected-symbol
 inspect/replay command slice are implemented. Replay routes the complete visible lifecycle and
 session/trading-state metadata, supports strict or budgeted permissive processing, emits bounded
-stderr progress and cancels safely at message boundaries. It still writes explicitly provisional
-JSONL diagnostics. Production interchange, manifests, research and simulation remain planned.
+stderr progress and cancels safely at message boundaries. The production event-v1 binary writer is
+implemented and contract-tested, while the command still writes explicitly provisional JSONL
+diagnostics. Snapshot interchange, completed manifests, research and simulation remain planned.
 
 Classification legend used throughout the documentation:
 
@@ -67,9 +68,10 @@ configuration contracts with canonical cross-language hashes, and bounded stream
 big-endian and timestamp validation, applies the full visible lifecycle to deterministic per-symbol
 level-3 books and exposes bounded inspect plus multi-symbol diagnostic replay. Replay has
 stage-aware strict/permissive error policy, stable error counts, degraded disclosure, rate-limited
-human or JSONL progress and graceful SIGINT exit 130 with retained partial diagnostics. Production
-binary replay artefacts and manifests, research and simulation commands are implemented by later
-tasks.
+human or JSONL progress and graceful SIGINT exit 130 with retained partial diagnostics. The C++
+event-v1 writer produces deterministic staged headers, dictionaries and normalised records without
+publishing a final path. Production snapshot/manifest publication, research and simulation commands
+are implemented by later tasks.
 
 ## Local setup
 

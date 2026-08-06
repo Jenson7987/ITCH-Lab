@@ -58,13 +58,23 @@ struct DiagnosticWriteError {
   std::string message;
 };
 
-class DiagnosticSink {
+class EventSink {
 public:
   [[nodiscard]] virtual std::optional<DiagnosticWriteError>
   write_event(const DiagnosticEvent& event) = 0;
+  virtual ~EventSink() = default;
+};
+
+class SnapshotSink {
+public:
   [[nodiscard]] virtual std::optional<DiagnosticWriteError>
   write_snapshot(const DiagnosticSnapshot& snapshot) = 0;
-  virtual ~DiagnosticSink() = default;
+  virtual ~SnapshotSink() = default;
+};
+
+class DiagnosticSink : public EventSink, public SnapshotSink {
+public:
+  ~DiagnosticSink() override = default;
 };
 
 class JsonlDiagnosticSink final : public DiagnosticSink {

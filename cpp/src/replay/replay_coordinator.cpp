@@ -113,7 +113,7 @@ count_total(const std::map<std::string, std::uint64_t>& counts) noexcept {
 } // namespace
 
 ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& config,
-                                    DiagnosticSink& diagnostics,
+                                    EventSink& events, SnapshotSink& snapshots,
                                     const CancellationToken cancellation,
                                     ProgressReporter* const progress) const {
   if (config.selection.symbols.empty() ||
@@ -300,7 +300,7 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
         return failure(ErrorCode::internal, "Selected-event counter overflowed.",
                        frame.message_index, frame.source_offset, source_type, order_reference);
       }
-      if (const auto write_failure = diagnostics.write_event(event)) {
+      if (const auto write_failure = events.write_event(event)) {
         return failure(write_failure->code, write_failure->message, frame.message_index,
                        frame.source_offset, source_type, order_reference);
       }
@@ -315,7 +315,7 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
         return failure(ErrorCode::internal, "Snapshot counter overflowed.", frame.message_index,
                        frame.source_offset, source_type, order_reference);
       }
-      if (const auto write_failure = diagnostics.write_snapshot(snapshot)) {
+      if (const auto write_failure = snapshots.write_snapshot(snapshot)) {
         return failure(write_failure->code, write_failure->message, frame.message_index,
                        frame.source_offset, source_type, order_reference);
       }

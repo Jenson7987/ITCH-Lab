@@ -71,10 +71,18 @@ struct ReplayResult {
 
 class ReplayCoordinator {
 public:
-  // Provisional replay for selected symbols. Production publication remains TASK-013/014.
+  // Replays selected symbols into independent event and snapshot sinks. Publication remains the
+  // command coordinator's responsibility.
+  [[nodiscard]] ReplayResult run(ByteSource& source, const ReplayConfig& config, EventSink& events,
+                                 SnapshotSink& snapshots, CancellationToken cancellation = {},
+                                 ProgressReporter* progress = nullptr) const;
+
+  // Compatibility adapter for the provisional combined JSONL diagnostic sink.
   [[nodiscard]] ReplayResult run(ByteSource& source, const ReplayConfig& config,
                                  DiagnosticSink& diagnostics, CancellationToken cancellation = {},
-                                 ProgressReporter* progress = nullptr) const;
+                                 ProgressReporter* progress = nullptr) const {
+    return run(source, config, diagnostics, diagnostics, cancellation, progress);
+  }
 };
 
 } // namespace itchlab
