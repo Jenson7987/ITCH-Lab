@@ -140,7 +140,8 @@
 - Expected files/components: ErrorPolicy, ProgressReporter, CancellationToken, top-level signal adapter.
 - Acceptance criteria: strict stops at first error; permissive skips only safely framed classes and enforces budget; progress observes channel/rate rules; first SIGINT closes partial output and exits 130; second may terminate.
 - Required tests: E2E-003, E2E-004, error-budget and non-TTY output tests.
-- Completion evidence: logs/manifests for failed, degraded and cancelled examples.
+- Completion evidence: result/log envelopes and partial/final diagnostic paths for failed,
+  degraded and cancelled examples; manifest evidence follows in TASK-014.
 - Complexity: Medium.
 
 #### TASK-013 — Implement normalised event interchange writer

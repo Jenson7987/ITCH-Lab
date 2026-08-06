@@ -188,11 +188,14 @@ Truncate and mutate frames. Assert bounded typed failures, no crash and no compl
 
 ### E2E-003 degraded flow
 
-Use a safely framed unknown type. Permissive replay completes degraded; conversion rejects it without allow-degraded; explicit override propagates disclosure into final report.
+Use a safely framed unknown type. Permissive replay completes degraded with exact error and skip
+counts. Once the downstream commands exist, conversion must reject it without allow-degraded and
+an explicit override must propagate disclosure into the final report.
 
 ### E2E-004 cancellation
 
-Cancel after output has begun. Assert exit 130, closed partial artefacts and successful clean rerun.
+Cancel a real replay subprocess after output has begun. Assert exit 130, newline-terminated closed
+partial artefacts, no final paths, an unchanged source and a successful clean rerun.
 
 ## Contract testing
 

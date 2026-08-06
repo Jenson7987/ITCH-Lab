@@ -22,6 +22,7 @@
 #include <iostream>
 #include <iterator>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <span>
@@ -72,6 +73,7 @@ struct ReplayArguments {
   OutputFormat format{OutputFormat::human};
   LogFormat log_format{LogFormat::human};
   bool force_new_run{};
+  bool quiet{};
 };
 
 template <typename T> struct ParsedArguments {
@@ -211,7 +213,7 @@ void print_inspect_help(std::ostream& output) {
 
 void print_replay_help(std::ostream& output) {
   output << "Replay selected symbols with session and trading-state filtering to provisional "
-            "TASK-011 JSONL diagnostics.\n\n"
+            "TASK-012 JSONL diagnostics.\n\n"
          << "Usage: itchlab replay --config <replay-config.json> [options]\n\n"
          << "Required:\n"
          << "  --config <path>             Version-1 replay configuration.\n\n"
@@ -219,7 +221,7 @@ void print_replay_help(std::ostream& output) {
          << "  --output-root <directory>   Diagnostic destination (default $ITCHLAB_RUNS_DIR or "
             "runs).\n"
          << "  --format <human|json>       Result format (default human).\n"
-         << "  --force-new-run             Reserved for production replay; rejected by TASK-011.\n"
+         << "  --force-new-run             Reserved for production replay; currently rejected.\n"
          << "  --quiet                     Suppress non-error progress.\n"
          << "  --log-format <human|jsonl>  Diagnostic log format (default human).\n"
          << "  --ascii                     Restrict presentation to ASCII.\n"
@@ -227,9 +229,10 @@ void print_replay_help(std::ostream& output) {
          << "  --help                      Show this help text.\n\n"
          << "Example:\n"
          << "  itchlab replay --config configs/replay.diagnostic.example.json --output-root "
-            "runs/task-011\n\n"
+            "runs/task-012\n\n"
          << "The output is not events.ilb, snapshots.ilb, or a completed replay manifest.\n"
-         << "Exit categories: 0 success, 2 config, 3 input/framing, 4 decode, 5 book, 6 output.\n";
+         << "Exit categories: 0 success, 2 config, 3 input/framing, 4 decode, 5 book, 6 output, "
+            "130 cancellation.\n";
 }
 
 [[nodiscard]] std::optional<std::string_view>
@@ -417,6 +420,7 @@ parse_replay_arguments(const std::span<const std::string_view> arguments) {
   bool saw_format = false;
   bool saw_force = false;
   bool saw_log_format = false;
+  bool saw_quiet = false;
 
   for (std::size_t index = 0; index < arguments.size(); ++index) {
     const auto argument = arguments[index];
@@ -476,8 +480,14 @@ parse_replay_arguments(const std::span<const std::string_view> arguments) {
       }
       parsed.log_format = *value == "jsonl" ? LogFormat::jsonl : LogFormat::human;
       saw_log_format = true;
-    } else if (argument == "--quiet" || argument == "--ascii" || argument == "--no-colour") {
-      // TASK-007 output is already progress-free, ASCII and uncoloured.
+    } else if (argument == "--quiet") {
+      if (saw_quiet) {
+        return {std::nullopt, usage_error("--quiet may be supplied only once.")};
+      }
+      parsed.quiet = true;
+      saw_quiet = true;
+    } else if (argument == "--ascii" || argument == "--no-colour") {
+      // Current presentation is already ASCII and uncoloured.
     } else {
       return {std::nullopt, usage_error("Unrecognised replay option: " + std::string{argument})};
     }
@@ -631,10 +641,13 @@ void render_inspection_human(std::ostream& output, const InspectionSummary& summ
     });
   }
   return Json{
-      {"artefact_status", "provisional_diagnostic"},
+      {"artefact_status",
+       summary.degraded ? "provisional_diagnostic_degraded" : "provisional_diagnostic"},
       {"all_counts_by_type", summary.all_counts_by_type},
       {"decoded_messages", summary.decoded_messages},
       {"directory_messages", summary.directory_messages},
+      {"error_counts_by_code", summary.error_counts_by_code},
+      {"errors_observed", summary.errors_observed},
       {"event_path", display_path(sink.event_path())},
       {"filtered_instrument_messages", summary.filtered_instrument_messages},
       {"global_session_events", std::move(global_session_events)},
@@ -644,6 +657,7 @@ void render_inspection_human(std::ostream& output, const InspectionSummary& summ
       {"selected_events", summary.selected_events},
       {"selected_counts_by_type", summary.selected_counts_by_type},
       {"selected_instrument_messages", summary.selected_instrument_messages},
+      {"skipped_messages", summary.skipped_messages},
       {"snapshot_path", display_path(sink.snapshot_path())},
       {"snapshots_written", summary.snapshots_written},
       {"source_bytes_consumed", summary.source_progress.source_bytes_consumed},
@@ -653,8 +667,10 @@ void render_inspection_human(std::ostream& output, const InspectionSummary& summ
 
 void render_replay_human(std::ostream& output, const ReplaySummary& summary,
                          const JsonlDiagnosticSink& sink) {
-  output << "Diagnostic replay completed.\n"
-         << "Artefact status: provisional diagnostic\n"
+  output << (summary.degraded ? "Diagnostic replay DEGRADED.\n" : "Diagnostic replay completed.\n")
+         << "Artefact status: "
+         << (summary.degraded ? "provisional diagnostic degraded" : "provisional diagnostic")
+         << '\n'
          << "Messages processed: " << summary.messages_processed << '\n'
          << "Global system messages: " << summary.global_system_messages << '\n'
          << "Stock Directory messages: " << summary.directory_messages << '\n'
@@ -662,6 +678,9 @@ void render_replay_human(std::ostream& output, const ReplaySummary& summary,
          << "Filtered instrument messages: " << summary.filtered_instrument_messages << '\n'
          << "Selected events: " << summary.selected_events << '\n'
          << "Snapshots written: " << summary.snapshots_written << '\n'
+         << "Errors observed: " << summary.errors_observed << '\n'
+         << "Skipped messages: " << summary.skipped_messages << '\n'
+         << "Error counts by code: " << map_text(summary.error_counts_by_code) << '\n'
          << "Diagnostic events: " << display_path(sink.event_path()) << '\n'
          << "Diagnostic snapshots: " << display_path(sink.snapshot_path()) << '\n';
   for (const auto& item : summary.instruments) {
@@ -673,16 +692,87 @@ void render_replay_human(std::ostream& output, const ReplaySummary& summary,
   }
 }
 
-void render_success_json(std::ostream& output, const std::string_view command, Json summary,
+void render_success_json(std::ostream& output, const std::string_view command,
+                         const std::string_view status, Json summary,
                          std::vector<std::string> warnings) {
   const Json envelope{
       {"command", command},
       {"schema_version", 1},
-      {"status", "completed"},
+      {"status", status},
       {"summary", std::move(summary)},
       {"warnings", std::move(warnings)},
   };
   output << envelope.dump(-1, ' ', false, Json::error_handler_t::strict) << '\n';
+}
+
+void render_progress(std::ostream& error, const LogFormat log_format,
+                     const ReplayProgress& progress) {
+  if (log_format == LogFormat::jsonl) {
+    const Json log_line{{"command", "replay"},
+                        {"elapsed_ms", progress.elapsed_ms},
+                        {"error_count", progress.error_count},
+                        {"event_code", "PROGRESS"},
+                        {"level", "info"},
+                        {"messages", progress.messages},
+                        {"selected_events", progress.selected_events},
+                        {"source_bytes", progress.source_bytes},
+                        {"stage", progress.stage}};
+    error << log_line.dump(-1, ' ', false, Json::error_handler_t::strict) << '\n';
+    return;
+  }
+  error << "Progress: stage=" << progress.stage << " messages=" << progress.messages
+        << " source_bytes=" << progress.source_bytes
+        << " selected_events=" << progress.selected_events << " elapsed_ms=" << progress.elapsed_ms
+        << " errors=" << progress.error_count << '\n';
+}
+
+void render_cancellation_requested(std::ostream& error, const LogFormat log_format) {
+  constexpr std::string_view message{"Cancellation requested; closing partial outputs"};
+  if (log_format == LogFormat::jsonl) {
+    const Json log_line{{"command", "replay"},
+                        {"event_code", "CANCELLATION_REQUESTED"},
+                        {"level", "warning"},
+                        {"message", message}};
+    error << log_line.dump(-1, ' ', false, Json::error_handler_t::strict) << '\n';
+  } else {
+    error << message << '\n';
+  }
+}
+
+int render_cancelled(std::ostream& output, std::ostream& error, const OutputFormat format,
+                     const LogFormat log_format, const ReplayError& cancellation) {
+  if (format == OutputFormat::json) {
+    Json context = Json::object();
+    if (cancellation.runtime) {
+      context = {
+          {"error_count", cancellation.runtime->error_count},
+          {"messages_processed", cancellation.runtime->messages_processed},
+          {"selected_events", cancellation.runtime->selected_events},
+          {"source_bytes_consumed", cancellation.runtime->source_progress.source_bytes_consumed},
+          {"uncompressed_bytes_delivered",
+           cancellation.runtime->source_progress.uncompressed_bytes_delivered}};
+    }
+    const Json envelope{
+        {"command", "replay"},
+        {"error",
+         {{"action", "Start a fresh replay; automatic resume is unavailable."},
+          {"code", error_code_name(ErrorCode::cancelled)},
+          {"context", std::move(context)},
+          {"message", "Replay was cancelled; partial diagnostic files were retained."}}},
+        {"schema_version", 1},
+        {"status", "cancelled"},
+    };
+    output << envelope.dump(-1, ' ', false, Json::error_handler_t::strict) << '\n';
+  } else if (log_format == LogFormat::jsonl) {
+    const Json log_line{{"command", "replay"},
+                        {"event_code", error_code_name(ErrorCode::cancelled)},
+                        {"level", "warning"},
+                        {"message", "Replay cancelled; partial diagnostic files were retained."}};
+    error << log_line.dump(-1, ' ', false, Json::error_handler_t::strict) << '\n';
+  } else {
+    error << "ERR_CANCELLED: Replay cancelled; partial diagnostic files were retained.\n";
+  }
+  return 130;
 }
 
 int render_error(std::ostream& output, std::ostream& error, const std::string_view command,
@@ -808,8 +898,8 @@ int run_inspect(const std::span<const std::string_view> arguments, std::ostream&
     }
   }
   if (options.format == OutputFormat::json) {
-    render_success_json(output, "inspect", inspection_summary_json(*inspected.summary, input),
-                        std::move(warnings));
+    render_success_json(output, "inspect", "completed",
+                        inspection_summary_json(*inspected.summary, input), std::move(warnings));
   } else {
     render_inspection_human(output, *inspected.summary, input);
     for (std::size_t index = 0; index < warnings.size(); ++index) {
@@ -821,7 +911,8 @@ int run_inspect(const std::span<const std::string_view> arguments, std::ostream&
 }
 
 int run_replay(const std::span<const std::string_view> arguments, std::ostream& output,
-               std::ostream& error) {
+               std::ostream& error, const RuntimeContext runtime,
+               const ProgressClock& progress_clock) {
   if (std::find(arguments.begin(), arguments.end(), "--help") != arguments.end()) {
     print_replay_help(output);
     return 0;
@@ -841,7 +932,7 @@ int run_replay(const std::span<const std::string_view> arguments, std::ostream& 
   const auto& options = *parsed.value;
   if (options.force_new_run) {
     const auto failure =
-        usage_error("--force-new-run is unavailable for TASK-011 provisional diagnostic replay.");
+        usage_error("--force-new-run is unavailable for provisional diagnostic replay.");
     return render_error(output, error, "replay", options.format, options.log_format, failure);
   }
 
@@ -859,12 +950,19 @@ int run_replay(const std::span<const std::string_view> arguments, std::ostream& 
                         config_issues_error(config_result.issues));
   }
   const auto& config = *config_result.config;
-  if (config.validation.mode != ValidationMode::strict || config.input.sha256) {
+  if (config.input.sha256) {
     const CommandError failure{
-        ErrorCode::config_schema, "TASK-011 replay requires strict mode and a null input SHA-256.",
-        "Use strict validation with a null source hash until production replay publication is "
-        "implemented."};
+        ErrorCode::config_schema, "TASK-012 replay requires a null input SHA-256.",
+        "Use a null source hash until production replay publication is implemented."};
     return render_error(output, error, "replay", options.format, options.log_format, failure);
+  }
+
+  if (runtime.cancellation.is_cancellation_requested()) {
+    render_cancellation_requested(error, options.log_format);
+    return render_cancelled(output, error, options.format, options.log_format,
+                            ReplayError{ErrorCode::cancelled, "Replay cancellation was requested.",
+                                        std::nullopt, std::nullopt, std::nullopt, std::nullopt,
+                                        std::nullopt});
   }
 
   auto input = open_input_source(config.input.path);
@@ -880,11 +978,44 @@ int run_replay(const std::span<const std::string_view> arguments, std::ostream& 
     return render_error(output, error, "replay", options.format, options.log_format, failure);
   }
 
+  std::unique_ptr<ProgressReporter> progress;
+  if (!options.quiet) {
+    progress = std::make_unique<ProgressReporter>(
+        progress_clock, [&error, log_format = options.log_format](const ReplayProgress& update) {
+          render_progress(error, log_format, update);
+        });
+  }
+
   const ReplayCoordinator coordinator;
-  const auto replayed = coordinator.run(*input.source, config, *diagnostics.sink);
+  const auto replayed = coordinator.run(*input.source, config, *diagnostics.sink,
+                                        runtime.cancellation, progress.get());
   if (replayed.error) {
+    if (replayed.error->code == ErrorCode::cancelled) {
+      render_cancellation_requested(error, options.log_format);
+    }
+    if (const auto close_error = diagnostics.sink->close_partial()) {
+      render_warning(error, "replay", options.log_format, "PARTIAL_CLOSE_FAILED",
+                     close_error->message);
+    }
+    if (replayed.error->code == ErrorCode::cancelled) {
+      return render_cancelled(output, error, options.format, options.log_format, *replayed.error);
+    }
     return render_error(output, error, "replay", options.format, options.log_format,
                         replay_error(*replayed.error));
+  }
+  if (runtime.cancellation.is_cancellation_requested()) {
+    render_cancellation_requested(error, options.log_format);
+    if (const auto close_error = diagnostics.sink->close_partial()) {
+      render_warning(error, "replay", options.log_format, "PARTIAL_CLOSE_FAILED",
+                     close_error->message);
+    }
+    return render_cancelled(output, error, options.format, options.log_format,
+                            ReplayError{ErrorCode::cancelled, "Replay cancellation was requested.",
+                                        std::nullopt, std::nullopt, std::nullopt, std::nullopt,
+                                        ReplayRuntimeContext{replayed.summary->messages_processed,
+                                                             replayed.summary->selected_events,
+                                                             replayed.summary->errors_observed,
+                                                             replayed.summary->source_progress}});
   }
   if (const auto publish_error = diagnostics.sink->publish()) {
     const CommandError failure{publish_error->code, publish_error->message,
@@ -892,12 +1023,19 @@ int run_replay(const std::span<const std::string_view> arguments, std::ostream& 
     return render_error(output, error, "replay", options.format, options.log_format, failure);
   }
 
-  const std::vector<std::string> warnings{
-      "TASK-011 files are provisional JSONL diagnostics, not production interchange or a completed "
-      "replay manifest."};
+  std::vector<std::string> warnings;
+  if (replayed.summary->degraded) {
+    warnings.emplace_back("DEGRADED: safely skipped " +
+                          std::to_string(replayed.summary->skipped_messages) +
+                          " malformed or inconsistent message(s): " +
+                          map_text(replayed.summary->error_counts_by_code) + '.');
+  }
+  warnings.emplace_back(
+      "TASK-012 files are provisional JSONL diagnostics, not production interchange or a completed "
+      "replay manifest.");
   if (options.format == OutputFormat::json) {
-    render_success_json(output, "replay", replay_summary_json(*replayed.summary, *diagnostics.sink),
-                        warnings);
+    render_success_json(output, "replay", replayed.summary->degraded ? "degraded" : "completed",
+                        replay_summary_json(*replayed.summary, *diagnostics.sink), warnings);
   } else {
     render_replay_human(output, *replayed.summary, *diagnostics.sink);
     for (const auto& warning : warnings) {
@@ -911,6 +1049,14 @@ int run_replay(const std::span<const std::string_view> arguments, std::ostream& 
 
 int run(const std::span<const std::string_view> arguments, std::ostream& output,
         std::ostream& error) {
+  return run(arguments, output, error, RuntimeContext{});
+}
+
+int run(const std::span<const std::string_view> arguments, std::ostream& output,
+        std::ostream& error, const RuntimeContext runtime) {
+  const SteadyProgressClock default_progress_clock;
+  const auto& progress_clock =
+      runtime.progress_clock != nullptr ? *runtime.progress_clock : default_progress_clock;
   try {
     if (arguments.empty()) {
       print_global_help(output);
@@ -928,7 +1074,7 @@ int run(const std::span<const std::string_view> arguments, std::ostream& output,
       return run_inspect(arguments.subspan(1), output, error);
     }
     if (arguments.front() == "replay") {
-      return run_replay(arguments.subspan(1), output, error);
+      return run_replay(arguments.subspan(1), output, error, runtime, progress_clock);
     }
 
     const auto format = wants_json(arguments) ? OutputFormat::json : OutputFormat::human;

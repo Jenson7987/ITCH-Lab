@@ -107,20 +107,27 @@ sequenceDiagram
 
 ### Alternative paths
 
-- In permissive mode, a safely skippable malformed message increments the error budget and marks the run degraded.
+- In permissive mode, a safely framed unknown type, known-type length mismatch, invalid timestamp
+  or decoder field invariant may be skipped because the outer frame supplies the next boundary.
+  An order-reference or quantity rejection may also be skipped because book mutation is atomic.
+- Every observed error is counted by stable code. Each skip consumes one unit of the configured
+  budget and marks the run degraded; the first error beyond the budget stops replay.
 - A non-book trade may create an event record without a changed book snapshot.
 - A selected symbol halted during part of the session retains state, but research rows outside a tradable state are flagged or excluded.
 
 ### Failure paths
 
-- Duplicate/missing order reference: strict mode aborts with event context.
+- Duplicate/missing order reference: strict mode aborts with event context; permissive mode may
+  skip the unchanged atomic mutation within budget.
 - Error budget exceeded: abort, mark failed and retain partial diagnostics.
+- Outer framing, I/O, internal and post-replay invariant failures are never skipped.
 - Disk write/hash failure: abort without publishing final paths.
 - Validation mismatch: preserve partial artefacts for diagnosis and exit non-zero.
 
 ### Cancellation
 
-SIGINT follows UF-006. No completed manifest is published.
+SIGINT follows UF-006. No completed artefact is published; a cancelled manifest is recorded only
+when the manifest layer is available.
 
 ## UF-003 — Convert and build a dataset
 
@@ -253,7 +260,8 @@ stateDiagram-v2
 2. The signal handler sets an atomic cancellation flag; it performs no unsafe I/O.
 3. The main loop observes the flag at a message boundary.
 4. Writers flush and close their partial files.
-5. The manifest records cancelled status when possible.
+5. The result records cancelled status and the manifest does likewise when the manifest layer is
+   available.
 6. The command exits with code 130.
 
 ### Recovery

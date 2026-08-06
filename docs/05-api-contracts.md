@@ -104,8 +104,8 @@ Idempotency: read-only and idempotent.
 
 Purpose: create normalised events, snapshots and a completed replay manifest.
 
-Incremental TASK-011 availability remains narrower than the final contract below. The implemented
-command accepts one or more configured symbols, strict mode, either value of
+Incremental TASK-012 availability remains narrower than the final contract below. The implemented
+command accepts one or more configured symbols, strict or permissive mode, either value of
 `require_trading_state` and a null input SHA-256. It resolves daily identities from Stock Directory
 messages, assigns `SymbolId` values in requested-symbol order and routes H/A/F/E/C/X/D/U/P/Q/B for
 selected locates. Selected events before `session_start_ns` warm the book and are emitted with
@@ -115,19 +115,22 @@ session metadata.
 
 The command writes `diagnostic-events.jsonl` and `diagnostic-snapshots.jsonl` beneath a fresh output
 root. Rows identify `itchlab-task-011-diagnostic-v1`, and success summaries use
-`artefact_status=provisional_diagnostic` without a production run ID. Snapshot timestamps are
+`artefact_status=provisional_diagnostic` without a production run ID; a permissive run that skips
+at least one message instead reports `status=degraded` and
+`artefact_status=provisional_diagnostic_degraded`. Snapshot timestamps are
 limited to the configured half-open session. Every in-session selected trading-state change emits a
 snapshot. Ordinary top-N changes and configured P/Q trade snapshots additionally require the
 instrument to be trading when `require_trading_state=true`. The success summary exposes requested
-instruments, their daily metadata/final state/digest, global session events and all/selected type
-counts with global, directory, selected and filtered reconciliation totals.
+instruments, their daily metadata/final state/digest, global session events, all/selected type
+counts with global, directory, selected and filtered reconciliation totals, and error/skip counts
+by stable error code.
 
 These files are diagnostic JSON Lines, not the version-1 interchange files or a completed replay
-run. Production binary writers, hashes, manifests, permissive error policy, progress/cancellation
-and immutable run identity remain assigned to TASK-012 through TASK-014. `--force-new-run` is
-rejected until immutable production run publication exists.
+run. Production binary writers, hashes, manifests and immutable run identity remain assigned to
+TASK-013 and TASK-014. `--force-new-run` is rejected until immutable production run publication
+exists.
 
-    itchlab replay +      --config <replay-config.json> +      [--output-root <directory>] +      [--format human|json] +      [--force-new-run]
+    itchlab replay +      --config <replay-config.json> +      [--output-root <directory>] +      [--format human|json] +      [--log-format human|jsonl] +      [--quiet] +      [--force-new-run]
 
 Replay config v1:
 
@@ -163,6 +166,17 @@ Semantic rules:
 - Session is half-open [start, end).
 - invariant_interval 1 means after every selected mutation; 0 is invalid.
 - In strict mode max_skipped_messages must be 0; permissive mode may use a non-negative explicit budget.
+- Strict mode stops on the first decoder or book error. Permissive mode may skip only frame-local
+  decoder errors (`ERR_UNKNOWN_MESSAGE`, `ERR_MESSAGE_LENGTH`, `ERR_TIMESTAMP` and decoder field
+  `ERR_INVARIANT`) or atomic book rejections (`ERR_ORDER_REFERENCE` and `ERR_QUANTITY`). Outer
+  framing, I/O, internal and final invariant errors remain fatal.
+- Every policy error is counted by stable code. Each skipped message consumes one budget unit; the
+  first otherwise-skippable error beyond the budget is fatal and is not counted as skipped.
+- Replay progress is written only to stderr: first after five seconds, then after 30 seconds or ten
+  million further messages, whichever comes first. `--log-format jsonl` emits one JSON object per
+  update and `--quiet` suppresses progress.
+- The first SIGINT requests cancellation at the next complete message boundary, closes streams and
+  retains only `.partial` diagnostics before exit 130. A second SIGINT may terminate immediately.
 
 Success artefacts:
 
@@ -479,14 +493,16 @@ public:
     const ReplayConfig& config,
     EventSink& events,
     SnapshotSink& snapshots,
-    CancellationToken cancellation);
+    CancellationToken cancellation,
+    ProgressReporter* progress);
 };
 ```
 
 Contract:
 
 - Calls sinks in source order.
-- Checks cancellation at bounded message intervals.
+- Checks cancellation at complete framed-message boundaries.
+- Reports observational progress without contributing wall-clock state to deterministic output.
 - Does not publish final artefacts; publication belongs to the command coordinator.
 
 ## Python public service interfaces

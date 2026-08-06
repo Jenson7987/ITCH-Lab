@@ -84,6 +84,9 @@ public:
   [[nodiscard]] std::optional<DiagnosticWriteError>
   write_snapshot(const DiagnosticSnapshot& snapshot) override;
 
+  // Flushes and closes both staged files without publishing final names. Idempotent.
+  [[nodiscard]] std::optional<DiagnosticWriteError> close_partial();
+
   // Flushes and atomically renames both staged files. Existing final files are never replaced.
   [[nodiscard]] std::optional<DiagnosticWriteError> publish();
 
@@ -91,14 +94,23 @@ public:
   [[nodiscard]] const std::filesystem::path& snapshot_path() const noexcept {
     return snapshot_path_;
   }
+  [[nodiscard]] const std::filesystem::path& event_partial_path() const noexcept {
+    return event_partial_path_;
+  }
+  [[nodiscard]] const std::filesystem::path& snapshot_partial_path() const noexcept {
+    return snapshot_partial_path_;
+  }
 
 private:
+  [[nodiscard]] std::optional<DiagnosticWriteError> close_streams();
+
   std::filesystem::path event_path_;
   std::filesystem::path snapshot_path_;
   std::filesystem::path event_partial_path_;
   std::filesystem::path snapshot_partial_path_;
   std::ofstream event_stream_;
   std::ofstream snapshot_stream_;
+  bool closed_{};
   bool published_{};
 };
 

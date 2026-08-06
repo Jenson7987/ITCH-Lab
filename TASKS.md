@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-012: Implement error policy, progress and cancellation
-  - Dependencies: TASK-011
-  - Acceptance criteria: Strict/permissive/error budget and safe exit 130
-  - Tests: E2E-003/E2E-004
-  - Documentation to update: 02-user-flows.md
-
 - [ ] TASK-013: Implement normalised event writer
   - Dependencies: TASK-010, TASK-012
   - Acceptance criteria: Golden 104-byte header and 72-byte records
@@ -133,6 +127,20 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-012: Implement error policy, progress and cancellation
+  - Completed: 2026-08-06
+  - Evidence: Replay now applies a stage-aware strict/permissive policy, counts stable errors,
+    enforces the exact skip budget and marks successfully skipped runs degraded. Rate-limited human
+    or JSONL progress stays on stderr and `--quiet` suppresses it. The first SIGINT is observed at a
+    complete message boundary, closes newline-terminated partial diagnostics and exits 130; a
+    second may terminate immediately. Twelve TASK-012 unit/integration cases cover E2E-003,
+    real-process E2E-004, safe/unsafe classes, exact budgets, atomic book skips, progress rate and
+    channel rules, cancellation tokens and signal handling. All 96 runnable CTest entries passed in
+    dev, release, ASan/UBSan and coverage presets; the authorised external-data entry skipped as
+    designed. The 25-file fixture check, reduced E2E smoke, all 75 Python tests, Ruff, strict mypy,
+    C++ formatting, shell syntax, diff checks and the Python wheel/sdist build passed. Production
+    interchange and manifest evidence remain correctly assigned to TASK-013/TASK-014.
 
 - [x] TASK-011: Add directory, session/state and filtering
   - Completed: 2026-08-05

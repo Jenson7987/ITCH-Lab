@@ -11,7 +11,7 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | FR-003 | 02 UF-002; 03 InstrumentDirectory/SessionState | TASK-004, TASK-007, TASK-011 | TASK-011 directory unit and multi-symbol/session/filter CLI/integration tests |
 | FR-004 | 03 OrderBook; 04 transient entities | TASK-006, TASK-010 | UT-BOOK-001, UT-BOOK-002, UT-BOOK-003, UT-BOOK-004, IT-003 |
 | FR-005 | 03 OrderBook; 04 PriceLevel/Snapshot | TASK-006, TASK-010 | IT-003, book aggregation/order property tests |
-| FR-006 | 02 UF-002/UF-006; 03 errors | TASK-002 (catalogue/config), TASK-012 (runtime policy) | UT-CFG-001, E2E-003, strict/permissive error-budget tests |
+| FR-006 | 02 UF-002/UF-006; 03 errors | TASK-002 (catalogue/config), TASK-012 (runtime policy) | UT-CFG-001, TASK-012 stage-aware policy/budget tests, E2E-003 |
 | FR-007 | 04 NormalisedEvent/event v1; 05 replay | TASK-007 (provisional diagnostic slice), TASK-013 (production interchange) | TASK-007 CLI/golden integration, UT-OUT-001, CT-BIN-001 |
 | FR-008 | 04 BookSnapshot/snapshot v1 | TASK-007 (provisional diagnostic slice), TASK-011, TASK-014 (production snapshots) | TASK-007 CLI/golden integration, TASK-011 halt/resume and trading-state-gating integration, UT-OUT-002, IT-004 |
 | FR-009 | 04 ReplayRun; 03 ManifestBuilder | TASK-002 (config contract), TASK-014 (manifest) | UT-CFG-001, CT-JSON-001, IT-004 |
@@ -36,10 +36,10 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | NFR-001 | ADR-003; 03 state/performance | TASK-006, TASK-013, TASK-029 | Repeated-run byte/digest tests, E2E-001 |
 | NFR-002 | 03 performance/scalability | TASK-004, TASK-016, TASK-017, TASK-029 | PERF-005/007/008, large-stream memory test |
 | NFR-003 | 03 performance; 09 release criteria | TASK-029 | PERF-004 plus platform benchmark report |
-| NFR-004 | 03 errors/file contracts | TASK-012, TASK-013, TASK-014, TASK-017 | IT-005, E2E-004, write-failure tests |
+| NFR-004 | 03 errors/file contracts | TASK-012, TASK-013, TASK-014, TASK-017 | E2E-004 process cancellation/clean-rerun test, IT-005, write-failure tests |
 | NFR-005 | ADR-002; 09 build | TASK-001, TASK-016, TASK-030 | macOS/Linux build, CT-BIN-001 |
 | NFR-006 | 03 state/file contracts; 09 release | TASK-001, TASK-002, TASK-014, TASK-020, TASK-030 | Canonical-hash, clean-install and E2E-001 |
-| NFR-007 | 03 logging; 06 progress | TASK-007, TASK-012 | stdout/stderr, TTY/non-TTY progress tests |
+| NFR-007 | 03 logging; 06 progress | TASK-007, TASK-012 | TASK-012 rate-limit and non-TTY JSONL/stderr/quiet tests |
 | NFR-008 | 07 SEC-001/002/012 | TASK-004, TASK-005, TASK-028 | UT-DEC-002, SEC-FUZZ-001, sanitizers |
 | NFR-009 | 08 coverage/CI | TASK-008, TASK-028, TASK-030 | Coverage gates and CI matrix |
 | NFR-010 | ADR-004; 02 UF-003–005 | TASK-018–020, TASK-023–027, TASK-031 | UT-FEAT-001, UT-MODEL-001, simulator properties |

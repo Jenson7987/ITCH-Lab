@@ -5,6 +5,7 @@
 #include "itchlab/input/framed_reader.hpp"
 #include "itchlab/itch/decoder.hpp"
 #include "itchlab/itch/messages.hpp"
+#include "itchlab/replay/error_policy.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -27,9 +28,11 @@ failure(const ErrorCode code, std::string message,
         const std::optional<MessageIndex> message_index = std::nullopt,
         const std::optional<std::uint64_t> source_offset = std::nullopt,
         const std::optional<std::uint8_t> source_type = std::nullopt,
-        const std::optional<OrderReference> order_reference = std::nullopt) {
-  return ReplayResult{std::nullopt, ReplayError{code, std::move(message), message_index,
-                                                source_offset, source_type, order_reference}};
+        const std::optional<OrderReference> order_reference = std::nullopt,
+        const std::optional<ReplayRuntimeContext> runtime = std::nullopt) {
+  return ReplayResult{std::nullopt,
+                      ReplayError{code, std::move(message), message_index, source_offset,
+                                  source_type, order_reference, runtime}};
 }
 
 [[nodiscard]] bool is_in_session(const TimestampNs timestamp_ns,
@@ -99,28 +102,36 @@ count_total(const std::map<std::string, std::uint64_t>& counts) noexcept {
   return message;
 }
 
+[[nodiscard]] std::map<std::string, std::uint64_t> error_counts(const ErrorPolicy& policy) {
+  std::map<std::string, std::uint64_t> result;
+  for (const auto& [code, count] : policy.counts_by_code()) {
+    result.emplace(error_code_name(code), count);
+  }
+  return result;
+}
+
 } // namespace
 
 ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& config,
-                                    DiagnosticSink& diagnostics) const {
+                                    DiagnosticSink& diagnostics,
+                                    const CancellationToken cancellation,
+                                    ProgressReporter* const progress) const {
   if (config.selection.symbols.empty() ||
       config.selection.symbols.size() > std::numeric_limits<SymbolId>::max()) {
     return failure(ErrorCode::config_schema,
                    "Replay requires between one and 65535 selected symbols.");
   }
-  if (config.validation.mode != ValidationMode::strict) {
-    return failure(ErrorCode::config_schema,
-                   "TASK-011 provisional replay supports strict validation only.");
-  }
   if (config.input.sha256) {
     return failure(ErrorCode::config_schema,
-                   "TASK-011 provisional replay requires input.sha256 to be null.");
+                   "Provisional replay requires input.sha256 to be null.");
   }
   if (config.validation.invariant_interval == 0) {
     return failure(ErrorCode::config_schema, "Invariant interval must be positive.");
   }
 
   ReplaySummary summary;
+  ErrorPolicy error_policy{config.validation};
+  std::uint64_t skipped_decode_messages{};
   FramedMessageReader reader{source};
   const ItchDecoder decoder;
   InstrumentDirectory directory{config.selection.symbols};
@@ -129,7 +140,26 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
   std::unordered_map<StockLocate, std::uint64_t> mutations_by_locate;
   std::unordered_set<StockLocate> unresolved_locates_observed;
 
+  const auto runtime_context = [&]() {
+    return ReplayRuntimeContext{summary.messages_processed, summary.selected_events,
+                                error_policy.error_count(), source.progress()};
+  };
+  const auto report_progress = [&]() {
+    if (progress != nullptr) {
+      progress->observe(summary.messages_processed, source.progress(), summary.selected_events,
+                        error_policy.error_count());
+    }
+  };
+  const auto cancellation_failure = [&]() {
+    return failure(ErrorCode::cancelled, "Replay cancellation was requested.", std::nullopt,
+                   std::nullopt, std::nullopt, std::nullopt, runtime_context());
+  };
+
   while (true) {
+    report_progress();
+    if (cancellation.is_cancellation_requested()) {
+      return cancellation_failure();
+    }
     const auto framed = reader.next();
     if (framed.error) {
       return failure(framed.error->code, framed.error->message, framed.error->message_index,
@@ -149,7 +179,24 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
 
     const auto decoded = decoder.decode(frame.payload);
     if (decoded.error) {
-      return failure(decoded.error->code, decoded.error->message, frame.message_index,
+      const auto decision = error_policy.observe(ReplayErrorOrigin::decoder, decoded.error->code);
+      if (decision.counter_overflow) {
+        return failure(ErrorCode::internal, "Replay error counter overflowed.", frame.message_index,
+                       frame.source_offset, decoded.error->source_type);
+      }
+      if (decision.disposition == ErrorDisposition::skip) {
+        if (!increment(skipped_decode_messages)) {
+          return failure(ErrorCode::internal, "Skipped decoder-message counter overflowed.",
+                         frame.message_index, frame.source_offset, decoded.error->source_type);
+        }
+        continue;
+      }
+      auto message = decoded.error->message;
+      if (decision.disposition == ErrorDisposition::budget_exceeded) {
+        message += " Permissive skipped-message budget of " +
+                   std::to_string(config.validation.max_skipped_messages) + " was exceeded.";
+      }
+      return failure(decoded.error->code, std::move(message), frame.message_index,
                      frame.source_offset, decoded.error->source_type);
     }
     if (!increment(summary.decoded_messages) ||
@@ -406,7 +453,22 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
       const auto before = book.top_levels(config.output.depth);
       const auto applied = book.apply(*book_message);
       if (applied.error) {
-        return failure(applied.error->code, applied.error->message, frame.message_index,
+        const auto decision =
+            error_policy.observe(ReplayErrorOrigin::book_apply, applied.error->code);
+        if (decision.counter_overflow) {
+          return failure(ErrorCode::internal, "Replay error counter overflowed.",
+                         frame.message_index, frame.source_offset, source_type,
+                         applied.error->order_reference);
+        }
+        if (decision.disposition == ErrorDisposition::skip) {
+          continue;
+        }
+        auto message = applied.error->message;
+        if (decision.disposition == ErrorDisposition::budget_exceeded) {
+          message += " Permissive skipped-message budget of " +
+                     std::to_string(config.validation.max_skipped_messages) + " was exceeded.";
+        }
+        return failure(applied.error->code, std::move(message), frame.message_index,
                        frame.source_offset, source_type, applied.error->order_reference);
       }
       const auto& delta = *applied.delta;
@@ -609,6 +671,11 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
     }
   }
 
+  report_progress();
+  if (cancellation.is_cancellation_requested()) {
+    return cancellation_failure();
+  }
+
   if (!directory.all_requested_resolved()) {
     return failure(ErrorCode::unknown_symbol, unresolved_message(directory.unresolved_symbols()));
   }
@@ -624,10 +691,12 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
       categorised_directory_total
           ? checked_add(summary.global_system_messages, *categorised_directory_total)
           : std::nullopt;
-  if (!all_count_total || !selected_count_total || !categorised_total ||
+  const auto processed_total = checked_add(summary.decoded_messages, skipped_decode_messages);
+  if (!all_count_total || !selected_count_total || !categorised_total || !processed_total ||
       *all_count_total != summary.decoded_messages ||
       *selected_count_total != summary.selected_instrument_messages ||
-      *categorised_total != summary.decoded_messages) {
+      *categorised_total != summary.decoded_messages ||
+      *processed_total != summary.messages_processed) {
     return failure(ErrorCode::internal, "Replay message-count reconciliation failed.");
   }
 
@@ -650,6 +719,10 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
   }
   summary.global_session_events = session.global_events();
   summary.source_progress = source.progress();
+  summary.errors_observed = error_policy.error_count();
+  summary.skipped_messages = error_policy.skipped_messages();
+  summary.degraded = error_policy.degraded();
+  summary.error_counts_by_code = error_counts(error_policy);
   return ReplayResult{std::move(summary), std::nullopt};
 }
 

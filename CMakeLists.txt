@@ -76,6 +76,7 @@ add_library(
   cpp/src/book/order_book.cpp
   cpp/src/config/canonical_json.cpp
   cpp/src/config/replay_config.cpp
+  cpp/src/core/cancellation.cpp
   cpp/src/core/errors.cpp
   cpp/src/core/sha256.cpp
   cpp/src/input/byte_source.cpp
@@ -88,6 +89,8 @@ add_library(
   cpp/src/itch/decoder.cpp
   cpp/src/output/diagnostic_sinks.cpp
   cpp/src/replay/instrument_directory.cpp
+  cpp/src/replay/error_policy.cpp
+  cpp/src/replay/progress_reporter.cpp
   cpp/src/replay/replay_coordinator.cpp
   cpp/src/replay/session_state.cpp
 )
@@ -95,10 +98,14 @@ target_include_directories(itchlab_core PUBLIC cpp/include)
 target_link_libraries(itchlab_core PRIVATE nlohmann_json::nlohmann_json ZLIB::ZLIB)
 itchlab_configure_target(itchlab_core)
 
-add_library(itchlab_cli cpp/apps/itchlab/cli.cpp)
+add_library(
+  itchlab_cli
+  cpp/apps/itchlab/cli.cpp
+  cpp/apps/itchlab/signal_adapter.cpp
+)
 target_include_directories(itchlab_cli PUBLIC cpp/apps)
 target_compile_definitions(itchlab_cli PRIVATE ITCHLAB_VERSION="${PROJECT_VERSION}")
-target_link_libraries(itchlab_cli PRIVATE itchlab_core nlohmann_json::nlohmann_json)
+target_link_libraries(itchlab_cli PUBLIC itchlab_core PRIVATE nlohmann_json::nlohmann_json)
 itchlab_configure_target(itchlab_cli)
 
 add_executable(itchlab cpp/apps/itchlab/main.cpp)
@@ -126,21 +133,29 @@ if(BUILD_TESTING)
     tests/cpp/integration/task007_replay_integration_test.cpp
     tests/cpp/integration/task008_e2e_integration_test.cpp
     tests/cpp/integration/task011_replay_integration_test.cpp
+    tests/cpp/integration/task012_cancellation_e2e_test.cpp
+    tests/cpp/integration/task012_replay_integration_test.cpp
     tests/cpp/property/order_book_property_test.cpp
     tests/cpp/property/framed_reader_property_test.cpp
     tests/cpp/unit/byte_decode_test.cpp
     tests/cpp/unit/byte_source_test.cpp
+    tests/cpp/unit/cancellation_test.cpp
     tests/cpp/unit/decoder_test.cpp
     tests/cpp/unit/errors_test.cpp
+    tests/cpp/unit/error_policy_test.cpp
     tests/cpp/unit/framed_reader_test.cpp
     tests/cpp/unit/order_book_test.cpp
+    tests/cpp/unit/progress_reporter_test.cpp
     tests/cpp/unit/instrument_directory_test.cpp
     tests/cpp/unit/session_state_test.cpp
     tests/cpp/unit/sha256_test.cpp
     tests/cpp/unit/types_test.cpp
   )
   target_compile_definitions(
-    itchlab_core_tests PRIVATE ITCHLAB_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    itchlab_core_tests
+    PRIVATE
+      ITCHLAB_BINARY_PATH="$<TARGET_FILE:itchlab>"
+      ITCHLAB_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
   )
   target_link_libraries(
     itchlab_core_tests
@@ -179,6 +194,6 @@ if(BUILD_TESTING)
   add_test(NAME TASK_007_cpp_cli_replay_help COMMAND itchlab replay --help)
   set_tests_properties(
     TASK_007_cpp_cli_replay_help
-    PROPERTIES PASS_REGULAR_EXPRESSION "provisional TASK-011"
+    PROPERTIES PASS_REGULAR_EXPRESSION "provisional TASK-012"
   )
 endif()

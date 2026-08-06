@@ -5,11 +5,11 @@ ITCH-Lab is an offline quantitative-research platform that decodes Nasdaq TotalV
 ## Status
 
 Specification complete. The reproducible C++/Python foundation, bounded plain/gzip framed-input
-layer, stateless full-MVP decoder, deterministic full-lifecycle level-3 book and first inspect/replay
-command slice are implemented. The book core supports the complete A/F/E/C/X/D/U visible
-lifecycle with atomic invariants, while replay currently writes explicitly provisional JSONL
-diagnostics for one synthetic symbol and routes only the initial A/D lifecycle. Production
-interchange, manifests, research and simulation remain planned.
+layer, stateless full-MVP decoder, deterministic full-lifecycle level-3 book and selected-symbol
+inspect/replay command slice are implemented. Replay routes the complete visible lifecycle and
+session/trading-state metadata, supports strict or budgeted permissive processing, emits bounded
+stderr progress and cancels safely at message boundaries. It still writes explicitly provisional
+JSONL diagnostics. Production interchange, manifests, research and simulation remain planned.
 
 Classification legend used throughout the documentation:
 
@@ -64,11 +64,12 @@ The repository structure is being implemented incrementally according to `TASKS.
 foundation provides buildable version/help CLIs, fixed C++ domain/error types, strict validated
 configuration contracts with canonical cross-language hashes, and bounded streaming of verified
 `itch-length-v1` plain/gzip sources. It decodes S/R/H/A/F/E/C/X/D/U/P/Q/B with exact length,
-big-endian and timestamp validation, applies the initial add/delete events to a deterministic
-level-3 book through the provisional command, and exposes bounded inspect plus one-symbol
-diagnostic replay commands. The underlying book supports complete executions, cancellations and
-replacements with deterministic FIFO/aggregate state. Production binary replay artefacts and
-manifests, full command routing, research and simulation commands are implemented by later tasks.
+big-endian and timestamp validation, applies the full visible lifecycle to deterministic per-symbol
+level-3 books and exposes bounded inspect plus multi-symbol diagnostic replay. Replay has
+stage-aware strict/permissive error policy, stable error counts, degraded disclosure, rate-limited
+human or JSONL progress and graceful SIGINT exit 130 with retained partial diagnostics. Production
+binary replay artefacts and manifests, research and simulation commands are implemented by later
+tasks.
 
 ## Local setup
 

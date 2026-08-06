@@ -70,8 +70,8 @@ JsonlDiagnosticSink::JsonlDiagnosticSink(std::filesystem::path event_path,
       event_stream_{std::move(event_stream)}, snapshot_stream_{std::move(snapshot_stream)} {}
 
 std::optional<DiagnosticWriteError> JsonlDiagnosticSink::write_event(const DiagnosticEvent& event) {
-  if (published_) {
-    return write_error("Cannot write an event after diagnostic publication.");
+  if (closed_) {
+    return write_error("Cannot write an event after diagnostic output was closed.");
   }
   Json value{
       {"book_digest", content_hash_to_hex(event.book_digest)},
@@ -121,8 +121,8 @@ std::optional<DiagnosticWriteError> JsonlDiagnosticSink::write_event(const Diagn
 
 std::optional<DiagnosticWriteError>
 JsonlDiagnosticSink::write_snapshot(const DiagnosticSnapshot& snapshot) {
-  if (published_) {
-    return write_error("Cannot write a snapshot after diagnostic publication.");
+  if (closed_) {
+    return write_error("Cannot write a snapshot after diagnostic output was closed.");
   }
   Json value{
       {"asks", level_array(snapshot.top_levels.asks)},
@@ -148,20 +148,38 @@ JsonlDiagnosticSink::write_snapshot(const DiagnosticSnapshot& snapshot) {
   return write_json_line(snapshot_stream_, value);
 }
 
-std::optional<DiagnosticWriteError> JsonlDiagnosticSink::publish() {
-  if (published_) {
-    return write_error("Diagnostic files have already been published.");
+std::optional<DiagnosticWriteError> JsonlDiagnosticSink::close_streams() {
+  if (closed_) {
+    return std::nullopt;
   }
 
   event_stream_.flush();
   snapshot_stream_.flush();
-  if (!event_stream_.good() || !snapshot_stream_.good()) {
-    return write_error("Diagnostic file flush failed.");
-  }
+  const auto flush_failed = !event_stream_.good() || !snapshot_stream_.good();
   event_stream_.close();
   snapshot_stream_.close();
-  if (event_stream_.fail() || snapshot_stream_.fail()) {
+  const auto close_failed = event_stream_.fail() || snapshot_stream_.fail();
+  closed_ = true;
+  if (flush_failed) {
+    return write_error("Diagnostic file flush failed.");
+  }
+  if (close_failed) {
     return write_error("Diagnostic file close failed.");
+  }
+  return std::nullopt;
+}
+
+std::optional<DiagnosticWriteError> JsonlDiagnosticSink::close_partial() { return close_streams(); }
+
+std::optional<DiagnosticWriteError> JsonlDiagnosticSink::publish() {
+  if (published_) {
+    return write_error("Diagnostic files have already been published.");
+  }
+  if (closed_) {
+    return write_error("Closed partial diagnostic files cannot be published.");
+  }
+  if (const auto close_error = close_streams()) {
+    return close_error;
   }
 
   std::error_code filesystem_error;
@@ -172,7 +190,11 @@ std::optional<DiagnosticWriteError> JsonlDiagnosticSink::publish() {
   std::filesystem::rename(snapshot_partial_path_, snapshot_path_, filesystem_error);
   if (filesystem_error) {
     std::error_code rollback_error;
-    std::filesystem::remove(event_path_, rollback_error);
+    std::filesystem::rename(event_path_, event_partial_path_, rollback_error);
+    if (rollback_error) {
+      return write_error(
+          "Could not publish the diagnostic snapshot file or restore the event partial file.");
+    }
     return write_error("Could not publish the diagnostic snapshot file.");
   }
   published_ = true;
