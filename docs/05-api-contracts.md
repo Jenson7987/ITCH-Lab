@@ -104,33 +104,26 @@ Idempotency: read-only and idempotent.
 
 Purpose: create normalised events, snapshots and a completed replay manifest.
 
-Incremental TASK-013 availability remains narrower than the final contract below. The implemented
-command accepts one or more configured symbols, strict or permissive mode, either value of
-`require_trading_state` and a null input SHA-256. It resolves daily identities from Stock Directory
-messages, assigns `SymbolId` values in requested-symbol order and routes H/A/F/E/C/X/D/U/P/Q/B for
-selected locates. Selected events before `session_start_ns` warm the book and are emitted with
-`in_session=false`; selected events at or after `session_end_ns` are not applied or emitted. Global
-S events continue to be retained after that boundary so later manifest publication has complete
-session metadata.
+The implemented command accepts one or more configured symbols, strict or permissive mode, either
+value of `require_trading_state` and either a null or expected input SHA-256. It resolves daily
+identities from Stock Directory messages, assigns `SymbolId` values in requested-symbol order and
+routes H/A/F/E/C/X/D/U/P/Q/B for selected locates. Selected events before `session_start_ns` warm
+the book and are emitted with `in_session=false`; selected events at or after `session_end_ns` are
+not applied or emitted. Global S events continue to be retained after that boundary so the
+completed manifest has complete session metadata.
 
-The command writes `diagnostic-events.jsonl` and `diagnostic-snapshots.jsonl` beneath a fresh output
-root. Rows identify `itchlab-task-011-diagnostic-v1`, and success summaries use
-`artefact_status=provisional_diagnostic` without a production run ID; a permissive run that skips
-at least one message instead reports `status=degraded` and
-`artefact_status=provisional_diagnostic_degraded`. Snapshot timestamps are
-limited to the configured half-open session. Every in-session selected trading-state change emits a
-snapshot. Ordinary top-N changes and configured P/Q trade snapshots additionally require the
-instrument to be trading when `require_trading_state=true`. The success summary exposes requested
-instruments, their daily metadata/final state/digest, global session events, all/selected type
-counts with global, directory, selected and filtered reconciliation totals, and error/skip counts
-by stable error code.
+The production command writes a staged immutable replay directory beneath
+`<output-root>/replay/`. Snapshot timestamps are limited to the configured half-open session.
+Every changed in-session selected trading state emits a snapshot. Ordinary top-N changes and
+configured P/Q trade snapshots additionally require the instrument to be trading when
+`require_trading_state=true`. P/Q observations update the causal last-trade pair even when their
+unchanged snapshot is disabled.
 
-These files are diagnostic JSON Lines, not the version-1 interchange files or a completed replay
-run. The production event-v1 writer now emits deterministic staged 104-byte headers, requested-order
-16-byte symbol entries and source-ordered 72-byte records for an owning coordinator, but it does not
-publish a final path. Snapshot writing, source/output hash coordination, manifests, immutable run
-identity and atomic completed publication remain assigned to TASK-014. `--force-new-run` is rejected
-until immutable production run publication exists.
+Before publication, the command verifies the source/executable/config identities, finalises both
+binary headers, checks expected sizes/counts and hashes both children. The staging directory retains
+a `.partial` suffix until a same-filesystem directory rename makes `events.ilb`, `snapshots.ilb` and
+the completed manifest visible together. Public shallow/deep validation remains assigned to
+TASK-015.
 
     itchlab replay +      --config <replay-config.json> +      [--output-root <directory>] +      [--format human|json] +      [--log-format human|jsonl] +      [--quiet] +      [--force-new-run]
 
@@ -178,7 +171,8 @@ Semantic rules:
   million further messages, whichever comes first. `--log-format jsonl` emits one JSON object per
   update and `--quiet` suppresses progress.
 - The first SIGINT requests cancellation at the next complete message boundary, closes streams and
-  retains only `.partial` diagnostics before exit 130. A second SIGINT may terminate immediately.
+  retains only a `.partial` staging directory/files before exit 130. A second SIGINT may terminate
+  immediately.
 
 Success artefacts:
 
@@ -188,8 +182,10 @@ Success artefacts:
 
 Idempotency:
 
-- If the same full identity digest already completed, return the existing run after validation.
-- force-new-run creates a new timestamped identity but never overwrites the completed directory.
+- If the same full identity digest already completed, return it after bounded manifest/file
+  size-and-hash verification.
+- `--force-new-run` creates a new timestamped run directory for the same content identity but never
+  overwrites a completed directory.
 - An existing conflicting partial directory fails with ERR_RUN_EXISTS.
 
 ### itchlab validate

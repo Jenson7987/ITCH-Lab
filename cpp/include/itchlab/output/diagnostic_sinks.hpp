@@ -48,6 +48,8 @@ struct DiagnosticSnapshot {
   bool top_n_changed{};
   std::optional<Price4> event_price4;
   std::optional<Shares> event_quantity;
+  std::optional<Price4> last_trade_price4;
+  std::optional<Shares> last_trade_quantity;
   TradingState trading_state{TradingState::unknown};
   TopLevels top_levels;
   ContentHash book_digest{};

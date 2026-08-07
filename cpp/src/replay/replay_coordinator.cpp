@@ -121,10 +121,6 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
     return failure(ErrorCode::config_schema,
                    "Replay requires between one and 65535 selected symbols.");
   }
-  if (config.input.sha256) {
-    return failure(ErrorCode::config_schema,
-                   "Provisional replay requires input.sha256 to be null.");
-  }
   if (config.validation.invariant_interval == 0) {
     return failure(ErrorCode::config_schema, "Invariant interval must be positive.");
   }
@@ -138,6 +134,11 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
   SessionState session;
   std::unordered_map<StockLocate, std::unique_ptr<OrderBook>> books;
   std::unordered_map<StockLocate, std::uint64_t> mutations_by_locate;
+  struct LastTradeObservation {
+    Price4 price4{};
+    Shares quantity{};
+  };
+  std::unordered_map<StockLocate, std::optional<LastTradeObservation>> last_trades_by_locate;
   std::unordered_set<StockLocate> unresolved_locates_observed;
 
   const auto runtime_context = [&]() {
@@ -241,6 +242,7 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
         }
         books.emplace(locate, std::make_unique<OrderBook>(locate));
         mutations_by_locate.emplace(locate, 0);
+        last_trades_by_locate.emplace(locate, std::nullopt);
       }
       continue;
     }
@@ -361,19 +363,27 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
           return failure(ErrorCode::internal, "Selected trading state disappeared.",
                          frame.message_index, frame.source_offset, source_type);
         }
-        const DiagnosticSnapshot snapshot{frame.message_index,
-                                          header.timestamp_ns,
-                                          instrument->symbol_id,
-                                          instrument->stock_locate,
-                                          instrument->symbol,
-                                          "trading_state",
-                                          config.output.depth,
-                                          false,
-                                          std::nullopt,
-                                          std::nullopt,
-                                          *current_state,
-                                          book.top_levels(config.output.depth),
-                                          digest};
+        const DiagnosticSnapshot snapshot{
+            frame.message_index,
+            header.timestamp_ns,
+            instrument->symbol_id,
+            instrument->stock_locate,
+            instrument->symbol,
+            "trading_state",
+            config.output.depth,
+            false,
+            std::nullopt,
+            std::nullopt,
+            last_trades_by_locate.at(instrument->stock_locate)
+                ? std::optional<Price4>{last_trades_by_locate.at(instrument->stock_locate)->price4}
+                : std::nullopt,
+            last_trades_by_locate.at(instrument->stock_locate)
+                ? std::optional<Shares>{last_trades_by_locate.at(instrument->stock_locate)
+                                            ->quantity}
+                : std::nullopt,
+            *current_state,
+            book.top_levels(config.output.depth),
+            digest};
         if (auto error = write_snapshot(snapshot)) {
           return std::move(*error);
         }
@@ -526,20 +536,27 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
                          frame.message_index, frame.source_offset, source_type,
                          delta.order_reference);
         }
-        const DiagnosticSnapshot snapshot{frame.message_index,
-                                          header.timestamp_ns,
-                                          instrument->symbol_id,
-                                          instrument->stock_locate,
-                                          instrument->symbol,
-                                          event_kind,
-                                          config.output.depth,
-                                          true,
-                                          event_price4 ? event_price4
-                                                       : std::optional<Price4>{delta.price4},
-                                          event_quantity,
-                                          *current_state,
-                                          after,
-                                          digest};
+        const DiagnosticSnapshot snapshot{
+            frame.message_index,
+            header.timestamp_ns,
+            instrument->symbol_id,
+            instrument->stock_locate,
+            instrument->symbol,
+            event_kind,
+            config.output.depth,
+            true,
+            event_price4 ? event_price4 : std::optional<Price4>{delta.price4},
+            event_quantity,
+            last_trades_by_locate.at(instrument->stock_locate)
+                ? std::optional<Price4>{last_trades_by_locate.at(instrument->stock_locate)->price4}
+                : std::nullopt,
+            last_trades_by_locate.at(instrument->stock_locate)
+                ? std::optional<Shares>{last_trades_by_locate.at(instrument->stock_locate)
+                                            ->quantity}
+                : std::nullopt,
+            *current_state,
+            after,
+            digest};
         if (auto error = write_snapshot(snapshot, delta.order_reference)) {
           return std::move(*error);
         }
@@ -554,6 +571,8 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
       secondary_reference = trade->match_number;
       event_price4 = trade->price4;
       event_quantity = trade->shares;
+      last_trades_by_locate.at(instrument->stock_locate) =
+          LastTradeObservation{trade->price4, trade->shares};
       const auto current_state = session.state(instrument->stock_locate);
       if (!current_state) {
         return failure(ErrorCode::internal, "Selected trading state disappeared.",
@@ -596,6 +615,8 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
                                           false,
                                           event_price4,
                                           event_quantity,
+                                          event_price4,
+                                          event_quantity,
                                           *current_state,
                                           book.top_levels(config.output.depth),
                                           digest};
@@ -611,6 +632,8 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
       secondary_reference = cross->match_number;
       event_price4 = cross->cross_price4;
       event_quantity = cross->shares;
+      last_trades_by_locate.at(instrument->stock_locate) =
+          LastTradeObservation{cross->cross_price4, cross->shares};
       event_subtype = cross->cross_type;
     } else if (const auto* broken = std::get_if<BrokenTrade>(&*decoded.message)) {
       event_kind = "broken_trade";
@@ -660,6 +683,8 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
                                         event_kind,
                                         config.output.depth,
                                         false,
+                                        event_price4,
+                                        event_quantity,
                                         event_price4,
                                         event_quantity,
                                         *current_state,

@@ -1,1 +1,1 @@
-"""Packaged copies of the public ITCH-Lab configuration schemas."""
+"""Packaged copies of the public ITCH-Lab JSON schemas."""

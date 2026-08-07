@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-014: Implement snapshot writer and replay manifest
-  - Dependencies: TASK-011–013
-  - Acceptance criteria: Golden snapshots; atomic completed manifest; safe paths
-  - Tests: UT-OUT-002, CT-JSON-001, path tests
-  - Documentation to update: 04/05 contracts
-
 - [ ] TASK-015: Implement artefact validation
   - Dependencies: TASK-013–014
   - Acceptance criteria: Shallow/deep validation catches tampering/partial/version errors
@@ -121,6 +115,22 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-014: Implement snapshot writer and replay manifest
+  - Completed: 2026-08-07
+  - Evidence: The snapshot-v1 writer explicitly encodes fixed little-endian records of
+    `48 + 28 × depth` bytes with nullable trade flags, deterministic depth padding and causal
+    state/trade emission semantics; UT-OUT-002 matches an independently generated 344-byte golden
+    byte for byte. Replay now stages event, snapshot, effective-config and manifest artefacts beneath
+    a validated run root, verifies source/executable/config/child hashes, publishes the completed
+    manifest last through an atomic directory rename and safely reuses only a fully verified identity
+    unless `--force` requests a new run. IT-004, CT-JSON-001 and path/atomic/tamper tests cover strict
+    schema validation, build lineage, private-path removal, symlink and alias rejection, failure and
+    cancellation partials, idempotency and immutable completed runs. All 118 runnable CTest entries
+    passed in dev, release, ASan/UBSan and clean coverage presets; the authorised external-data entry
+    skipped as designed. The independent golden hashes, both fixture checks, reduced E2E smoke, all
+    78 Python tests, Ruff, strict mypy, C++ formatting, shell syntax, diff/privacy checks and the
+    Python wheel/sdist build passed.
 
 - [x] TASK-013: Implement normalised event writer
   - Completed: 2026-08-06

@@ -5,6 +5,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -105,13 +106,9 @@ std::filesystem::path write_session_replay_config(const std::filesystem::path& d
   return destination;
 }
 
-std::vector<Json> read_jsonl(const std::filesystem::path& path) {
-  std::istringstream stream{read_file(path)};
-  std::vector<Json> rows;
-  for (std::string line; std::getline(stream, line);) {
-    rows.push_back(Json::parse(line));
-  }
-  return rows;
+std::filesystem::path replay_directory(const std::filesystem::path& output_root,
+                                       const Json& envelope) {
+  return output_root / "replay" / envelope.at("summary").at("replay_id").get<std::string>();
 }
 
 } // namespace
@@ -199,8 +196,8 @@ TEST_CASE("TASK-007 human and JSONL diagnostic channels remain separated",
   REQUIRE(Json::parse(decode_error.output).at("error").at("code") == "ERR_MESSAGE_LENGTH");
 }
 
-TEST_CASE("TASK-007 CLI replay publishes exact deterministic provisional diagnostics",
-          "[TASK-007][CLI][replay][golden]") {
+TEST_CASE("TASK-014 CLI replay publishes deterministic binary records for plain and gzip input",
+          "[TASK-007][TASK-014][CLI][replay][binary]") {
   TemporaryDirectory plain_root;
   TemporaryDirectory gzip_root;
   const auto plain_config = write_replay_config(
@@ -220,7 +217,7 @@ TEST_CASE("TASK-007 CLI replay publishes exact deterministic provisional diagnos
   REQUIRE(plain.error.empty());
   REQUIRE(gzip.error.empty());
   const auto envelope = Json::parse(plain.output);
-  REQUIRE(envelope.at("summary").at("artefact_status") == "provisional_diagnostic");
+  REQUIRE(envelope.at("summary").at("artefact_status") == "published");
   REQUIRE(envelope.at("summary").at("messages_processed") == 9);
   REQUIRE(envelope.at("summary").at("global_system_messages") == 6);
   REQUIRE(envelope.at("summary").at("directory_messages") == 1);
@@ -236,27 +233,32 @@ TEST_CASE("TASK-007 CLI replay publishes exact deterministic provisional diagnos
   REQUIRE(instrument.at("final_book_digest") ==
           "47213ce72b18bbb9fb839f064fb00c71d810d21c19e1fe74a9ed61162c0d2a6c");
   REQUIRE(envelope.at("summary").at("global_session_events").size() == 6);
-  REQUIRE(envelope.at("warnings").size() == 1);
+  REQUIRE(envelope.at("warnings").is_array());
 
-  const auto expected_events =
-      read_file(repository_path("tests/golden/itch50/synthetic_minimal_diagnostic_events.jsonl"));
-  const auto expected_snapshots = read_file(
-      repository_path("tests/golden/itch50/synthetic_minimal_diagnostic_snapshots.jsonl"));
-  REQUIRE(read_file(plain_output / "diagnostic-events.jsonl") == expected_events);
-  REQUIRE(read_file(gzip_output / "diagnostic-events.jsonl") == expected_events);
-  REQUIRE(read_file(plain_output / "diagnostic-snapshots.jsonl") == expected_snapshots);
-  REQUIRE(read_file(gzip_output / "diagnostic-snapshots.jsonl") == expected_snapshots);
+  const auto plain_run = replay_directory(plain_output, envelope);
+  const auto gzip_run = replay_directory(gzip_output, Json::parse(gzip.output));
+  const auto plain_events = read_file(plain_run / "events.ilb");
+  const auto gzip_events = read_file(gzip_run / "events.ilb");
+  const auto plain_snapshots = read_file(plain_run / "snapshots.ilb");
+  const auto gzip_snapshots = read_file(gzip_run / "snapshots.ilb");
+  constexpr std::size_t records_offset = 104 + 16;
+  REQUIRE(plain_events.size() == records_offset + 2 * 72);
+  REQUIRE(plain_snapshots.size() == records_offset + 2 * 104);
+  REQUIRE(plain_events.substr(records_offset) == gzip_events.substr(records_offset));
+  REQUIRE(plain_snapshots.substr(records_offset) == gzip_snapshots.substr(records_offset));
 
   const auto repeated = run_command({"replay", "--config", plain_config.string(), "--output-root",
                                      plain_output.string(), "--format", "json"});
-  REQUIRE(repeated.exit_code == 6);
-  REQUIRE(Json::parse(repeated.output).at("error").at("code") == "ERR_OUTPUT_PATH");
-  REQUIRE(read_file(plain_output / "diagnostic-events.jsonl") == expected_events);
-  REQUIRE(read_file(plain_output / "diagnostic-snapshots.jsonl") == expected_snapshots);
+  REQUIRE(repeated.exit_code == 0);
+  const auto repeated_summary = Json::parse(repeated.output).at("summary");
+  REQUIRE(repeated_summary.at("reused").get<bool>());
+  REQUIRE(repeated_summary.at("replay_id") == envelope.at("summary").at("replay_id"));
+  REQUIRE(read_file(plain_run / "events.ilb") == plain_events);
+  REQUIRE(read_file(plain_run / "snapshots.ilb") == plain_snapshots);
 }
 
-TEST_CASE("TASK-007 CLI replay failures never publish final diagnostic names",
-          "[TASK-007][CLI][replay][failure]") {
+TEST_CASE("TASK-014 CLI replay failures never publish completed replay names",
+          "[TASK-007][TASK-014][CLI][replay][failure]") {
   TemporaryDirectory root;
   const auto config =
       write_replay_config(root.path() / "unknown.json",
@@ -268,8 +270,9 @@ TEST_CASE("TASK-007 CLI replay failures never publish final diagnostic names",
   REQUIRE(result.exit_code == 5);
   REQUIRE(result.error.empty());
   REQUIRE(Json::parse(result.output).at("error").at("code") == "ERR_UNKNOWN_SYMBOL");
-  REQUIRE_FALSE(std::filesystem::exists(output_root / "diagnostic-events.jsonl"));
-  REQUIRE_FALSE(std::filesystem::exists(output_root / "diagnostic-snapshots.jsonl"));
+  REQUIRE_FALSE(std::filesystem::exists(output_root / "events.ilb"));
+  REQUIRE_FALSE(std::filesystem::exists(output_root / "snapshots.ilb"));
+  REQUIRE_FALSE(std::filesystem::exists(output_root / "replay-manifest.json"));
 
   const auto safe_config = write_replay_config(
       root.path() / "safe.json", repository_path("tests/fixtures/synthetic_minimal.itch"));
@@ -279,8 +282,8 @@ TEST_CASE("TASK-007 CLI replay failures never publish final diagnostic names",
   REQUIRE(Json::parse(broad.output).at("error").at("code") == "ERR_OUTPUT_PATH");
 }
 
-TEST_CASE("TASK-011 CLI replay publishes deterministic filtered multi-symbol diagnostics",
-          "[TASK-011][CLI][replay][session]") {
+TEST_CASE("TASK-011 CLI replay publishes deterministic filtered multi-symbol binary records",
+          "[TASK-011][TASK-014][CLI][replay][session]") {
   TemporaryDirectory plain_root;
   TemporaryDirectory gzip_root;
   const auto plain_config = write_session_replay_config(
@@ -313,21 +316,15 @@ TEST_CASE("TASK-011 CLI replay publishes deterministic filtered multi-symbol dia
   REQUIRE(summary.at("instruments").at(1).at("symbol_id") == 2);
   REQUIRE(summary.at("global_session_events").size() == 6);
 
-  REQUIRE(read_file(plain_output / "diagnostic-events.jsonl") ==
-          read_file(gzip_output / "diagnostic-events.jsonl"));
-  REQUIRE(read_file(plain_output / "diagnostic-snapshots.jsonl") ==
-          read_file(gzip_output / "diagnostic-snapshots.jsonl"));
-  const auto events = read_jsonl(plain_output / "diagnostic-events.jsonl");
-  const auto snapshots = read_jsonl(plain_output / "diagnostic-snapshots.jsonl");
-  REQUIRE(events.size() == 12);
-  REQUIRE(snapshots.size() == 6);
-  for (const auto& event : events) {
-    REQUIRE(event.at("symbol") != "AMZN");
-    REQUIRE(event.at("timestamp_ns").get<std::uint64_t>() < 34'200'000'010'000ULL);
-  }
-  for (const auto& snapshot : snapshots) {
-    REQUIRE(snapshot.at("symbol") != "AMZN");
-    REQUIRE(snapshot.at("timestamp_ns").get<std::uint64_t>() >= 34'200'000'000'000ULL);
-    REQUIRE(snapshot.at("timestamp_ns").get<std::uint64_t>() < 34'200'000'010'000ULL);
-  }
+  const auto plain_run = replay_directory(plain_output, envelope);
+  const auto gzip_run = replay_directory(gzip_output, Json::parse(gzip.output));
+  const auto plain_events = read_file(plain_run / "events.ilb");
+  const auto gzip_events = read_file(gzip_run / "events.ilb");
+  const auto plain_snapshots = read_file(plain_run / "snapshots.ilb");
+  const auto gzip_snapshots = read_file(gzip_run / "snapshots.ilb");
+  constexpr std::size_t records_offset = 104 + 2 * 16;
+  REQUIRE(plain_events.size() == records_offset + 12 * 72);
+  REQUIRE(plain_snapshots.size() == records_offset + 6 * 104);
+  REQUIRE(plain_events.substr(records_offset) == gzip_events.substr(records_offset));
+  REQUIRE(plain_snapshots.substr(records_offset) == gzip_snapshots.substr(records_offset));
 }

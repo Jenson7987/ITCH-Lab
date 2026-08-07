@@ -145,6 +145,12 @@ JsonlDiagnosticSink::write_snapshot(const DiagnosticSnapshot& snapshot) {
   if (snapshot.event_quantity) {
     value["event_quantity"] = *snapshot.event_quantity;
   }
+  if (snapshot.last_trade_price4) {
+    value["last_trade_price4"] = *snapshot.last_trade_price4;
+  }
+  if (snapshot.last_trade_quantity) {
+    value["last_trade_quantity"] = *snapshot.last_trade_quantity;
+  }
   return write_json_line(snapshot_stream_, value);
 }
 

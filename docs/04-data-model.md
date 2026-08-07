@@ -13,11 +13,23 @@
 
 - Canonical JSON bytes follow [RFC 8785 JSON Canonicalization Scheme](https://www.rfc-editor.org/rfc/rfc8785.html), encoded as UTF-8. Duplicate object names, invalid Unicode, NaN and infinity are rejected before hashing. Implementations do not invent a separate C++/Python float formatting rule.
 - The effective config is the validated version-1 config after documented defaults have been materialised. `config_sha256` is SHA-256 over the complete canonical effective config, including relative locator fields, and is the integrity fingerprint stored with the config.
+- For replay publication, a null `input.sha256` is materialised to the verified source hash and
+  `input.path` is reduced to the source basename before the effective config is stored or hashed.
+  This keeps first-run and expected-hash replay bytes consistent while preventing absolute local
+  paths from entering a publishable manifest.
 - An identity-config projection removes only locator fields whose identified parent content is already supplied separately: replay `input.path` and `input.sha256`; dataset `conversion_manifests`; experiment `dataset_manifest`; and simulation `dataset_manifest` and `prediction_manifest`. No scientific, validation or selection field is removed. `identity_config_sha256` is SHA-256 over that canonical projection.
 - A stage identity digest is SHA-256 over: an ASCII domain separator ending in NUL; ordered raw 32-byte parent-content hashes; the raw 32-byte identity-config hash; the exact executable or installed-wheel 32-byte content hash; and the output schema version as an unsigned two-byte big-endian integer.
 - Replay uses domain separator itchlab-replay-v1; later stages use itchlab-conversion-v1, itchlab-dataset-v1, itchlab-experiment-v1 and itchlab-simulation-v1.
-- Human run IDs are UTC basic timestamp, a hyphen and the first 12 lowercase hexadecimal digest characters. The full digest remains in the manifest.
-- A publishable run requires a clean recorded Git commit. Development runs from dirty trees are labelled non-publishable and receive a new timestamped directory even when other identity inputs match.
+- Human run IDs are a UTC basic timestamp with nine fractional-second digits, a hyphen and the
+  first 12 lowercase hexadecimal digest characters, for example
+  `20260807T120000.123456789Z-a1b2c3d4e5f6`. The full digest remains in the manifest. Fractional
+  precision permits `--force-new-run` to create a distinct immutable run without changing the
+  scientific identity.
+- A publishable run requires a Release build from a clean recorded Git commit. Debug builds and
+  development runs from dirty trees are labelled non-publishable; their recorded build metadata
+  distinguishes them from the corresponding clean Release build. Repeating the same development
+  build still follows normal idempotent reuse unless `--force-new-run` requests another immutable
+  timestamped directory.
 - Observational start/end times, locator paths and progress metrics do not enter the stage-identity digest. They remain covered by the full config or manifest integrity hash where present.
 - RFC 8785 uses the I-JSON number model. JSON integer fields therefore use the interoperable exact range −(2^53−1) through 2^53−1 even when their in-memory domain type is wider. In particular, version-1 numeric random seeds are restricted to 0 through 2^53−1 while remaining `uint64` in memory and manifests.
 
@@ -113,6 +125,11 @@ One directory with replay-manifest.json, events.ilb and snapshots.ilb.
 | artefacts | array | No | [] | Relative path, schema, size and SHA-256 |
 | error_summary | object | No | {} | Counts by stable code |
 
+Version 1 additionally records `identity_sha256`, `identity_config_sha256`,
+`executable_sha256`, `publishable`, global session events, final per-instrument state/digest and
+per-artefact record metadata. `publishable` is false unless the recorded build is a Release build
+from a clean Git tree. Artefact paths are fixed run-relative basenames.
+
 ### NormalisedEvent
 
 Persisted in events.ilb and later events.parquet.
@@ -152,7 +169,7 @@ Persisted in snapshots.ilb and snapshots.parquet.
 | event_kind | enum | No | — | Trigger classification |
 | event_price4 | uint32 | Yes | null | When meaningful |
 | event_quantity | uint64 | Yes | null | When meaningful |
-| last_trade_price4 | uint32 | Yes | null | Latest observed eligible trade |
+| last_trade_price4 | uint32 | Yes | null | Latest selected P/Q trade observation |
 | last_trade_quantity | uint64 | Yes | null | Paired with last trade price |
 | top_n_changed | bool | No | false | True when this snapshot was emitted because exported depth changed |
 | bid_price4_1..N | uint32 | Yes | null | Strictly descending valid levels |
@@ -162,6 +179,11 @@ Persisted in snapshots.ilb and snapshots.parquet.
 | trading_state | enum | No | unknown | preopen, trading, halted, paused, quotation_only, closed or unknown |
 
 Uniqueness: (trading_date, symbol_id, message_index). Rows are physically sorted by symbol_id then message_index in Parquet partitions, while binary order follows source message order.
+
+For snapshot-v1, P and Q are the configured unchanged-book trade observations. They update the
+per-instrument last-trade pair even when unchanged trade snapshots are disabled, so a later
+top-N/state snapshot carries the latest causal observation. B records do not rewrite an earlier
+snapshot or rewind this pair.
 
 ### DatasetRun
 

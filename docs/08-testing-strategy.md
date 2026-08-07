@@ -104,6 +104,12 @@ monotonic ordering and injected reservation/record/seek/patch/flush/close failur
 integration test routes all selected events through the real replay coordinator and confirms exact
 source message-index order while leaving only `events.ilb.partial`.
 
+TASK-014 adds an independently generated 344-byte snapshot-v1 golden with depth two, paired
+bid/ask validity, nullable trigger/last-trade fields and exact state/top-change flag bytes. IT-004
+publishes a full replay directory, rehashes both children, checks manifest lineage/counts/build
+metadata, proves identity reuse/forced immutability and recursively rejects private path leakage.
+CT-JSON-001 validates the strict completed-manifest schema and rejects unknown keys.
+
 ### Python datasets/models
 
 - Price4 conversions avoid binary-float values until presentation.

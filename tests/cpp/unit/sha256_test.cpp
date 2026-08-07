@@ -2,6 +2,10 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <cstddef>
+#include <span>
+#include <string>
+
 TEST_CASE("TASK-002 SHA-256 matches FIPS vectors", "[TASK-002][hash]") {
   REQUIRE(itchlab::content_hash_to_hex(itchlab::sha256("")) ==
           "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
@@ -21,4 +25,21 @@ TEST_CASE("TASK-002 content hashes require lowercase fixed hexadecimal", "[TASK-
   REQUIRE_FALSE(itchlab::content_hash_from_hex(
                     "BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD")
                     .has_value());
+}
+
+TEST_CASE("TASK-014 incremental SHA-256 is invariant to every chunk boundary",
+          "[TASK-014][hash][incremental]") {
+  const std::string payload(257, 'x');
+  const auto bytes = std::as_bytes(std::span{payload.data(), payload.size()});
+  const auto expected = itchlab::sha256(bytes);
+  for (std::size_t split = 0; split <= bytes.size(); ++split) {
+    itchlab::Sha256Hasher hasher;
+    REQUIRE(hasher.update(bytes.first(split)));
+    REQUIRE(hasher.update(bytes.subspan(split)));
+    const auto actual = hasher.finalise();
+    REQUIRE(actual.has_value());
+    REQUIRE(itchlab::content_hash_to_hex(*actual) == itchlab::content_hash_to_hex(expected));
+    REQUIRE_FALSE(hasher.finalise().has_value());
+    REQUIRE_FALSE(hasher.update(bytes.first(1)));
+  }
 }

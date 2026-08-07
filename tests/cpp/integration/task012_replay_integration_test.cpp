@@ -91,6 +91,21 @@ CommandResult run_command(const std::vector<std::string>& owned_arguments,
   return CommandResult{code, output.str(), error.str()};
 }
 
+std::filesystem::path replay_directory(const std::filesystem::path& output_root,
+                                       const Json& envelope) {
+  return output_root / "replay" / envelope.at("summary").at("replay_id").get<std::string>();
+}
+
+bool contains_file_named(const std::filesystem::path& root, const std::string_view filename) {
+  if (!std::filesystem::is_directory(root)) {
+    return false;
+  }
+  return std::ranges::any_of(
+      std::filesystem::recursive_directory_iterator{root}, [&](const auto& entry) {
+        return entry.is_regular_file() && entry.path().filename() == filename;
+      });
+}
+
 std::filesystem::path write_replay_config(const std::filesystem::path& destination,
                                           const std::filesystem::path& input,
                                           const itchlab::ValidationMode mode,
@@ -193,17 +208,19 @@ TEST_CASE("E2E-003 TASK-012 permissive replay completes degraded for a safely fr
   REQUIRE(result.error.empty());
   const auto envelope = Json::parse(result.output);
   REQUIRE(envelope.at("status") == "degraded");
-  REQUIRE(envelope.at("summary").at("artefact_status") == "provisional_diagnostic_degraded");
+  REQUIRE(envelope.at("summary").at("artefact_status") == "published");
   REQUIRE(envelope.at("summary").at("messages_processed") == 10);
   REQUIRE(envelope.at("summary").at("decoded_messages") == 9);
   REQUIRE(envelope.at("summary").at("errors_observed") == 1);
   REQUIRE(envelope.at("summary").at("skipped_messages") == 1);
   REQUIRE(envelope.at("summary").at("error_counts_by_code") == Json{{"ERR_UNKNOWN_MESSAGE", 1}});
-  REQUIRE(envelope.at("warnings").size() == 2);
+  REQUIRE_FALSE(envelope.at("warnings").empty());
   REQUIRE(envelope.at("warnings").at(0).get<std::string>().starts_with("DEGRADED:"));
-  REQUIRE(std::filesystem::exists(output_root / "diagnostic-events.jsonl"));
-  REQUIRE(std::filesystem::exists(output_root / "diagnostic-snapshots.jsonl"));
-  REQUIRE_FALSE(std::filesystem::exists(output_root / "diagnostic-events.jsonl.partial"));
+  const auto run = replay_directory(output_root, envelope);
+  REQUIRE(std::filesystem::exists(run / "events.ilb"));
+  REQUIRE(std::filesystem::exists(run / "snapshots.ilb"));
+  REQUIRE(std::filesystem::exists(run / "replay-manifest.json"));
+  REQUIRE_FALSE(contains_file_named(output_root, "events.ilb.partial"));
 }
 
 TEST_CASE("TASK-012 strict mode and permissive budgets stop at the first fatal point",
@@ -223,8 +240,8 @@ TEST_CASE("TASK-012 strict mode and permissive budgets stop at the first fatal p
     const auto envelope = Json::parse(result.output);
     REQUIRE(envelope.at("error").at("code") == "ERR_UNKNOWN_MESSAGE");
     REQUIRE(envelope.at("error").at("context").at("message_index") == 9);
-    REQUIRE_FALSE(std::filesystem::exists(output_root / "diagnostic-events.jsonl"));
-    REQUIRE(std::filesystem::exists(output_root / "diagnostic-events.jsonl.partial"));
+    REQUIRE_FALSE(contains_file_named(output_root, "events.ilb"));
+    REQUIRE(contains_file_named(output_root, "events.ilb.partial"));
   }
 
   SECTION("zero budget rejects the first safely skippable message") {

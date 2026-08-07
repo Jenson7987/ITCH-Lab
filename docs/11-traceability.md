@@ -36,9 +36,9 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | NFR-001 | ADR-003; 03 state/performance | TASK-006, TASK-013, TASK-029 | TASK-013 byte-for-byte event golden/source-order test, repeated-run byte/digest tests, E2E-001 |
 | NFR-002 | 03 performance/scalability | TASK-004, TASK-016, TASK-017, TASK-029 | PERF-005/007/008, large-stream memory test |
 | NFR-003 | 03 performance; 09 release criteria | TASK-029 | PERF-004 plus platform benchmark report |
-| NFR-004 | 03 errors/file contracts | TASK-012, TASK-013, TASK-014, TASK-017 | TASK-013 injected writer failures/partial-only test, E2E-004 process cancellation/clean-rerun test, IT-005 |
+| NFR-004 | 03 errors/file contracts | TASK-012, TASK-013, TASK-014, TASK-017 | TASK-013/TASK-014 injected writer failures, atomic publication tests, E2E-004 process cancellation/clean-rerun test, IT-005 |
 | NFR-005 | ADR-002; 09 build | TASK-001, TASK-016, TASK-030 | macOS/Linux build, CT-BIN-001 |
-| NFR-006 | 03 state/file contracts; 09 release | TASK-001, TASK-002, TASK-014, TASK-020, TASK-030 | Canonical-hash, clean-install and E2E-001 |
+| NFR-006 | 03 state/file contracts; 09 release | TASK-001, TASK-002, TASK-014, TASK-020, TASK-030 | Canonical-hash, TASK-014 identity/build-lineage, clean-install and E2E-001 |
 | NFR-007 | 03 logging; 06 progress | TASK-007, TASK-012 | TASK-012 rate-limit and non-TTY JSONL/stderr/quiet tests |
 | NFR-008 | 07 SEC-001/002/012 | TASK-004, TASK-005, TASK-028 | UT-DEC-002, SEC-FUZZ-001, sanitizers |
 | NFR-009 | 08 coverage/CI | TASK-008, TASK-028, TASK-030 | Coverage gates and CI matrix |
@@ -53,13 +53,13 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | SEC-001 | 07 binary validation | TASK-004, TASK-005, TASK-009, TASK-028 | UT-DEC-002, SEC-FUZZ-001, ASan/UBSan |
 | SEC-002 | 07 checked arithmetic | TASK-002, TASK-004, TASK-010, TASK-024, TASK-028 | Integer/quantity/cash boundary tests |
 | SEC-003 | 07 filesystem writes; 09 incidents | TASK-014, TASK-028 | SEC-PATH-001, symlink/alias/cancellation tests |
-| SEC-004 | 07 integrity/provenance | TASK-013–017, TASK-028 | TASK-013 embedded-hash golden and partial-only tests, IT-012, hash-tamper tests |
+| SEC-004 | 07 integrity/provenance | TASK-013–017, TASK-028 | TASK-013 embedded-hash golden and partial-only tests, TASK-014 child-hash verification/IT-004, IT-012, hash-tamper tests |
 | SEC-005 | 07 runtime network | TASK-030 | Network-disabled E2E-001 and dependency review |
 | SEC-006 | 07 serialisation | TASK-016, TASK-020, TASK-028 | No-pickle contract and malicious artefact rejection |
 | SEC-007 | 07 secrets | TASK-028, TASK-030 | Secret scan and config-schema inspection |
 | SEC-008 | 07 dependencies; 09 release | TASK-001, TASK-028, TASK-030 | Dependency audit/licence inventory |
 | SEC-009 | 07 report escaping | TASK-021, TASK-028 | HTML/Markdown injection fixtures |
-| SEC-010 | 07 logging restrictions | TASK-014, TASK-021, TASK-028 | Absolute-path and payload-log assertions |
+| SEC-010 | 07 logging restrictions | TASK-014, TASK-021, TASK-028 | TASK-014 recursive absolute-path assertions and payload-log assertions |
 | SEC-011 | 07 misuse/data handling | TASK-003, TASK-021, TASK-027, TASK-031 | Git/archive data check and report wording tests |
 | SEC-012 | 07 resource exhaustion | TASK-004, TASK-012, TASK-017, TASK-028 | PERF-008, oversized-frame, disk/cancel tests |
 

@@ -9,8 +9,8 @@ layer, stateless full-MVP decoder, deterministic full-lifecycle level-3 book and
 inspect/replay command slice are implemented. Replay routes the complete visible lifecycle and
 session/trading-state metadata, supports strict or budgeted permissive processing, emits bounded
 stderr progress and cancels safely at message boundaries. The production event-v1 binary writer is
-implemented and contract-tested, while the command still writes explicitly provisional JSONL
-diagnostics. Snapshot interchange, completed manifests, research and simulation remain planned.
+implemented alongside snapshot-v1 and atomic completed replay manifests. Public artefact
+validation, research conversion and simulation remain planned.
 
 Classification legend used throughout the documentation:
 
@@ -66,12 +66,13 @@ foundation provides buildable version/help CLIs, fixed C++ domain/error types, s
 configuration contracts with canonical cross-language hashes, and bounded streaming of verified
 `itch-length-v1` plain/gzip sources. It decodes S/R/H/A/F/E/C/X/D/U/P/Q/B with exact length,
 big-endian and timestamp validation, applies the full visible lifecycle to deterministic per-symbol
-level-3 books and exposes bounded inspect plus multi-symbol diagnostic replay. Replay has
+level-3 books and exposes bounded inspect plus multi-symbol replay. Replay has
 stage-aware strict/permissive error policy, stable error counts, degraded disclosure, rate-limited
-human or JSONL progress and graceful SIGINT exit 130 with retained partial diagnostics. The C++
-event-v1 writer produces deterministic staged headers, dictionaries and normalised records without
-publishing a final path. Production snapshot/manifest publication, research and simulation commands
-are implemented by later tasks.
+human or JSONL progress and graceful SIGINT exit 130 with retained partial artefacts. The C++
+writers produce deterministic event-v1 and snapshot-v1 headers, dictionaries and records. Replay
+binds them to verified source/config/executable hashes and atomically publishes a completed,
+private-path-free manifest. Public validation, research and simulation commands are implemented by
+later tasks.
 
 ## Local setup
 
@@ -129,13 +130,15 @@ The implemented synthetic vertical slice can be exercised without licensed marke
         --symbols AAPL
     ./build/dev/itchlab replay \
         --config configs/replay.diagnostic.example.json \
-        --output-root runs/task-011-example
+        --output-root runs/task-014-example
 
 The replay command accepts one or more configured symbols, applies selected pre-session events to
 warm each book, and limits snapshots to the configured half-open session and optional tradable-state
-filter. It requires a fresh output root and writes deterministic `diagnostic-events.jsonl` and
-`diagnostic-snapshots.jsonl`. These files are labelled provisional; they are not `events.ilb`,
-`snapshots.ilb` or a completed replay manifest.
+filter. It writes `events.ilb`, `snapshots.ilb` and `replay-manifest.json` beneath
+`<output-root>/replay/<replay-id>/`. The command verifies source and executable bytes, records exact
+lineage/build metadata, reuses an already verified identical run by default and supports an
+explicit immutable `--force-new-run`. Failed or cancelled work remains in a `.partial` staging
+directory and never receives a completed manifest.
 
 Planned research workflow (implemented by later tasks):
 
@@ -147,8 +150,8 @@ Planned research workflow (implemented by later tasks):
 ## Testing and quality commands
 
 The first synthetic inspect/replay slice has a clean-checkout smoke command. It configures and
-builds the development preset, verifies the fixed fixture corpus, checks repeatable golden output
-and confirms that a corrupt gzip source cannot publish final diagnostic files:
+builds the development preset, verifies the fixed fixture corpus, checks repeatable binary replay
+output and confirms that a corrupt gzip source cannot publish a completed replay directory:
 
     ./scripts/ci/task008-smoke.sh
 

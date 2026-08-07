@@ -126,8 +126,8 @@ sequenceDiagram
 
 ### Cancellation
 
-SIGINT follows UF-006. No completed artefact is published; a cancelled manifest is recorded only
-when the manifest layer is available.
+SIGINT follows UF-006. No completed artefact or completed manifest is published. Version 1 reports
+cancelled status through the CLI envelope and retains the run-owned `.partial` staging directory.
 
 ## UF-003 — Convert and build a dataset
 
@@ -260,14 +260,14 @@ stateDiagram-v2
 2. The signal handler sets an atomic cancellation flag; it performs no unsafe I/O.
 3. The main loop observes the flag at a message boundary.
 4. Writers flush and close their partial files.
-5. The result records cancelled status and the manifest does likewise when the manifest layer is
-   available.
+5. The CLI result records cancelled status; the completed-only version-1 manifest remains absent.
 6. The command exits with code 130.
 
 ### Recovery
 
 - The user may inspect logs and partial metadata.
-- A fresh run generates a new temporary directory.
+- The user may archive/remove the partial run or select a fresh output root before rerunning; a
+  conflicting partial identity is never overwritten automatically.
 - Automatic continuation from a byte offset is deferred because restoring complete order-book state is not implemented.
 - Partial artefacts are never accepted as completed inputs.
 

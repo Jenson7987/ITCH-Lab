@@ -1,9 +1,13 @@
 #include "itchlab/core/sha256.hpp"
 
+#include <algorithm>
 #include <array>
 #include <bit>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
+#include <optional>
+#include <span>
 
 namespace itchlab {
 namespace {
@@ -20,8 +24,6 @@ constexpr std::array<std::uint32_t, 64> kRoundConstants{
     0x748f82eeU, 0x78a5636fU, 0x84c87814U, 0x8cc70208U, 0x90befffaU, 0xa4506cebU, 0xbef9a3f7U,
     0xc67178f2U,
 };
-
-using State = std::array<std::uint32_t, 8>;
 
 constexpr std::uint32_t choose(const std::uint32_t x, const std::uint32_t y,
                                const std::uint32_t z) noexcept {
@@ -49,7 +51,8 @@ constexpr std::uint32_t small_sigma1(const std::uint32_t value) noexcept {
   return std::rotr(value, 17) ^ std::rotr(value, 19) ^ (value >> 10U);
 }
 
-void process_block(State& state, const std::span<const std::byte, 64> block) noexcept {
+void process_block(std::array<std::uint32_t, 8>& state,
+                   const std::span<const std::byte, 64> block) noexcept {
   std::array<std::uint32_t, 64> words{};
   for (std::size_t index = 0; index < 16; ++index) {
     const auto offset = index * 4;
@@ -108,45 +111,77 @@ constexpr std::optional<std::uint8_t> hex_nibble(const char character) noexcept 
 
 } // namespace
 
-ContentHash sha256(const std::span<const std::byte> input) noexcept {
-  State state{0x6a09e667U, 0xbb67ae85U, 0x3c6ef372U, 0xa54ff53aU,
-              0x510e527fU, 0x9b05688cU, 0x1f83d9abU, 0x5be0cd19U};
-
-  std::size_t offset = 0;
-  while (input.size() - offset >= 64) {
-    process_block(state, std::span<const std::byte, 64>{input.data() + offset, 64});
-    offset += 64;
+bool Sha256Hasher::update(const std::span<const std::byte> input) noexcept {
+  if (finalised_ || input.size() > std::numeric_limits<std::uint64_t>::max() - total_bytes_ ||
+      total_bytes_ + static_cast<std::uint64_t>(input.size()) >
+          std::numeric_limits<std::uint64_t>::max() / 8U) {
+    return false;
   }
+  total_bytes_ += static_cast<std::uint64_t>(input.size());
+
+  std::size_t offset{};
+  if (pending_size_ != 0) {
+    const auto consumed = std::min(input.size(), pending_.size() - pending_size_);
+    std::copy_n(input.begin(), static_cast<std::ptrdiff_t>(consumed),
+                pending_.begin() + static_cast<std::ptrdiff_t>(pending_size_));
+    pending_size_ += consumed;
+    offset += consumed;
+    if (pending_size_ == pending_.size()) {
+      process_block(state_, std::span<const std::byte, 64>{pending_});
+      pending_size_ = 0;
+    }
+  }
+
+  while (input.size() - offset >= pending_.size()) {
+    process_block(state_, std::span<const std::byte, 64>{input.data() + offset, 64});
+    offset += pending_.size();
+  }
+  const auto remaining = input.size() - offset;
+  if (remaining != 0) {
+    std::copy_n(input.begin() + static_cast<std::ptrdiff_t>(offset),
+                static_cast<std::ptrdiff_t>(remaining), pending_.begin());
+    pending_size_ = remaining;
+  }
+  return true;
+}
+
+std::optional<ContentHash> Sha256Hasher::finalise() noexcept {
+  if (finalised_) {
+    return std::nullopt;
+  }
+  finalised_ = true;
 
   std::array<std::byte, 128> tail{};
-  const auto remaining = input.size() - offset;
-  for (std::size_t index = 0; index < remaining; ++index) {
-    tail[index] = input[offset + index];
-  }
-  tail[remaining] = std::byte{0x80};
-
-  const auto padded_size = remaining < 56 ? std::size_t{64} : std::size_t{128};
-  const auto bit_length = static_cast<std::uint64_t>(input.size()) * 8U;
+  std::copy_n(pending_.begin(), static_cast<std::ptrdiff_t>(pending_size_), tail.begin());
+  tail[pending_size_] = std::byte{0x80};
+  const auto padded_size = pending_size_ < 56 ? std::size_t{64} : std::size_t{128};
+  const auto bit_length = total_bytes_ * 8U;
   for (std::size_t index = 0; index < 8; ++index) {
     const auto shift = static_cast<unsigned>((7 - index) * 8);
     tail[padded_size - 8 + index] =
         static_cast<std::byte>(static_cast<std::uint8_t>(bit_length >> shift));
   }
 
-  process_block(state, std::span<const std::byte, 64>{tail.data(), 64});
+  process_block(state_, std::span<const std::byte, 64>{tail.data(), 64});
   if (padded_size == 128) {
-    process_block(state, std::span<const std::byte, 64>{tail.data() + 64, 64});
+    process_block(state_, std::span<const std::byte, 64>{tail.data() + 64, 64});
   }
 
   ContentHash digest{};
-  for (std::size_t word = 0; word < state.size(); ++word) {
+  for (std::size_t word = 0; word < state_.size(); ++word) {
     for (std::size_t byte = 0; byte < 4; ++byte) {
       const auto shift = static_cast<unsigned>((3 - byte) * 8);
       digest[word * 4 + byte] =
-          static_cast<std::byte>(static_cast<std::uint8_t>(state[word] >> shift));
+          static_cast<std::byte>(static_cast<std::uint8_t>(state_[word] >> shift));
     }
   }
   return digest;
+}
+
+ContentHash sha256(const std::span<const std::byte> input) noexcept {
+  Sha256Hasher hasher;
+  static_cast<void>(hasher.update(input));
+  return *hasher.finalise();
 }
 
 ContentHash sha256(const std::string_view input) noexcept {

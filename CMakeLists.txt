@@ -25,6 +25,8 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(nlohmann_json)
 find_package(ZLIB REQUIRED)
 
+find_package(Git QUIET)
+
 function(itchlab_configure_target target_name)
   target_compile_features(${target_name} PRIVATE cxx_std_20)
   set_target_properties(${target_name} PROPERTIES CXX_EXTENSIONS OFF)
@@ -90,6 +92,8 @@ add_library(
   cpp/src/output/binary_encode.cpp
   cpp/src/output/diagnostic_sinks.cpp
   cpp/src/output/event_writer.cpp
+  cpp/src/output/manifest.cpp
+  cpp/src/output/snapshot_writer.cpp
   cpp/src/replay/instrument_directory.cpp
   cpp/src/replay/error_policy.cpp
   cpp/src/replay/progress_reporter.cpp
@@ -100,13 +104,34 @@ target_include_directories(itchlab_core PUBLIC cpp/include)
 target_link_libraries(itchlab_core PRIVATE nlohmann_json::nlohmann_json ZLIB::ZLIB)
 itchlab_configure_target(itchlab_core)
 
+set(ITCHLAB_BUILD_METADATA_HEADER
+    "${CMAKE_CURRENT_BINARY_DIR}/generated/itchlab/build_metadata.hpp"
+)
+add_custom_target(
+  itchlab_build_metadata
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DITCHLAB_METADATA_OUTPUT=${ITCHLAB_BUILD_METADATA_HEADER}"
+    "-DITCHLAB_METADATA_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}"
+    "-DITCHLAB_METADATA_GIT=${GIT_EXECUTABLE}"
+    "-DITCHLAB_METADATA_VERSION=${PROJECT_VERSION}"
+    "-DITCHLAB_METADATA_COMPILER=${CMAKE_CXX_COMPILER_ID}"
+    "-DITCHLAB_METADATA_COMPILER_VERSION=${CMAKE_CXX_COMPILER_VERSION}"
+    "-DITCHLAB_METADATA_TARGET=${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
+    "-DITCHLAB_METADATA_BUILD_TYPE=$<CONFIG>"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateBuildMetadata.cmake"
+  BYPRODUCTS "${ITCHLAB_BUILD_METADATA_HEADER}"
+  COMMENT "Refreshing exact build lineage metadata"
+  VERBATIM
+)
+
 add_library(
   itchlab_cli
   cpp/apps/itchlab/cli.cpp
   cpp/apps/itchlab/signal_adapter.cpp
 )
-target_include_directories(itchlab_cli PUBLIC cpp/apps)
-target_compile_definitions(itchlab_cli PRIVATE ITCHLAB_VERSION="${PROJECT_VERSION}")
+add_dependencies(itchlab_cli itchlab_build_metadata)
+target_include_directories(itchlab_cli PUBLIC cpp/apps PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 target_link_libraries(itchlab_cli PUBLIC itchlab_core PRIVATE nlohmann_json::nlohmann_json)
 itchlab_configure_target(itchlab_cli)
 
@@ -138,6 +163,7 @@ if(BUILD_TESTING)
     tests/cpp/integration/task012_cancellation_e2e_test.cpp
     tests/cpp/integration/task012_replay_integration_test.cpp
     tests/cpp/integration/task013_event_writer_integration_test.cpp
+    tests/cpp/integration/task014_publication_integration_test.cpp
     tests/cpp/property/order_book_property_test.cpp
     tests/cpp/property/framed_reader_property_test.cpp
     tests/cpp/unit/byte_decode_test.cpp
@@ -152,8 +178,10 @@ if(BUILD_TESTING)
     tests/cpp/unit/order_book_test.cpp
     tests/cpp/unit/progress_reporter_test.cpp
     tests/cpp/unit/instrument_directory_test.cpp
+    tests/cpp/unit/manifest_test.cpp
     tests/cpp/unit/session_state_test.cpp
     tests/cpp/unit/sha256_test.cpp
+    tests/cpp/unit/snapshot_writer_test.cpp
     tests/cpp/unit/types_test.cpp
   )
   target_compile_definitions(
@@ -199,6 +227,6 @@ if(BUILD_TESTING)
   add_test(NAME TASK_007_cpp_cli_replay_help COMMAND itchlab replay --help)
   set_tests_properties(
     TASK_007_cpp_cli_replay_help
-    PROPERTIES PASS_REGULAR_EXPRESSION "provisional TASK-012"
+    PROPERTIES PASS_REGULAR_EXPRESSION "versioned binary events"
   )
 endif()

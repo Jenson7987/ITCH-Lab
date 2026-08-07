@@ -1,4 +1,4 @@
-"""Generate or verify the independent synthetic event-v1 interchange golden."""
+"""Generate or verify independent synthetic event-v1 and snapshot-v1 goldens."""
 
 from __future__ import annotations
 
@@ -12,12 +12,16 @@ from pathlib import Path
 from typing import Final
 
 REPOSITORY_ROOT: Final = Path(__file__).resolve().parents[2]
-GOLDEN_PATH: Final = Path("tests/golden/interchange/synthetic_events_v1.ilb")
-METADATA_PATH: Final = Path("tests/golden/interchange/synthetic_events_v1.json")
+EVENT_GOLDEN_PATH: Final = Path("tests/golden/interchange/synthetic_events_v1.ilb")
+EVENT_METADATA_PATH: Final = Path("tests/golden/interchange/synthetic_events_v1.json")
+SNAPSHOT_GOLDEN_PATH: Final = Path("tests/golden/interchange/synthetic_snapshots_v1.ilb")
+SNAPSHOT_METADATA_PATH: Final = Path("tests/golden/interchange/synthetic_snapshots_v1.json")
 
 HEADER = struct.Struct("<8sHHHHIIHHQ32s32s4s")
 SYMBOL = struct.Struct("<HH8sI")
 EVENT = struct.Struct("<QQQQQIIIHBbcHB4sB7s")
+SNAPSHOT = struct.Struct("<QQHBBIQI4sQ")
+DEPTH_LEVEL = struct.Struct("<BB2sIQIQ")
 
 PRIMARY: Final = 1 << 0
 SECONDARY: Final = 1 << 1
@@ -69,7 +73,7 @@ def _event(
     )
 
 
-def render_golden() -> bytes:
+def render_event_golden() -> bytes:
     """Render reviewed literal event-v1 values without production-code imports."""
     config_hash = bytes(range(1, 33))
     source_hash = bytes(range(33, 65))
@@ -265,20 +269,116 @@ def render_golden() -> bytes:
     return rendered
 
 
+def _depth_level(
+    bid: tuple[int, int] | None, ask: tuple[int, int] | None
+) -> bytes:
+    return DEPTH_LEVEL.pack(
+        int(bid is not None),
+        int(ask is not None),
+        b"\0" * 2,
+        bid[0] if bid else 0,
+        bid[1] if bid else 0,
+        ask[0] if ask else 0,
+        ask[1] if ask else 0,
+    )
+
+
+def render_snapshot_golden() -> bytes:
+    """Render reviewed literal snapshot-v1 values without production-code imports."""
+    config_hash = bytes(range(1, 33))
+    source_hash = bytes(range(33, 65))
+    depth = 2
+    record_size = 48 + 28 * depth
+    first = SNAPSHOT.pack(
+        5,
+        1_000_000,
+        1,
+        1,
+        87,
+        1_652_300,
+        300,
+        1_652_350,
+        b"\0" * 4,
+        75,
+    ) + b"".join(
+        (
+            _depth_level((1_652_300, 300), (1_652_400, 200)),
+            _depth_level((1_652_200, 500), None),
+        )
+    )
+    second = SNAPSHOT.pack(
+        14,
+        1_000_090,
+        2,
+        10,
+        24,
+        0,
+        0,
+        0,
+        b"\0" * 4,
+        0,
+    ) + b"".join((_depth_level(None, None), _depth_level(None, None)))
+    records = (first, second)
+    header = HEADER.pack(
+        b"ITCHLS1\0",
+        1,
+        104,
+        record_size,
+        depth,
+        10_000,
+        20_190_130,
+        2,
+        1,
+        len(records),
+        config_hash,
+        source_hash,
+        b"\0" * 4,
+    )
+    dictionary = b"".join(
+        (
+            SYMBOL.pack(1, 0x1234, b"AAPL    ", 100),
+            SYMBOL.pack(2, 0xABCD, b"MSFT.X  ", 200),
+        )
+    )
+    rendered = header + dictionary + b"".join(records)
+    assert SNAPSHOT.size == 48
+    assert DEPTH_LEVEL.size == 28
+    assert all(len(record) == record_size for record in records)
+    assert len(rendered) == 104 + 2 * 16 + 2 * record_size
+    return rendered
+
+
 def render_outputs() -> dict[Path, bytes]:
-    golden = render_golden()
-    metadata = {
+    event_golden = render_event_golden()
+    event_metadata = {
         "record_count": 10,
         "record_size": 72,
         "schema_version": 1,
-        "sha256": hashlib.sha256(golden).hexdigest(),
-        "size_bytes": len(golden),
+        "sha256": hashlib.sha256(event_golden).hexdigest(),
+        "size_bytes": len(event_golden),
+        "symbol_count": 2,
+        "synthetic": True,
+    }
+    snapshot_golden = render_snapshot_golden()
+    snapshot_metadata = {
+        "depth": 2,
+        "record_count": 2,
+        "record_size": 104,
+        "schema_version": 1,
+        "sha256": hashlib.sha256(snapshot_golden).hexdigest(),
+        "size_bytes": len(snapshot_golden),
         "symbol_count": 2,
         "synthetic": True,
     }
     return {
-        GOLDEN_PATH: golden,
-        METADATA_PATH: (json.dumps(metadata, indent=2, sort_keys=True) + "\n").encode(),
+        EVENT_GOLDEN_PATH: event_golden,
+        EVENT_METADATA_PATH: (
+            json.dumps(event_metadata, indent=2, sort_keys=True) + "\n"
+        ).encode(),
+        SNAPSHOT_GOLDEN_PATH: snapshot_golden,
+        SNAPSHOT_METADATA_PATH: (
+            json.dumps(snapshot_metadata, indent=2, sort_keys=True) + "\n"
+        ).encode(),
     }
 
 

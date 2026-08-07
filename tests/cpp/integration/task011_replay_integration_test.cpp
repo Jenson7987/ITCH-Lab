@@ -178,6 +178,8 @@ TEST_CASE("TASK-011 replay filters early, warms selected books and honours sessi
   REQUIRE(resume_snapshot != plain_trace.diagnostics.snapshots.end());
   REQUIRE(resume_snapshot->trading_state == itchlab::TradingState::trading);
   REQUIRE(resume_snapshot->top_levels.bids[0]->price4 == 1'000'200);
+  REQUIRE(resume_snapshot->last_trade_price4 == 1'000'100);
+  REQUIRE(resume_snapshot->last_trade_quantity == 25);
   REQUIRE(std::ranges::none_of(plain_trace.diagnostics.snapshots, [](const auto& snapshot) {
     return snapshot.message_index == 15 || snapshot.message_index == 17;
   }));
@@ -248,4 +250,11 @@ TEST_CASE("TASK-011 replay routes every supported selected-instrument message ty
   REQUIRE(event_kinds == std::set<std::string>{"add", "broken_trade", "cancel", "cross", "delete",
                                                "execute", "execute_price", "replace", "trade",
                                                "trading_state"});
+
+  const auto post_break_state =
+      std::ranges::find_if(trace.diagnostics.snapshots,
+                           [](const auto& snapshot) { return snapshot.message_index == 26; });
+  REQUIRE(post_break_state != trace.diagnostics.snapshots.end());
+  REQUIRE(post_break_state->last_trade_price4 == 1'000'500);
+  REQUIRE(post_break_state->last_trade_quantity == 75);
 }

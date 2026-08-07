@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
       return 70;
     }
     return itchlab::cli::run(arguments, std::cout, std::cerr,
-                             itchlab::cli::RuntimeContext{signals.token(), nullptr});
+                             itchlab::cli::RuntimeContext{signals.token(), nullptr, argv[0]});
   }
   return itchlab::cli::run(arguments, std::cout, std::cerr);
 }

@@ -1,0 +1,286 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://itchlab.local/schemas/replay-manifest.schema.json",
+  "title": "ITCH-Lab completed replay manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "replay_id",
+    "status",
+    "publishable",
+    "started_at",
+    "completed_at",
+    "source",
+    "config",
+    "config_sha256",
+    "identity_config_sha256",
+    "identity_sha256",
+    "executable_sha256",
+    "code_revision",
+    "build",
+    "counts",
+    "error_summary",
+    "global_session_events",
+    "instruments",
+    "artefacts"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "replay_id": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}\\.[0-9]{9}Z-[0-9a-f]{12}$"
+    },
+    "status": {"enum": ["completed", "degraded"]},
+    "publishable": {"type": "boolean"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical_name",
+        "compression",
+        "exchange_timezone",
+        "framing",
+        "sha256",
+        "size_bytes",
+        "trading_date"
+      ],
+      "properties": {
+        "canonical_name": {"$ref": "#/$defs/basename"},
+        "compression": {"enum": ["none", "gzip"]},
+        "exchange_timezone": {"const": "America/New_York"},
+        "framing": {"const": "itch-length-v1"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "size_bytes": {"$ref": "#/$defs/count"},
+        "trading_date": {"type": "string", "format": "date"}
+      }
+    },
+    "config": {
+      "allOf": [
+        {"$ref": "https://itchlab.local/schemas/replay-config.schema.json"},
+        {
+          "properties": {
+            "input": {
+              "properties": {
+                "path": {
+                  "$ref": "https://itchlab.local/schemas/replay-manifest.schema.json#/$defs/basename"
+                },
+                "sha256": {
+                  "$ref": "https://itchlab.local/schemas/replay-manifest.schema.json#/$defs/sha256"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "config_sha256": {"$ref": "#/$defs/sha256"},
+    "identity_config_sha256": {"$ref": "#/$defs/sha256"},
+    "identity_sha256": {"$ref": "#/$defs/sha256"},
+    "executable_sha256": {"$ref": "#/$defs/sha256"},
+    "code_revision": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|unknown)(?:\\+dirty)?$"
+    },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "application_version",
+        "build_type",
+        "compiler",
+        "compiler_version",
+        "target"
+      ],
+      "properties": {
+        "application_version": {"type": "string", "minLength": 1},
+        "build_type": {"type": "string", "minLength": 1},
+        "compiler": {"type": "string", "minLength": 1},
+        "compiler_version": {"type": "string", "minLength": 1},
+        "target": {"type": "string", "minLength": 1}
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "all_by_type",
+        "decoded_messages",
+        "directory_messages",
+        "errors_observed",
+        "filtered_instrument_messages",
+        "global_system_messages",
+        "messages_processed",
+        "selected_by_type",
+        "selected_events",
+        "selected_instrument_messages",
+        "skipped_messages",
+        "snapshots_written"
+      ],
+      "properties": {
+        "all_by_type": {"$ref": "#/$defs/typeCounts"},
+        "decoded_messages": {"$ref": "#/$defs/count"},
+        "directory_messages": {"$ref": "#/$defs/count"},
+        "errors_observed": {"$ref": "#/$defs/count"},
+        "filtered_instrument_messages": {"$ref": "#/$defs/count"},
+        "global_system_messages": {"$ref": "#/$defs/count"},
+        "messages_processed": {"$ref": "#/$defs/count"},
+        "selected_by_type": {"$ref": "#/$defs/typeCounts"},
+        "selected_events": {"$ref": "#/$defs/count"},
+        "selected_instrument_messages": {"$ref": "#/$defs/count"},
+        "skipped_messages": {"$ref": "#/$defs/count"},
+        "snapshots_written": {"$ref": "#/$defs/count"}
+      }
+    },
+    "error_summary": {
+      "type": "object",
+      "propertyNames": {"pattern": "^ERR_[A-Z0-9_]+$"},
+      "additionalProperties": {"$ref": "#/$defs/count"}
+    },
+    "global_session_events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["event_code", "message_index", "timestamp_ns"],
+        "properties": {
+          "event_code": {"enum": ["O", "S", "Q", "M", "E", "C"]},
+          "message_index": {"$ref": "#/$defs/count"},
+          "timestamp_ns": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 86399999999999
+          }
+        }
+      }
+    },
+    "instruments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "final_book_digest",
+          "final_order_count",
+          "final_trading_state",
+          "financial_status",
+          "market_category",
+          "round_lot_size",
+          "round_lots_only",
+          "stock_locate",
+          "symbol",
+          "symbol_id"
+        ],
+        "properties": {
+          "final_book_digest": {"$ref": "#/$defs/sha256"},
+          "final_order_count": {"$ref": "#/$defs/count"},
+          "final_trading_state": {
+            "enum": [
+              "unknown",
+              "preopen",
+              "trading",
+              "halted",
+              "paused",
+              "quotation_only",
+              "closed"
+            ]
+          },
+          "financial_status": {"type": "string", "pattern": "^[ -~]$"},
+          "market_category": {"type": "string", "pattern": "^[ -~]$"},
+          "round_lot_size": {"type": "integer", "minimum": 0, "maximum": 4294967295},
+          "round_lots_only": {"type": "boolean"},
+          "stock_locate": {"type": "integer", "minimum": 1, "maximum": 65535},
+          "symbol": {"type": "string", "pattern": "^[!-~](?:[ -~]{0,6}[!-~])?$"},
+          "symbol_id": {"type": "integer", "minimum": 1, "maximum": 65535}
+        }
+      }
+    },
+    "artefacts": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        {"$ref": "#/$defs/eventArtefact"},
+        {"$ref": "#/$defs/snapshotArtefact"}
+      ],
+      "items": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"publishable": {"const": true}},
+        "required": ["publishable"]
+      },
+      "then": {
+        "properties": {
+          "build": {"properties": {"build_type": {"const": "Release"}}},
+          "code_revision": {"pattern": "^[0-9a-f]{40}$"}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "basename": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!\\.{1,2}$)[^/\\\\]+$"
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "count": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+    "typeCounts": {
+      "type": "object",
+      "propertyNames": {"pattern": "^[A-Z]$"},
+      "additionalProperties": {"$ref": "#/$defs/count"}
+    },
+    "eventArtefact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "path",
+        "record_count",
+        "record_size",
+        "schema_version",
+        "sha256",
+        "size_bytes"
+      ],
+      "properties": {
+        "kind": {"const": "events"},
+        "path": {"const": "events.ilb"},
+        "record_count": {"$ref": "#/$defs/count"},
+        "record_size": {"const": 72},
+        "schema_version": {"const": 1},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "size_bytes": {"$ref": "#/$defs/count"}
+      }
+    },
+    "snapshotArtefact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "depth",
+        "kind",
+        "path",
+        "record_count",
+        "record_size",
+        "schema_version",
+        "sha256",
+        "size_bytes"
+      ],
+      "properties": {
+        "depth": {"type": "integer", "minimum": 1, "maximum": 50},
+        "kind": {"const": "snapshots"},
+        "path": {"const": "snapshots.ilb"},
+        "record_count": {"$ref": "#/$defs/count"},
+        "record_size": {"type": "integer", "minimum": 76, "maximum": 1448},
+        "schema_version": {"const": 1},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "size_bytes": {"$ref": "#/$defs/count"}
+      }
+    }
+  }
+}

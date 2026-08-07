@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -89,6 +90,15 @@ std::string first_frame_of_type(const std::string_view stream, const char source
   return {};
 }
 
+std::string with_timestamp(std::string frame, const std::uint64_t timestamp_ns) {
+  REQUIRE(frame.size() >= 13);
+  for (std::size_t index = 0; index < 6; ++index) {
+    const auto shift = static_cast<unsigned>((5 - index) * 8U);
+    frame[7 + index] = static_cast<char>(static_cast<std::uint8_t>(timestamp_ns >> shift));
+  }
+  return frame;
+}
+
 std::filesystem::path write_config(const std::filesystem::path& destination,
                                    const std::filesystem::path& input) {
   auto config = Json::parse(read_file(repository_path("configs/replay.diagnostic.example.json")));
@@ -136,6 +146,19 @@ int wait_for_child(const pid_t child) {
   return WEXITSTATUS(status);
 }
 
+std::optional<std::filesystem::path> find_file_named(const std::filesystem::path& root,
+                                                     const std::string_view filename) {
+  if (!std::filesystem::is_directory(root)) {
+    return std::nullopt;
+  }
+  for (const auto& entry : std::filesystem::recursive_directory_iterator{root}) {
+    if (entry.is_regular_file() && entry.path().filename() == filename) {
+      return entry.path();
+    }
+  }
+  return std::nullopt;
+}
+
 #endif
 
 } // namespace
@@ -147,7 +170,7 @@ TEST_CASE("E2E-004 TASK-012 SIGINT closes partial outputs, exits 130 and permits
 #else
   TemporaryDirectory temporary;
   const auto mixed = read_file(repository_path("tests/fixtures/synthetic_mixed.itch"));
-  const auto trade_frame = first_frame_of_type(mixed, 'P');
+  const auto trade_frame = with_timestamp(first_frame_of_type(mixed, 'P'), 80'000'000'000'000ULL);
   std::string long_source = mixed;
   constexpr std::size_t repetitions = 500'000;
   long_source.reserve(mixed.size() + trade_frame.size() * repetitions);
@@ -162,16 +185,19 @@ TEST_CASE("E2E-004 TASK-012 SIGINT closes partial outputs, exits 130 and permits
   const auto stderr_path = temporary.path() / "cancel.stderr";
 
   const auto child = spawn_replay(config, output_root, stdout_path, stderr_path);
-  const auto event_partial = output_root / "diagnostic-events.jsonl.partial";
+  std::optional<std::filesystem::path> event_partial;
   bool output_started{};
   bool child_exited{};
   int early_status{};
   for (std::size_t attempt = 0; attempt < 5'000; ++attempt) {
     std::error_code error;
-    if (std::filesystem::exists(event_partial, error) && !error &&
-        std::filesystem::file_size(event_partial, error) > 0 && !error) {
-      output_started = true;
-      break;
+    event_partial = find_file_named(output_root, "events.ilb.partial");
+    if (event_partial) {
+      const auto size = std::filesystem::file_size(*event_partial, error);
+      if (!error && size > 104 + 16) {
+        output_started = true;
+        break;
+      }
     }
     const auto waited = ::waitpid(child, &early_status, WNOHANG);
     if (waited == child) {
@@ -191,13 +217,13 @@ TEST_CASE("E2E-004 TASK-012 SIGINT closes partial outputs, exits 130 and permits
   REQUIRE(wait_for_child(child) == 130);
 
   REQUIRE(read_file(source_path) == long_source);
-  REQUIRE_FALSE(std::filesystem::exists(output_root / "diagnostic-events.jsonl"));
-  REQUIRE_FALSE(std::filesystem::exists(output_root / "diagnostic-snapshots.jsonl"));
-  REQUIRE(std::filesystem::exists(event_partial));
-  REQUIRE(std::filesystem::exists(output_root / "diagnostic-snapshots.jsonl.partial"));
-  const auto partial_events = read_file(event_partial);
-  REQUIRE_FALSE(partial_events.empty());
-  REQUIRE(partial_events.back() == '\n');
+  REQUIRE_FALSE(find_file_named(output_root, "events.ilb").has_value());
+  REQUIRE_FALSE(find_file_named(output_root, "snapshots.ilb").has_value());
+  REQUIRE_FALSE(find_file_named(output_root, "replay-manifest.json").has_value());
+  REQUIRE(event_partial.has_value());
+  REQUIRE(std::filesystem::exists(*event_partial));
+  REQUIRE(find_file_named(output_root, "snapshots.ilb.partial").has_value());
+  REQUIRE(std::filesystem::file_size(*event_partial) > 104 + 16);
 
   const auto cancelled = Json::parse(read_file(stdout_path));
   REQUIRE(cancelled.at("status") == "cancelled");
@@ -211,7 +237,8 @@ TEST_CASE("E2E-004 TASK-012 SIGINT closes partial outputs, exits 130 and permits
   const auto clean_child = spawn_replay(clean_config, clean_root, temporary.path() / "clean.stdout",
                                         temporary.path() / "clean.stderr");
   REQUIRE(wait_for_child(clean_child) == 0);
-  REQUIRE(std::filesystem::exists(clean_root / "diagnostic-events.jsonl"));
-  REQUIRE(std::filesystem::exists(clean_root / "diagnostic-snapshots.jsonl"));
+  REQUIRE(find_file_named(clean_root, "events.ilb").has_value());
+  REQUIRE(find_file_named(clean_root, "snapshots.ilb").has_value());
+  REQUIRE(find_file_named(clean_root, "replay-manifest.json").has_value());
 #endif
 }
