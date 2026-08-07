@@ -17,7 +17,7 @@
   `input.path` is reduced to the source basename before the effective config is stored or hashed.
   This keeps first-run and expected-hash replay bytes consistent while preventing absolute local
   paths from entering a publishable manifest.
-- An identity-config projection removes only locator fields whose identified parent content is already supplied separately: replay `input.path` and `input.sha256`; dataset `conversion_manifests`; experiment `dataset_manifest`; and simulation `dataset_manifest` and `prediction_manifest`. No scientific, validation or selection field is removed. `identity_config_sha256` is SHA-256 over that canonical projection.
+- An identity-config projection removes only locator fields whose identified parent content is already supplied separately: replay `input.path` and `input.sha256`; conversion `replay_manifests` and `output_root`; dataset `conversion_manifests`; experiment `dataset_manifest`; and simulation `dataset_manifest` and `prediction_manifest`. No scientific, validation or selection field is removed. `identity_config_sha256` is SHA-256 over that canonical projection.
 - A stage identity digest is SHA-256 over: an ASCII domain separator ending in NUL; ordered raw 32-byte parent-content hashes; the raw 32-byte identity-config hash; the exact executable or installed-wheel 32-byte content hash; and the output schema version as an unsigned two-byte big-endian integer.
 - Replay uses domain separator itchlab-replay-v1; later stages use itchlab-conversion-v1, itchlab-dataset-v1, itchlab-experiment-v1 and itchlab-simulation-v1.
 - Human run IDs are a UTC basic timestamp with nine fractional-second digits, a hyphen and the
@@ -44,7 +44,8 @@ erDiagram
     REPLAY_RUN ||--o{ ORDER : maintains
     INSTRUMENT ||--o{ ORDER : contains
     NORMALISED_EVENT ||--o| BOOK_SNAPSHOT : triggers
-    REPLAY_RUN ||--o{ DATASET_RUN : transforms
+    REPLAY_RUN ||--o{ CONVERSION_RUN : transforms
+    CONVERSION_RUN ||--o{ DATASET_RUN : feeds
     DATASET_RUN ||--o{ PREDICTION : produces
     DATASET_RUN ||--o{ SIMULATION_RUN : supports
     SIMULATION_RUN ||--o{ SIMULATED_ORDER : owns
@@ -184,6 +185,80 @@ For snapshot-v1, P and Q are the configured unchanged-book trade observations. T
 per-instrument last-trade pair even when unchanged trade snapshots are disabled, so a later
 top-N/state snapshot carries the latest causal observation. B records do not rewrite an earlier
 snapshot or rewind this pair.
+
+### ConversionRun and Parquet schema v1
+
+A conversion run is stored beneath `conversion/<conversion-id>/` and contains a completed
+`conversion-manifest.json` plus separate event and snapshot datasets. It accepts one or more
+completed replay manifests with unique trading dates and a common snapshot depth. Degraded replay
+parents are rejected unless `allow_degraded` is explicitly true; accepting one makes the conversion
+status `degraded`.
+
+The manifest records the effective config and both config hashes, the full conversion identity,
+the Python package-content hash and runtime versions, ordered authenticated parent identities,
+logical schemas and their canonical hashes, per-partition counts, and every Parquet file's relative
+path, row count, size and SHA-256. The conversion identity uses the ordered replay-manifest SHA-256
+values as parent-content hashes and the `itchlab-conversion-v1` domain separator.
+
+Dataset paths are fixed as follows, where the symbol component is URI percent-encoded so a source
+symbol cannot introduce a path separator:
+
+    events/trading_date=YYYY-MM-DD/symbol=<encoded-symbol>/part-N.parquet
+    snapshots/trading_date=YYYY-MM-DD/symbol=<encoded-symbol>/part-N.parquet
+
+`trading_date` and `symbol` are typed logical partition columns reconstructed from those paths; they
+are omitted from each physical Parquet file. Rows are strictly increasing by `message_index` within
+each `(kind, trading_date, symbol)` partition. Zstandard is the version-1 compression codec and the
+configured `row_group_size` is an upper bound on rows in each row group.
+
+The logical event schema is:
+
+| Field | Arrow/Parquet dtype | Nullable |
+| --- | --- | --- |
+| trading_date | date32[day] | No |
+| symbol | string/UTF-8 | No |
+| message_index | uint64 | No |
+| timestamp_ns | uint64 | No |
+| symbol_id | uint16 | No |
+| event_kind | string/UTF-8 | No |
+| source_type | string/UTF-8 | No |
+| primary_reference | uint64 | Yes |
+| secondary_reference | uint64 | Yes |
+| side | int8 | Yes |
+| price4 | uint32 | Yes |
+| quantity | uint64 | Yes |
+| remaining_quantity | uint64 | Yes |
+| execution_price4 | uint32 | Yes |
+| aux_code | string/UTF-8 | Yes |
+| event_subtype | string/UTF-8 | Yes |
+| in_session | bool | No |
+| flags | uint16 | No |
+
+The logical snapshot schema is:
+
+| Field | Arrow/Parquet dtype | Nullable |
+| --- | --- | --- |
+| trading_date | date32[day] | No |
+| symbol | string/UTF-8 | No |
+| message_index | uint64 | No |
+| timestamp_ns | uint64 | No |
+| symbol_id | uint16 | No |
+| event_kind | string/UTF-8 | No |
+| event_price4 | uint32 | Yes |
+| event_quantity | uint64 | Yes |
+| last_trade_price4 | uint32 | Yes |
+| last_trade_quantity | uint64 | Yes |
+| top_n_changed | bool | No |
+| trading_state | string/UTF-8 | No |
+| flags | uint8 | No |
+| bid_price4_1..N | uint32 | Yes |
+| bid_quantity_1..N | uint64 | Yes |
+| ask_price4_1..N | uint32 | Yes |
+| ask_quantity_1..N | uint64 | Yes |
+
+Nullable columns preserve the binary validity flags exactly: a valid numeric zero remains zero and
+an invalid field becomes Arrow null. Price4 and quantity fields remain integers; conversion does
+not introduce floating-point prices.
 
 ### DatasetRun
 

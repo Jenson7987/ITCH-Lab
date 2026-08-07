@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "replay_manifests": [
+    "runs/replay/20190130-example/replay-manifest.json"
+  ],
+  "output_root": "runs",
+  "parquet": {
+    "compression": "zstd",
+    "row_group_size": 65536,
+    "partition_keys": ["trading_date", "symbol"]
+  },
+  "allow_degraded": false
+}

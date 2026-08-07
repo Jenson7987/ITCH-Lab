@@ -61,4 +61,4 @@ def test_task_001_python_cli_rejects_unsupported_arguments(
 
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert "unrecognised argument" in captured.err
+    assert "--config is required" in captured.err

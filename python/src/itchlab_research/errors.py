@@ -85,4 +85,26 @@ class InterchangeReadError(ValueError):
         super().__init__(f"{code.value}: {message}")
 
 
-__all__ = ["ConfigIssue", "ConfigValidationError", "ErrorCode", "InterchangeReadError"]
+class ConversionError(RuntimeError):
+    """One stable, path-safe failure from conversion or publication."""
+
+    def __init__(
+        self,
+        code: ErrorCode,
+        message: str,
+        *,
+        partial_exists: bool = False,
+    ) -> None:
+        self.code = code
+        self.message = message
+        self.partial_exists = partial_exists
+        super().__init__(f"{code.value}: {message}")
+
+
+__all__ = [
+    "ConfigIssue",
+    "ConfigValidationError",
+    "ConversionError",
+    "ErrorCode",
+    "InterchangeReadError",
+]

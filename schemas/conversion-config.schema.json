@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://itchlab.local/schemas/conversion-config.schema.json",
+  "title": "ITCH-Lab conversion config v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "replay_manifests", "output_root", "parquet"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "replay_manifests": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/relativePath"}
+    },
+    "output_root": {"$ref": "#/$defs/relativePath"},
+    "parquet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["compression", "row_group_size", "partition_keys"],
+      "properties": {
+        "compression": {"const": "zstd"},
+        "row_group_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "partition_keys": {
+          "type": "array",
+          "prefixItems": [{"const": "trading_date"}, {"const": "symbol"}],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        }
+      }
+    },
+    "allow_degraded": {"type": "boolean", "default": false}
+  },
+  "$defs": {
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    }
+  }
+}

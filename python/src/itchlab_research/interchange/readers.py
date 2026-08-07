@@ -775,6 +775,18 @@ def read_events(
             yield EventBatch(metadata, records)
 
 
+def read_event_metadata(path: Path, *, expected_sha256: str) -> InterchangeMetadata:
+    """Authenticate an event-v1 artefact and return its validated fixed metadata."""
+    _validate_reader_arguments(expected_sha256, 1)
+    for _stream, metadata, _identity_value in _validated_stream(
+        path,
+        InterchangeKind.EVENTS,
+        expected_sha256,
+    ):
+        return metadata
+    raise _fail(ErrorCode.INTERNAL, "Event metadata validation did not open its artefact.")
+
+
 def read_snapshots(
     path: Path,
     *,
@@ -815,4 +827,21 @@ def read_snapshots(
             yield SnapshotBatch(metadata, records)
 
 
-__all__ = ["read_events", "read_snapshots"]
+def read_snapshot_metadata(path: Path, *, expected_sha256: str) -> InterchangeMetadata:
+    """Authenticate a snapshot-v1 artefact and return its validated fixed metadata."""
+    _validate_reader_arguments(expected_sha256, 1)
+    for _stream, metadata, _identity_value in _validated_stream(
+        path,
+        InterchangeKind.SNAPSHOTS,
+        expected_sha256,
+    ):
+        return metadata
+    raise _fail(ErrorCode.INTERNAL, "Snapshot metadata validation did not open its artefact.")
+
+
+__all__ = [
+    "read_event_metadata",
+    "read_events",
+    "read_snapshot_metadata",
+    "read_snapshots",
+]

@@ -10,7 +10,13 @@ from typing import cast
 import pytest
 from jsonschema import Draft202012Validator
 
-from itchlab_research.config import ConfigKind, ReplayConfig, load_config, parse_config
+from itchlab_research.config import (
+    ConfigKind,
+    ConversionConfig,
+    ReplayConfig,
+    load_config,
+    parse_config,
+)
 from itchlab_research.errors import ConfigValidationError, ErrorCode
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -18,7 +24,7 @@ VALID_ROOT = REPOSITORY_ROOT / "tests" / "golden" / "configs" / "valid"
 INVALID_ROOT = REPOSITORY_ROOT / "tests" / "golden" / "configs" / "invalid"
 
 
-@pytest.mark.parametrize("kind", ["replay", "dataset", "experiment", "simulation"])
+@pytest.mark.parametrize("kind", ["replay", "conversion", "dataset", "experiment", "simulation"])
 def test_task_002_example_and_valid_golden_configs_match(kind: ConfigKind) -> None:
     example = REPOSITORY_ROOT / "configs" / f"{kind}.example.json"
     golden = VALID_ROOT / f"{kind}.json"
@@ -57,7 +63,7 @@ def test_ut_cfg_001_unknown_nested_key_fails() -> None:
     assert captured.value.issues[0].json_pointer == "/output"
 
 
-@pytest.mark.parametrize("kind", ["replay", "dataset", "experiment", "simulation"])
+@pytest.mark.parametrize("kind", ["replay", "conversion", "dataset", "experiment", "simulation"])
 def test_ut_cfg_001_every_config_rejects_unknown_root_keys(kind: ConfigKind) -> None:
     document = json.loads((VALID_ROOT / f"{kind}.json").read_text(encoding="utf-8"))
     document["unexpected"] = True
@@ -67,6 +73,38 @@ def test_ut_cfg_001_every_config_rejects_unknown_root_keys(kind: ConfigKind) -> 
 
     assert captured.value.issues[0].code is ErrorCode.CONFIG_SCHEMA
     assert captured.value.issues[0].json_pointer == ""
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "expected_code"),
+    [
+        ("replay_manifests", ["../replay-manifest.json"], ErrorCode.INPUT_PATH),
+        ("replay_manifests", ["C:\\replay-manifest.json"], ErrorCode.INPUT_PATH),
+        ("output_root", ".", ErrorCode.OUTPUT_PATH),
+        ("output_root", "runs/work.partial/output", ErrorCode.OUTPUT_PATH),
+    ],
+)
+def test_task_017_conversion_config_rejects_unsafe_paths(
+    field: str,
+    value: object,
+    expected_code: ErrorCode,
+) -> None:
+    document = json.loads((VALID_ROOT / "conversion.json").read_text(encoding="utf-8"))
+    document[field] = value
+
+    with pytest.raises(ConfigValidationError) as captured:
+        parse_config(json.dumps(document), "conversion")
+
+    assert expected_code in {issue.code for issue in captured.value.issues}
+
+
+def test_task_017_conversion_config_materialises_degraded_default() -> None:
+    document = json.loads((VALID_ROOT / "conversion.json").read_text(encoding="utf-8"))
+    del document["allow_degraded"]
+
+    config = cast(ConversionConfig, parse_config(json.dumps(document), "conversion"))
+
+    assert config.allow_degraded is False
 
 
 def test_ut_cfg_001_overlapping_dates_fail() -> None:

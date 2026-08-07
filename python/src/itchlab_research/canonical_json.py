@@ -11,6 +11,7 @@ import rfc8785
 
 from itchlab_research.config import (
     Config,
+    ConversionConfig,
     DatasetConfig,
     ExperimentConfig,
     ReplayConfig,
@@ -52,6 +53,18 @@ def config_document(config: Config) -> dict[str, Any]:
                 "max_skipped_messages": config.validation.max_skipped_messages,
                 "invariant_interval": config.validation.invariant_interval,
             },
+        }
+    if isinstance(config, ConversionConfig):
+        return {
+            "schema_version": config.schema_version,
+            "replay_manifests": list(config.replay_manifests),
+            "output_root": config.output_root,
+            "parquet": {
+                "compression": config.parquet.compression,
+                "row_group_size": config.parquet.row_group_size,
+                "partition_keys": list(config.parquet.partition_keys),
+            },
+            "allow_degraded": config.allow_degraded,
         }
     if isinstance(config, DatasetConfig):
         return {
@@ -146,6 +159,9 @@ def identity_config_document(config: Config) -> dict[str, Any]:
         input_config = cast(dict[str, Any], document["input"])
         del input_config["path"]
         del input_config["sha256"]
+    elif isinstance(config, ConversionConfig):
+        del document["replay_manifests"]
+        del document["output_root"]
     elif isinstance(config, DatasetConfig):
         del document["conversion_manifests"]
     elif isinstance(config, ExperimentConfig):

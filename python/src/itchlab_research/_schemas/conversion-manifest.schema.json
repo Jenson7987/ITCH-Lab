@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://itchlab.local/schemas/conversion-manifest.schema.json",
+  "title": "ITCH-Lab completed conversion manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "conversion_id",
+    "status",
+    "started_at",
+    "completed_at",
+    "config",
+    "config_sha256",
+    "identity_config_sha256",
+    "identity_sha256",
+    "tool",
+    "parents",
+    "partition_keys",
+    "sort_keys",
+    "schemas",
+    "counts",
+    "artefacts"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "conversion_id": {"$ref": "#/$defs/runId"},
+    "status": {"enum": ["completed", "degraded"]},
+    "started_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"},
+    "config": {"$ref": "https://itchlab.local/schemas/conversion-config.schema.json"},
+    "config_sha256": {"$ref": "#/$defs/sha256"},
+    "identity_config_sha256": {"$ref": "#/$defs/sha256"},
+    "identity_sha256": {"$ref": "#/$defs/sha256"},
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "application_version",
+        "content_digest_kind",
+        "sha256",
+        "python_version",
+        "pyarrow_version"
+      ],
+      "properties": {
+        "application_version": {"type": "string", "minLength": 1},
+        "content_digest_kind": {"const": "python-package-content-v1"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "python_version": {"type": "string", "minLength": 1},
+        "pyarrow_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "parents": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/parent"}
+    },
+    "partition_keys": {
+      "type": "array",
+      "prefixItems": [{"const": "trading_date"}, {"const": "symbol"}],
+      "items": false,
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "sort_keys": {
+      "type": "array",
+      "prefixItems": [{"const": "message_index"}],
+      "items": false,
+      "minItems": 1,
+      "maxItems": 1
+    },
+    "schemas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["events", "snapshots"],
+      "properties": {
+        "events": {"$ref": "#/$defs/parquetSchema"},
+        "snapshots": {"$ref": "#/$defs/parquetSchema"}
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["events", "snapshots", "parquet_files", "by_partition"],
+      "properties": {
+        "events": {"$ref": "#/$defs/count"},
+        "snapshots": {"$ref": "#/$defs/count"},
+        "parquet_files": {"$ref": "#/$defs/count"},
+        "by_partition": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/partitionCount"}
+        }
+      }
+    },
+    "artefacts": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/artefact"}
+    }
+  },
+  "$defs": {
+    "runId": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}\\.[0-9]{9}Z-[0-9a-f]{12}$"
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "count": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+    "symbol": {"type": "string", "pattern": "^[!-~](?:[ -~]{0,6}[!-~])?$"},
+    "parent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "replay_id",
+        "manifest_sha256",
+        "status",
+        "trading_date",
+        "config_sha256",
+        "identity_sha256",
+        "source_sha256",
+        "events_sha256",
+        "snapshots_sha256",
+        "snapshot_depth"
+      ],
+      "properties": {
+        "replay_id": {"$ref": "#/$defs/runId"},
+        "manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "status": {"enum": ["completed", "degraded"]},
+        "trading_date": {"type": "string", "format": "date"},
+        "config_sha256": {"$ref": "#/$defs/sha256"},
+        "identity_sha256": {"$ref": "#/$defs/sha256"},
+        "source_sha256": {"$ref": "#/$defs/sha256"},
+        "events_sha256": {"$ref": "#/$defs/sha256"},
+        "snapshots_sha256": {"$ref": "#/$defs/sha256"},
+        "snapshot_depth": {"type": "integer", "minimum": 1, "maximum": 50}
+      }
+    },
+    "parquetField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "dtype", "nullable"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "dtype": {"type": "string", "minLength": 1},
+        "nullable": {"type": "boolean"}
+      }
+    },
+    "parquetSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fields", "sha256"],
+      "properties": {
+        "fields": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/parquetField"}},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "partitionCount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trading_date", "symbol", "events", "snapshots"],
+      "properties": {
+        "trading_date": {"type": "string", "format": "date"},
+        "symbol": {"$ref": "#/$defs/symbol"},
+        "events": {"$ref": "#/$defs/count"},
+        "snapshots": {"$ref": "#/$defs/count"}
+      }
+    },
+    "artefact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "path", "sha256", "size_bytes", "row_count", "trading_date", "symbol"],
+      "properties": {
+        "kind": {"enum": ["events", "snapshots"]},
+        "path": {
+          "type": "string",
+          "pattern": "^(?:events|snapshots)/trading_date=[0-9]{4}-[0-9]{2}-[0-9]{2}/symbol=(?:[A-Za-z0-9._~-]|%[0-9A-F]{2})+/part-[0-9]+\\.parquet$"
+        },
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "size_bytes": {"$ref": "#/$defs/count"},
+        "row_count": {"$ref": "#/$defs/count"},
+        "trading_date": {"type": "string", "format": "date"},
+        "symbol": {"$ref": "#/$defs/symbol"}
+      }
+    }
+  }
+}

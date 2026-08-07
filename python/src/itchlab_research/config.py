@@ -17,17 +17,34 @@ from jsonschema.exceptions import ValidationError
 
 from itchlab_research.errors import ConfigIssue, ConfigValidationError, ErrorCode
 
-ConfigKind = Literal["replay", "dataset", "experiment", "simulation"]
+ConfigKind = Literal["replay", "conversion", "dataset", "experiment", "simulation"]
 JSONScalar: TypeAlias = None | bool | int | float | str
 JSONValue: TypeAlias = JSONScalar | list["JSONValue"] | dict[str, "JSONValue"]
 
 MAX_IJSON_INTEGER: Final = 9_007_199_254_740_991
 _SCHEMA_BY_KIND: Final[dict[ConfigKind, str]] = {
     "replay": "replay-config.schema.json",
+    "conversion": "conversion-config.schema.json",
     "dataset": "dataset-config.schema.json",
     "experiment": "experiment-config.schema.json",
     "simulation": "simulation-config.schema.json",
 }
+
+
+@dataclass(frozen=True, slots=True)
+class ConversionParquetConfig:
+    compression: Literal["zstd"]
+    row_group_size: int
+    partition_keys: tuple[Literal["trading_date", "symbol"], ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ConversionConfig:
+    schema_version: int
+    replay_manifests: tuple[str, ...]
+    output_root: str
+    parquet: ConversionParquetConfig
+    allow_degraded: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -187,7 +204,9 @@ class SimulationConfig:
     seed: int
 
 
-Config: TypeAlias = ReplayConfig | DatasetConfig | ExperimentConfig | SimulationConfig
+Config: TypeAlias = (
+    ReplayConfig | ConversionConfig | DatasetConfig | ExperimentConfig | SimulationConfig
+)
 
 
 class _DuplicateNameError(ValueError):
@@ -249,7 +268,7 @@ def _json_pointer(path: Sequence[str | int]) -> str:
     return "".join(f"/{_escape_pointer(str(component))}" for component in path)
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=5)
 def _schema(kind: ConfigKind) -> Mapping[str, Any]:
     resource = files("itchlab_research._schemas").joinpath(_SCHEMA_BY_KIND[kind])
     return cast(Mapping[str, Any], json.loads(resource.read_text(encoding="utf-8")))
@@ -330,6 +349,35 @@ def _semantic_issues(document: dict[str, JSONValue], kind: ConfigKind) -> tuple[
                     "/selection", ErrorCode.SESSION_WINDOW, "Session start must precede end."
                 )
             )
+    elif kind == "conversion":
+        locators = [
+            *cast(list[str], document["replay_manifests"]),
+            cast(str, document["output_root"]),
+        ]
+        for index, locator in enumerate(locators):
+            normalised = locator.replace("\\", "/")
+            path = Path(normalised)
+            segments = normalised.split("/")
+            if (
+                normalised.startswith("/")
+                or (len(normalised) >= 2 and normalised[1] == ":")
+                or path.is_absolute()
+                or path.drive
+                or any(part in {"", ".", ".."} or part.endswith(".partial") for part in segments)
+            ):
+                pointer = (
+                    f"/replay_manifests/{index}" if index < len(locators) - 1 else "/output_root"
+                )
+                issues.append(
+                    ConfigIssue(
+                        pointer,
+                        ErrorCode.OUTPUT_PATH
+                        if pointer == "/output_root"
+                        else ErrorCode.INPUT_PATH,
+                        "Conversion locators must be safe relative paths without "
+                        "partial components.",
+                    )
+                )
     elif kind == "dataset":
         symbols = cast(list[str], document["symbols"])
         tick_sizes = cast(dict[str, JSONValue], document["tick_size4_by_symbol"])
@@ -434,6 +482,24 @@ def _build_replay(document: dict[str, JSONValue]) -> ReplayConfig:
             max_skipped_messages=cast(int, validation["max_skipped_messages"]),
             invariant_interval=cast(int, validation["invariant_interval"]),
         ),
+    )
+
+
+def _build_conversion(document: dict[str, JSONValue]) -> ConversionConfig:
+    parquet = cast(dict[str, JSONValue], document["parquet"])
+    return ConversionConfig(
+        schema_version=cast(int, document["schema_version"]),
+        replay_manifests=tuple(cast(list[str], document["replay_manifests"])),
+        output_root=cast(str, document["output_root"]),
+        parquet=ConversionParquetConfig(
+            compression="zstd",
+            row_group_size=cast(int, parquet["row_group_size"]),
+            partition_keys=cast(
+                tuple[Literal["trading_date", "symbol"], ...],
+                tuple(cast(list[str], parquet["partition_keys"])),
+            ),
+        ),
+        allow_degraded=cast(bool, document.get("allow_degraded", False)),
     )
 
 
@@ -543,6 +609,7 @@ def _build_simulation(document: dict[str, JSONValue]) -> SimulationConfig:
 
 _BUILDERS: Final[dict[ConfigKind, Callable[[dict[str, JSONValue]], Config]]] = {
     "replay": _build_replay,
+    "conversion": _build_conversion,
     "dataset": _build_dataset,
     "experiment": _build_experiment,
     "simulation": _build_simulation,
@@ -574,6 +641,8 @@ def load_config(path: Path, kind: ConfigKind) -> Config:
 __all__ = [
     "Config",
     "ConfigKind",
+    "ConversionConfig",
+    "ConversionParquetConfig",
     "DatasetConfig",
     "ExperimentConfig",
     "MAX_IJSON_INTEGER",

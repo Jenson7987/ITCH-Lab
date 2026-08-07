@@ -112,6 +112,17 @@ CT-JSON-001 validates the strict completed-manifest schema and rejects unknown k
 
 ### Python datasets/models
 
+- TASK-017 IT-007 converts the independent event-v1/snapshot-v1 golden values and checks exact
+  Arrow dtypes, nulls, integer zeroes, URI-safe partition paths, per-symbol order, row-group bounds,
+  per-partition counts and the strict conversion-manifest schema.
+- Conversion boundary tests cover authenticated parent tampering, degraded-policy propagation,
+  multiple days, inconsistent snapshot depth, unsafe/source-overlapping output roots, verified
+  identity reuse and immutable forced runs. Forging either a completed manifest count or a Parquet
+  child plus its declared hash is rejected before reuse.
+- A 120,000-record synthetic interchange stream stays below a 128 MiB traced-Python allocation peak
+  and 256 MiB process peak-RSS growth while preserving configured row-group bounds. Injected writer
+  failure and service cancellation leave only partial output; a real subprocess SIGINT exits 130
+  without a completed manifest.
 - Price4 conversions avoid binary-float values until presentation.
 - Each rolling feature on a hand-calculated event sequence.
 - Future perturbation does not change earlier features.
@@ -163,7 +174,7 @@ Each failing generated case is reduced and committed as a regression fixture whe
 | IT-004 | Replay through event/snapshot writers | Exact headers, counts, records and hashes |
 | IT-005 | Interrupt replay during write | Partial suffix only; no completed manifest |
 | IT-006 | C++ binary artefacts into Python readers | Exact round-trip typed records |
-| IT-007 | Conversion to Parquet | Dtypes, nulls, partition paths and values match |
+| IT-007 | Conversion to Parquet | Golden dtypes, nulls, integer values, partition paths, sort order and validated manifest match |
 | IT-008 | Feature/label pipeline | Hand-calculated rows and leakage guard pass |
 | IT-009 | Training baselines | Expected output schemas and training-only preprocessing |
 | IT-010 | Event/prediction stream through simulator | Golden orders, fills, cash and inventory |
@@ -202,8 +213,8 @@ Truncate and mutate frames. Assert bounded typed failures, no crash and no compl
 ### E2E-003 degraded flow
 
 Use a safely framed unknown type. Permissive replay completes degraded with exact error and skip
-counts. Once the downstream commands exist, conversion must reject it without allow-degraded and
-an explicit override must propagate disclosure into the final report.
+counts. Conversion rejects it without `allow_degraded`; an explicit override produces a degraded
+conversion manifest. Later downstream tasks must propagate that disclosure into the final report.
 
 ### E2E-004 cancellation
 

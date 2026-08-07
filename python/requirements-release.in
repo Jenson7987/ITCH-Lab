@@ -1,5 +1,6 @@
 # Build dependencies used for an isolated release environment.
 jsonschema>=4.25,<5
+pyarrow>=11,<24
 rfc8785>=0.1.4,<1
 setuptools>=83,<84
 wheel>=0.47,<1

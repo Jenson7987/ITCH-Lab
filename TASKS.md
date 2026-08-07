@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-017: Convert interchange to Parquet
-  - Dependencies: TASK-016
-  - Acceptance criteria: Typed chunked partitions and atomic conversion manifest
-  - Tests: IT-007 and memory/failure tests
-  - Documentation to update: 04-data-model.md if schema differs
-
 - [ ] TASK-018: Implement causal feature catalogue
   - Dependencies: TASK-017
   - Acceptance criteria: Required past-only features and metadata
@@ -103,6 +97,19 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-017: Convert interchange to Parquet
+  - Completed: 2026-08-07
+  - Evidence: The `itchlab-research convert` command authenticates completed replay lineage and
+    event-v1/snapshot-v1 children before bounded conversion to documented Zstandard Parquet schemas,
+    with canonical trading-date/symbol partitions, strict per-partition message-index order and
+    atomic immutable manifest publication. Degraded parents require an explicit override; matching
+    runs are fully revalidated before reuse and forced runs never overwrite. IT-007 reconciles every
+    golden value, dtype and null; multi-day/depth, tamper, path, write-failure and real-SIGINT tests
+    pass. The 120,000-record case stays below its 128 MiB traced-allocation and 256 MiB RSS-growth
+    limits. All 155 Python tests, Ruff formatting/lint, strict mypy, fixture checks and wheel/sdist
+    build passed. The Release C++ producer build passed; 128 runnable CTests passed and the authorised
+    external-data test skipped as designed.
 
 - [x] TASK-016: Implement safe Python interchange readers
   - Completed: 2026-08-07

@@ -70,7 +70,7 @@ Raw message bytes and stack traces are absent unless an explicit debug flag is u
 
 ### Configuration validation and hashing
 
-The four version-1 command configs use JSON Schema draft 2020-12. Every object sets `additionalProperties` to false. Parsing rejects duplicate object names, invalid Unicode and non-finite numbers before schema validation. Structural failures use `ERR_CONFIG_SCHEMA`; semantic failures use the most specific stable code below. When several independent config failures can be reported safely, they are returned in ascending JSON-pointer order.
+The five version-1 command configs use JSON Schema draft 2020-12. Every object sets `additionalProperties` to false. Parsing rejects duplicate object names, invalid Unicode and non-finite numbers before schema validation. Structural failures use `ERR_CONFIG_SCHEMA`; semantic failures use the most specific stable code below. When several independent config failures can be reported safely, they are returned in ascending JSON-pointer order.
 
 Domain validation follows schema validation and enforces relationships that JSON Schema does not express portably, including sorted unique horizons/windows, symbol-to-tick-map equality, chronological non-overlapping dates and strategy-to-prediction requirements. JSON integer fields are limited to the RFC 8785/I-JSON exact range even when the corresponding in-memory type is wider; numeric seeds are therefore 0 through 9,007,199,254,740,991.
 
@@ -218,20 +218,61 @@ The console entry point may be invoked as python -m itchlab_research or itchlab-
 
 ### convert
 
-    itchlab-research convert +      --config <dataset-conversion.json> +      [--allow-degraded]
+    itchlab-research convert \
+        --config <conversion-config.json> \
+        [--allow-degraded] \
+        [--force-new-run] \
+        [--format human|json] \
+        [--log-format human|jsonl] \
+        [--quiet]
 
-Config fields:
+Conversion config v1:
 
-- replay_manifests: non-empty list of completed replay manifests.
-- output_root: relative or CLI-resolved path.
-- parquet: compression (zstd recommended), row_group_size and partition keys.
+    {
+      "schema_version": 1,
+      "replay_manifests": [
+        "runs/replay/20190130-example/replay-manifest.json"
+      ],
+      "output_root": "runs",
+      "parquet": {
+        "compression": "zstd",
+        "row_group_size": 65536,
+        "partition_keys": ["trading_date", "symbol"]
+      },
+      "allow_degraded": false
+    }
+
+Config locators are non-empty safe relative paths, resolved from the command working directory;
+absolute paths, traversal, symlinked output roots, partial components and source/output overlap are
+rejected. Replay locators are unique. Parents must have unique trading dates and the same snapshot
+depth. Version 1 fixes compression to `zstd`, partition keys to `trading_date,symbol`, and row-group
+size to 1–1,048,576 rows.
 
 Behaviour:
 
-- Validates all parent artefacts first.
-- Reads binary records in bounded chunks.
-- Writes event and snapshot Parquet datasets to partial directories.
-- Publishes conversion-manifest.json last.
+- Strictly validates each completed replay manifest, canonical lineage, child size/hash/header and
+  symbol dictionary before creating an output root.
+- Rejects a degraded parent by default. Config `allow_degraded=true` or CLI `--allow-degraded`
+  accepts it and propagates a literal degraded status and warning.
+- Reads authenticated binary records in bounded chunks and writes the documented integer/null
+  schema to URI-safe Hive partitions. At most 32 Parquet files are open concurrently.
+- Writes beneath `<output_root>/conversion/<conversion-id>.partial`, validates schemas, strict
+  per-partition message-index order, row counts, sizes and hashes, writes the manifest, then uses a
+  same-filesystem directory rename for atomic publication.
+- The first SIGINT requests cancellation at a complete batch boundary, closes writers, retains only
+  partial output and exits 130. A write failure cannot publish a completed directory.
+
+Idempotency follows the stage identity in 04-data-model.md. A matching completed run is reused only
+after its manifest lineage, Parquet schemas/order/counts and all child hashes are revalidated.
+`--force-new-run` creates a new timestamped immutable directory with the same full identity. A
+matching partial run or concurrent identity lock fails with `ERR_RUN_EXISTS`; completed runs are
+never overwritten.
+
+Success artefacts:
+
+- `runs/conversion/<conversion-id>/conversion-manifest.json`
+- `runs/conversion/<conversion-id>/events/trading_date=.../symbol=.../part-N.parquet`
+- `runs/conversion/<conversion-id>/snapshots/trading_date=.../symbol=.../part-N.parquet`
 
 ### build-dataset
 

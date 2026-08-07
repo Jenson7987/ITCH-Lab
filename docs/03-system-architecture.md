@@ -182,7 +182,7 @@ Subcommands: inspect, replay, validate and benchmark. Detailed contracts are in 
 | Component | Responsibility |
 | --- | --- |
 | interchange | Safe readers for supported event/snapshot schemas; no pickle |
-| convert | Chunked conversion to typed Parquet and conversion manifest |
+| conversion | Authenticated bounded conversion to typed Parquet and an atomic conversion manifest |
 | features | Past-only feature calculations and feature metadata |
 | labels | Future-horizon labels in a separate computation stage |
 | splits | Whole-day chronological partitions and leakage assertions |
@@ -350,6 +350,8 @@ There is no production server. “Deployment” means a versioned local release 
 
     schemas/
     ├── replay-config.schema.json
+    ├── conversion-config.schema.json
+    ├── conversion-manifest.schema.json
     ├── dataset-config.schema.json
     ├── experiment-config.schema.json
     ├── simulation-config.schema.json

@@ -15,7 +15,7 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | FR-007 | 04 NormalisedEvent/event v1; 05 replay | TASK-007 (provisional diagnostic slice), TASK-013 (production event writer) | TASK-007 CLI/golden integration, UT-OUT-001 independent binary golden, TASK-013 mixed replay ordering, CT-BIN-001 |
 | FR-008 | 04 BookSnapshot/snapshot v1 | TASK-007 (provisional diagnostic slice), TASK-011, TASK-014 (production snapshots) | TASK-007 CLI/golden integration, TASK-011 halt/resume and trading-state-gating integration, UT-OUT-002, IT-004 |
 | FR-009 | 04 ReplayRun; 03 ManifestBuilder | TASK-002 (config contract), TASK-014 (manifest) | UT-CFG-001, CT-JSON-001, IT-004 |
-| FR-010 | 03 Python conversion; 05 convert | TASK-016, TASK-017 | CT-BIN-001, IT-006, IT-007 |
+| FR-010 | 03 Python conversion; 04 ConversionRun/Parquet v1; 05 convert | TASK-016, TASK-017 | CT-BIN-001, IT-006, IT-007, conversion manifest/schema/tamper tests |
 | FR-011 | 04 DatasetRun; 05 build-dataset | TASK-018 | UT-FEAT-001, hand-calculated features |
 | FR-012 | 02 UF-003; 05 dataset config | TASK-019 | UT-LABEL-001, IT-008, partition properties |
 | FR-013 | 02 UF-004; 05 train | TASK-020 | UT-MODEL-001, IT-009, metric hand cases |
@@ -26,7 +26,7 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | FR-018 | ADR-004; 05 simulate | TASK-026 | UT-STRAT-002, prediction-key tests |
 | FR-019 | 02 UF-004/UF-005; 06 UI-009 | TASK-021, TASK-027, TASK-031 | IT-011, E2E-001, report-content checks |
 | FR-020 | 03 performance; 05 benchmark | TASK-029 | PERF-001 through PERF-008 |
-| FR-021 | 03 file contracts; 04 run entities | TASK-002 (canonical hashes), TASK-014, TASK-017, TASK-027 | Canonical-hash and identity/hash/idempotency contract tests |
+| FR-021 | 03 file contracts; 04 run entities | TASK-002 (canonical hashes), TASK-014, TASK-017, TASK-027 | Canonical-hash, verified-reuse, force-new-run and identity contract tests |
 | FR-022 | 03 ArtefactValidator; 05 validate | TASK-015 | IT-012, CT-BIN-001, tamper/version tests |
 
 ## Non-functional requirements
@@ -36,7 +36,7 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | NFR-001 | ADR-003; 03 state/performance | TASK-006, TASK-013, TASK-029 | TASK-013 byte-for-byte event golden/source-order test, repeated-run byte/digest tests, E2E-001 |
 | NFR-002 | 03 performance/scalability | TASK-004, TASK-016, TASK-017, TASK-029 | PERF-005/007/008, large-stream memory test |
 | NFR-003 | 03 performance; 09 release criteria | TASK-029 | PERF-004 plus platform benchmark report |
-| NFR-004 | 03 errors/file contracts | TASK-012, TASK-013, TASK-014, TASK-017 | TASK-013/TASK-014 injected writer failures, atomic publication tests, E2E-004 process cancellation/clean-rerun test, IT-005 |
+| NFR-004 | 03 errors/file contracts | TASK-012, TASK-013, TASK-014, TASK-017 | TASK-013/TASK-014 injected writer failures, TASK-017 injected write/real-SIGINT partial-only tests, atomic publication tests, E2E-004, IT-005 |
 | NFR-005 | ADR-002; 09 build | TASK-001, TASK-016, TASK-030 | macOS/Linux build, CT-BIN-001 |
 | NFR-006 | 03 state/file contracts; 09 release | TASK-001, TASK-002, TASK-014, TASK-020, TASK-030 | Canonical-hash, TASK-014 identity/build-lineage, clean-install and E2E-001 |
 | NFR-007 | 03 logging; 06 progress | TASK-007, TASK-012 | TASK-012 rate-limit and non-TTY JSONL/stderr/quiet tests |
@@ -52,7 +52,7 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | --- | --- | --- | --- |
 | SEC-001 | 07 binary validation | TASK-004, TASK-005, TASK-009, TASK-028 | UT-DEC-002, SEC-FUZZ-001, ASan/UBSan |
 | SEC-002 | 07 checked arithmetic | TASK-002, TASK-004, TASK-010, TASK-024, TASK-028 | Integer/quantity/cash boundary tests |
-| SEC-003 | 07 filesystem writes; 09 incidents | TASK-014, TASK-028 | SEC-PATH-001, symlink/alias/cancellation tests |
+| SEC-003 | 07 filesystem writes; 09 incidents | TASK-014, TASK-017, TASK-028 | TASK-017 traversal/source-output-overlap checks, SEC-PATH-001, symlink/alias/cancellation tests |
 | SEC-004 | 07 integrity/provenance | TASK-013–017, TASK-028 | TASK-013 embedded-hash golden and partial-only tests, TASK-014 child-hash verification/IT-004, IT-012, hash-tamper tests |
 | SEC-005 | 07 runtime network | TASK-030 | Network-disabled E2E-001 and dependency review |
 | SEC-006 | 07 serialisation | TASK-016, TASK-020, TASK-028 | No-pickle contract and malicious artefact rejection |

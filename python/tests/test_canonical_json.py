@@ -80,6 +80,19 @@ def test_task_002_locator_changes_affect_full_but_not_identity_hash() -> None:
     assert original_hashes.identity_config_sha256 == changed_hashes.identity_config_sha256
 
 
+def test_task_017_conversion_locators_do_not_change_identity_hash() -> None:
+    original_text = (GOLDEN_ROOT / "valid" / "conversion.json").read_text(encoding="utf-8")
+    changed_document = json.loads(original_text)
+    changed_document["replay_manifests"] = ["elsewhere/replay-manifest.json"]
+    changed_document["output_root"] = "different-runs"
+
+    original_hashes = config_hashes(parse_config(original_text, "conversion"))
+    changed_hashes = config_hashes(parse_config(json.dumps(changed_document), "conversion"))
+
+    assert original_hashes.config_sha256 != changed_hashes.config_sha256
+    assert original_hashes.identity_config_sha256 == changed_hashes.identity_config_sha256
+
+
 def test_task_002_map_property_order_does_not_change_dataset_model_or_hash() -> None:
     original_text = (GOLDEN_ROOT / "valid" / "dataset.json").read_text(encoding="utf-8")
     changed_document = json.loads(original_text)

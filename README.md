@@ -10,7 +10,8 @@ inspect/replay command slice are implemented. Replay routes the complete visible
 session/trading-state metadata, supports strict or budgeted permissive processing, emits bounded
 stderr progress and cancels safely at message boundaries. The production event-v1 binary writer is
 implemented alongside snapshot-v1 and atomic completed replay manifests. Public artefact
-validation is implemented; research conversion and simulation remain planned.
+validation and authenticated, bounded conversion to partitioned Parquet are implemented; feature,
+model and simulation stages remain planned.
 
 Classification legend used throughout the documentation:
 
@@ -73,8 +74,10 @@ writers produce deterministic event-v1 and snapshot-v1 headers, dictionaries and
 binds them to verified source/config/executable hashes and atomically publishes a completed,
 private-path-free manifest. The read-only `validate` command checks completed replay directories or
 standalone interchange files in shallow or streamed deep mode. Authenticated Python event-v1 and
-snapshot-v1 readers now expose typed, validated records in bounded chunks; Parquet conversion and
-simulation commands are implemented by later tasks.
+snapshot-v1 readers expose typed, validated records in bounded chunks. The Python `convert` command
+now validates replay lineage and child hashes, preserves integer/null semantics in typed Parquet,
+and atomically publishes a conversion manifest with complete lineage and child hashes. Feature
+construction, modelling and simulation commands are implemented by later tasks.
 
 ## Local setup
 
@@ -140,6 +143,8 @@ The implemented synthetic vertical slice can be exercised without licensed marke
     ./build/dev/itchlab validate \
         --file tests/golden/interchange/synthetic_events_v1.ilb \
         --deep
+    python -m itchlab_research convert \
+        --config configs/conversion.example.json
 
 The replay command accepts one or more configured symbols, applies selected pre-session events to
 warm each book, and limits snapshots to the configured half-open session and optional tradable-state
@@ -159,9 +164,17 @@ exact stored source bytes against the recorded source identity. Use `--format js
 result envelope. The command never repairs an artefact; invalid paths exit 3 and validation,
 tampering, partial-status or unsupported-version failures exit 7.
 
-Planned research workflow (implemented by later tasks):
+Before running `convert`, set `replay_manifests` in the conversion config to one or more completed
+replay manifests. The command writes Zstandard Parquet beneath
+`<output_root>/conversion/<conversion-id>/`, partitioned by trading date and URI-encoded symbol,
+and publishes `conversion-manifest.json` only after schema, order, row-count and hash validation.
+Degraded replay parents require `allow_degraded`; cancellation or write failure retains only a
+`.partial` run. Use `--format json` for a stable machine-readable result, or `--force-new-run` to
+create another immutable timestamped directory for the same content identity.
 
-    python -m itchlab_research convert --config configs/dataset.example.json
+Remaining planned research workflow (implemented by later tasks):
+
+    python -m itchlab_research build-dataset --config configs/dataset.example.json
     python -m itchlab_research train --config configs/experiment.example.json
     python -m itchlab_research simulate --config configs/simulation.example.json
     python -m itchlab_research report --run-id <run-id>

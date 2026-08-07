@@ -13,7 +13,12 @@ from itchlab_research.interchange.models import (
     SymbolEntry,
     TradingState,
 )
-from itchlab_research.interchange.readers import read_events, read_snapshots
+from itchlab_research.interchange.readers import (
+    read_event_metadata,
+    read_events,
+    read_snapshot_metadata,
+    read_snapshots,
+)
 
 __all__ = [
     "EventBatch",
@@ -27,6 +32,8 @@ __all__ = [
     "SnapshotRecord",
     "SymbolEntry",
     "TradingState",
+    "read_event_metadata",
     "read_events",
+    "read_snapshot_metadata",
     "read_snapshots",
 ]
