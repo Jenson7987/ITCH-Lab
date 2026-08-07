@@ -216,7 +216,10 @@ partial artefacts, no final paths, an unchanged source and a successful clean re
 
 - Golden byte files for event/snapshot schema v1 generated from synthetic records.
 - C++ writer compared byte-for-byte with golden files.
-- Python reader reads golden files.
+- The TASK-016 production Python readers authenticate and read every golden event/snapshot record
+  into exact typed diagnostics across multiple chunk sizes. Independent `struct` decoding remains a
+  separate oracle; corrupt schema, reserved-bit, endian, null-canonicalisation, ordering and hash
+  cases fail with stable codes before an affected batch is yielded.
 - Python tests independently construct expected values rather than importing C++ constants.
 
 ### JSON contracts

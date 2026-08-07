@@ -69,4 +69,20 @@ class ConfigValidationError(ValueError):
         super().__init__(f"{len(self.issues)} configuration error(s)")
 
 
-__all__ = ["ConfigIssue", "ConfigValidationError", "ErrorCode"]
+class InterchangeReadError(ValueError):
+    """One stable, payload-free failure while reading an interchange artefact."""
+
+    def __init__(
+        self,
+        code: ErrorCode,
+        message: str,
+        *,
+        record_index: int | None = None,
+    ) -> None:
+        self.code = code
+        self.message = message
+        self.record_index = record_index
+        super().__init__(f"{code.value}: {message}")
+
+
+__all__ = ["ConfigIssue", "ConfigValidationError", "ErrorCode", "InterchangeReadError"]

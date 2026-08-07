@@ -1,10 +1,90 @@
 {
-  "depth": 2,
-  "record_count": 2,
-  "record_size": 104,
-  "schema_version": 1,
+  "metadata": {
+    "config_sha256": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+    "degraded": true,
+    "depth": 2,
+    "file_sha256": "8367cffd4c6167ee959063418877068422d6a6d2bb8767629a2c0d30037a4349",
+    "kind": "snapshots",
+    "price_scale": 10000,
+    "record_count": 2,
+    "record_size": 104,
+    "schema_version": 1,
+    "source_sha256": "2122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f40",
+    "symbols": [
+      {
+        "round_lot_size": 100,
+        "stock_locate": 4660,
+        "symbol": "AAPL",
+        "symbol_id": 1
+      },
+      {
+        "round_lot_size": 200,
+        "stock_locate": 43981,
+        "symbol": "MSFT.X",
+        "symbol_id": 2
+      }
+    ],
+    "trading_date": "2019-01-30"
+  },
+  "records": [
+    {
+      "event_kind": "add",
+      "event_price4": 1652300,
+      "event_quantity": 300,
+      "flags": 87,
+      "last_trade_price4": 1652350,
+      "last_trade_quantity": 75,
+      "levels": [
+        {
+          "ask_price4": 1652400,
+          "ask_quantity": 200,
+          "bid_price4": 1652300,
+          "bid_quantity": 300
+        },
+        {
+          "ask_price4": null,
+          "ask_quantity": null,
+          "bid_price4": 1652200,
+          "bid_quantity": 500
+        }
+      ],
+      "message_index": 5,
+      "symbol_id": 1,
+      "timestamp_ns": 1000000,
+      "top_n_changed": true,
+      "trading_date": "2019-01-30",
+      "trading_state": "trading"
+    },
+    {
+      "event_kind": "trading_state",
+      "event_price4": null,
+      "event_quantity": null,
+      "flags": 24,
+      "last_trade_price4": null,
+      "last_trade_quantity": null,
+      "levels": [
+        {
+          "ask_price4": null,
+          "ask_quantity": null,
+          "bid_price4": null,
+          "bid_quantity": null
+        },
+        {
+          "ask_price4": null,
+          "ask_quantity": null,
+          "bid_price4": null,
+          "bid_quantity": null
+        }
+      ],
+      "message_index": 14,
+      "symbol_id": 2,
+      "timestamp_ns": 1000090,
+      "top_n_changed": false,
+      "trading_date": "2019-01-30",
+      "trading_state": "halted"
+    }
+  ],
   "sha256": "8367cffd4c6167ee959063418877068422d6a6d2bb8767629a2c0d30037a4349",
   "size_bytes": 344,
-  "symbol_count": 2,
   "synthetic": true
 }

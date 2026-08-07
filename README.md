@@ -72,8 +72,9 @@ human or JSONL progress and graceful SIGINT exit 130 with retained partial artef
 writers produce deterministic event-v1 and snapshot-v1 headers, dictionaries and records. Replay
 binds them to verified source/config/executable hashes and atomically publishes a completed,
 private-path-free manifest. The read-only `validate` command checks completed replay directories or
-standalone interchange files in shallow or streamed deep mode. Research and simulation commands are
-implemented by later tasks.
+standalone interchange files in shallow or streamed deep mode. Authenticated Python event-v1 and
+snapshot-v1 readers now expose typed, validated records in bounded chunks; Parquet conversion and
+simulation commands are implemented by later tasks.
 
 ## Local setup
 

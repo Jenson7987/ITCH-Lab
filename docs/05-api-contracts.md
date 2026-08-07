@@ -505,8 +505,18 @@ Contract:
 
 ## Python public service interfaces
 
-    def read_events(path: Path, *, chunk_records: int) -> Iterator[EventBatch]: ...
-    def read_snapshots(path: Path, *, chunk_records: int) -> Iterator[SnapshotBatch]: ...
+    def read_events(
+        path: Path,
+        *,
+        expected_sha256: str,
+        chunk_records: int,
+    ) -> Iterator[EventBatch]: ...
+    def read_snapshots(
+        path: Path,
+        *,
+        expected_sha256: str,
+        chunk_records: int,
+    ) -> Iterator[SnapshotBatch]: ...
     def validate_replay(manifest: Path, *, deep: bool = False) -> ValidationReport: ...
     def build_features(snapshots: LazyFrame, config: FeatureConfig) -> LazyFrame: ...
     def build_labels(snapshots: LazyFrame, config: LabelConfig) -> LazyFrame: ...
@@ -516,7 +526,30 @@ Contract:
 
 Contracts:
 
-- Readers reject unsupported magic/version/record size before yielding a batch.
+- `expected_sha256` is the lowercase child hash authenticated by the owning completed manifest;
+  standalone contract tests use the independently pinned golden hash. It is mandatory because a
+  computed hash without a trusted expected value does not authenticate an artefact.
+- Readers open one regular file descriptor, reject partial path components, validate the complete
+  header/dictionary and exact declared size, hash the file incrementally and verify that the file
+  identity remained stable before yielding a batch.
+- Readers reject unsupported magic/version/header size/record size/depth/price scale, invalid dates,
+  reserved header bits/bytes, placeholder config/source hashes and non-canonical dictionaries before
+  yielding a batch.
+- EventBatch and SnapshotBatch carry common immutable metadata plus a source-ordered tuple of frozen
+  typed records. Python integers preserve unsigned binary values; trading dates use `datetime.date`,
+  enum fields use string enums and invalid fields become `None` only through the documented validity
+  bits. Snapshot depth slots remain fixed and independently nullable by side.
+- Each complete chunk is checked before it is yielded. Record validation covers source ordering,
+  kind/source consistency, required and reserved flags, canonical absent-field zeroes, quantities,
+  timestamps, ASCII values and snapshot depth/state/trigger invariants. A later corrupt chunk may
+  fail after earlier validated chunks have been consumed.
+- `chunk_records` must be a positive integer and is an upper bound; the reader may split it further
+  to keep an encoded batch within its fixed internal byte limit. A valid zero-record final artefact
+  yields no batches.
+- Expected file/domain failures raise `InterchangeReadError` with a stable `ErrorCode` and optional
+  zero-based record index; messages omit raw payloads and absolute paths.
+- Readers use explicit little-endian field decoding and bounded reads. They do not use native struct
+  packing, mmap, pickle, joblib, eval or exec and perform no network or filesystem writes.
 - Feature functions may inspect current/past rows only.
 - Label functions are isolated so their future access cannot leak into feature expressions.
 - PartitionedDataset exposes test rows for final evaluation, not training selection.

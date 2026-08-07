@@ -2,15 +2,9 @@
 
 Authoritative task details and evidence requirements are in docs/10-implementation-plan.md. Work on one item at a time.
 
-## Current milestone — M2 Full MVP message lifecycle and validated artefacts
+## Current milestone — M3 Causal dataset and predictive baselines
 
 ## Queued
-
-- [ ] TASK-016: Implement safe Python interchange readers
-  - Dependencies: TASK-015
-  - Acceptance criteria: Chunked cross-platform golden-file reads; no pickle
-  - Tests: CT-BIN-001 and corrupt schema tests
-  - Documentation to update: 05-api-contracts.md
 
 - [ ] TASK-017: Convert interchange to Parquet
   - Dependencies: TASK-016
@@ -109,6 +103,19 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-016: Implement safe Python interchange readers
+  - Completed: 2026-08-07
+  - Evidence: Standard-library event-v1 and snapshot-v1 readers now require a trusted child
+    SHA-256, validate the complete header, dictionary, size and stable file identity before yielding,
+    and decode explicit little-endian records into frozen typed batches with an internal byte cap.
+    Record validation mirrors the established C++ flag, null, ordering, quantity, ASCII, state and
+    depth invariants; partial paths, unsupported/endian-mutated schemas, reserved bits, tampering and
+    pickle-shaped input fail with stable typed errors. CT-BIN-001/IT-006 match all ten event and two
+    snapshot golden records to independently generated JSON diagnostics across chunk sizes. All 131
+    Python tests, Ruff, formatting, strict mypy, dependency and fixture checks, wheel/sdist build,
+    reduced E2E smoke and the Release C++ build passed; all 128 runnable Release CTest entries passed
+    and the authorised external-data entry skipped as designed.
 
 - [x] TASK-015: Implement artefact validation
   - Completed: 2026-08-07

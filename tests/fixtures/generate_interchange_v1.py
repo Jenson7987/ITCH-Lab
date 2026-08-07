@@ -348,26 +348,157 @@ def render_snapshot_golden() -> bytes:
     return rendered
 
 
+EVENT_KIND_NAMES: Final = {
+    1: "add",
+    2: "execute",
+    3: "execute_price",
+    4: "cancel",
+    5: "delete",
+    6: "replace",
+    7: "trade",
+    8: "cross",
+    9: "broken_trade",
+    10: "trading_state",
+}
+TRADING_STATE_NAMES: Final = {
+    0: "unknown",
+    1: "preopen",
+    2: "trading",
+    3: "halted",
+    4: "paused",
+    5: "quotation_only",
+    6: "closed",
+}
+
+
+def _metadata_diagnostic(content: bytes, kind: str) -> dict[str, object]:
+    header = HEADER.unpack_from(content)
+    symbols = []
+    for index in range(header[7]):
+        symbol_id, stock_locate, raw_symbol, round_lot_size = SYMBOL.unpack_from(
+            content, HEADER.size + index * SYMBOL.size
+        )
+        symbols.append(
+            {
+                "round_lot_size": round_lot_size,
+                "stock_locate": stock_locate,
+                "symbol": raw_symbol.rstrip(b" ").decode("ascii"),
+                "symbol_id": symbol_id,
+            }
+        )
+    encoded_date = header[6]
+    return {
+        "config_sha256": header[10].hex(),
+        "degraded": bool(header[8] & 1),
+        "depth": header[4],
+        "file_sha256": hashlib.sha256(content).hexdigest(),
+        "kind": kind,
+        "price_scale": header[5],
+        "record_count": header[9],
+        "record_size": header[3],
+        "schema_version": header[1],
+        "source_sha256": header[11].hex(),
+        "symbols": symbols,
+        "trading_date": (
+            f"{encoded_date // 10_000:04d}-{encoded_date // 100 % 100:02d}-{encoded_date % 100:02d}"
+        ),
+    }
+
+
+def _event_diagnostics(content: bytes) -> list[dict[str, object]]:
+    header = HEADER.unpack_from(content)
+    records_offset = HEADER.size + header[7] * SYMBOL.size
+    records = []
+    for index in range(header[9]):
+        record = EVENT.unpack_from(content, records_offset + index * EVENT.size)
+        flags = record[12]
+        records.append(
+            {
+                "aux_code": (
+                    record[14].decode("ascii").rstrip(" ")
+                    if flags & AUXILIARY
+                    else None
+                ),
+                "event_kind": EVENT_KIND_NAMES[record[9]],
+                "event_subtype": chr(record[15]) if flags & SUBTYPE else None,
+                "execution_price4": record[7] if flags & EXECUTION_PRICE else None,
+                "flags": flags,
+                "in_session": bool(flags & IN_SESSION),
+                "message_index": record[0],
+                "price4": record[5] if flags & PRICE else None,
+                "primary_reference": record[2] if flags & PRIMARY else None,
+                "quantity": record[4] if flags & QUANTITY else None,
+                "remaining_quantity": record[6] if flags & REMAINING else None,
+                "secondary_reference": record[3] if flags & SECONDARY else None,
+                "side": record[10] if flags & SIDE else None,
+                "source_type": record[11].decode("ascii"),
+                "symbol_id": record[8],
+                "timestamp_ns": record[1],
+                "trading_date": _metadata_diagnostic(content, "events")["trading_date"],
+            }
+        )
+    return records
+
+
+def _snapshot_diagnostics(content: bytes) -> list[dict[str, object]]:
+    header = HEADER.unpack_from(content)
+    records_offset = HEADER.size + header[7] * SYMBOL.size
+    records = []
+    for index in range(header[9]):
+        record_offset = records_offset + index * header[3]
+        record = SNAPSHOT.unpack_from(content, record_offset)
+        flags = record[4]
+        levels = []
+        for level_index in range(header[4]):
+            level = DEPTH_LEVEL.unpack_from(
+                content,
+                record_offset + SNAPSHOT.size + level_index * DEPTH_LEVEL.size,
+            )
+            levels.append(
+                {
+                    "ask_price4": level[5] if level[1] else None,
+                    "ask_quantity": level[6] if level[1] else None,
+                    "bid_price4": level[3] if level[0] else None,
+                    "bid_quantity": level[4] if level[0] else None,
+                }
+            )
+        records.append(
+            {
+                "event_kind": EVENT_KIND_NAMES[record[3]],
+                "event_price4": record[5] if flags & 1 else None,
+                "event_quantity": record[6] if flags & 2 else None,
+                "flags": flags,
+                "last_trade_price4": record[7] if flags & 4 else None,
+                "last_trade_quantity": record[9] if flags & 4 else None,
+                "levels": levels,
+                "message_index": record[0],
+                "symbol_id": record[2],
+                "timestamp_ns": record[1],
+                "top_n_changed": bool(flags & (1 << 6)),
+                "trading_date": _metadata_diagnostic(content, "snapshots")[
+                    "trading_date"
+                ],
+                "trading_state": TRADING_STATE_NAMES[flags >> 3 & 7],
+            }
+        )
+    return records
+
+
 def render_outputs() -> dict[Path, bytes]:
     event_golden = render_event_golden()
     event_metadata = {
-        "record_count": 10,
-        "record_size": 72,
-        "schema_version": 1,
+        "metadata": _metadata_diagnostic(event_golden, "events"),
+        "records": _event_diagnostics(event_golden),
         "sha256": hashlib.sha256(event_golden).hexdigest(),
         "size_bytes": len(event_golden),
-        "symbol_count": 2,
         "synthetic": True,
     }
     snapshot_golden = render_snapshot_golden()
     snapshot_metadata = {
-        "depth": 2,
-        "record_count": 2,
-        "record_size": 104,
-        "schema_version": 1,
+        "metadata": _metadata_diagnostic(snapshot_golden, "snapshots"),
+        "records": _snapshot_diagnostics(snapshot_golden),
         "sha256": hashlib.sha256(snapshot_golden).hexdigest(),
         "size_bytes": len(snapshot_golden),
-        "symbol_count": 2,
         "synthetic": True,
     }
     return {
