@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-015: Implement artefact validation
-  - Dependencies: TASK-013–014
-  - Acceptance criteria: Shallow/deep validation catches tampering/partial/version errors
-  - Tests: IT-012, CT-BIN-001
-  - Documentation to update: README validate command
-
 - [ ] TASK-016: Implement safe Python interchange readers
   - Dependencies: TASK-015
   - Acceptance criteria: Chunked cross-platform golden-file reads; no pickle
@@ -115,6 +109,23 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-015: Implement artefact validation
+  - Completed: 2026-08-07
+  - Evidence: The read-only `itchlab validate` command now accepts exactly one completed replay
+    directory or standalone event-v1/snapshot-v1 file, reports stable human/JSON checks and can
+    optionally authenticate exact source bytes. Shallow replay validation checks the strict bounded
+    manifest, canonical config/identity lineage, child hashes/sizes/counts, headers, dictionaries and
+    cross-file metadata before data use. Deep validation streams every record, checks ordering,
+    validity/reserved bits, canonical null/depth and session semantics, rehashes against concurrent
+    changes and reconstructs final visible books to authenticate counts and digests. IT-012 proves
+    child tampering fails before record reads; CT-BIN-001 independently decodes every committed
+    event and snapshot golden record in Python. Additional tests cover wrong sources, digest forgery,
+    duplicate manifest keys, partial/truncated artefacts, unsupported versions, reserved fields,
+    ordering, CLI output and exit categories. All 128 runnable CTest entries passed in dev, Release
+    and ASan/UBSan presets; the authorised external-data entry skipped as designed. All 80 Python
+    tests, Ruff, strict mypy, C++ formatting, diff/privacy checks, the Release C++ build and Python
+    wheel/sdist build passed.
 
 - [x] TASK-014: Implement snapshot writer and replay manifest
   - Completed: 2026-08-07

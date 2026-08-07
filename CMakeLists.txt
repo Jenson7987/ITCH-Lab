@@ -99,6 +99,7 @@ add_library(
   cpp/src/replay/progress_reporter.cpp
   cpp/src/replay/replay_coordinator.cpp
   cpp/src/replay/session_state.cpp
+  cpp/src/validation/validator.cpp
 )
 target_include_directories(itchlab_core PUBLIC cpp/include)
 target_link_libraries(itchlab_core PRIVATE nlohmann_json::nlohmann_json ZLIB::ZLIB)
@@ -164,6 +165,7 @@ if(BUILD_TESTING)
     tests/cpp/integration/task012_replay_integration_test.cpp
     tests/cpp/integration/task013_event_writer_integration_test.cpp
     tests/cpp/integration/task014_publication_integration_test.cpp
+    tests/cpp/integration/task015_validation_integration_test.cpp
     tests/cpp/property/order_book_property_test.cpp
     tests/cpp/property/framed_reader_property_test.cpp
     tests/cpp/unit/byte_decode_test.cpp
@@ -183,6 +185,7 @@ if(BUILD_TESTING)
     tests/cpp/unit/sha256_test.cpp
     tests/cpp/unit/snapshot_writer_test.cpp
     tests/cpp/unit/types_test.cpp
+    tests/cpp/unit/validator_test.cpp
   )
   target_compile_definitions(
     itchlab_core_tests
@@ -228,5 +231,11 @@ if(BUILD_TESTING)
   set_tests_properties(
     TASK_007_cpp_cli_replay_help
     PROPERTIES PASS_REGULAR_EXPRESSION "versioned binary events"
+  )
+
+  add_test(NAME TASK_015_cpp_cli_validate_help COMMAND itchlab validate --help)
+  set_tests_properties(
+    TASK_015_cpp_cli_validate_help
+    PROPERTIES PASS_REGULAR_EXPRESSION "Validate a completed replay"
   )
 endif()

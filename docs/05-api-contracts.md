@@ -122,8 +122,8 @@ unchanged snapshot is disabled.
 Before publication, the command verifies the source/executable/config identities, finalises both
 binary headers, checks expected sizes/counts and hashes both children. The staging directory retains
 a `.partial` suffix until a same-filesystem directory rename makes `events.ilb`, `snapshots.ilb` and
-the completed manifest visible together. Public shallow/deep validation remains assigned to
-TASK-015.
+the completed manifest visible together. The read-only validate command below independently
+rechecks published bytes.
 
     itchlab replay +      --config <replay-config.json> +      [--output-root <directory>] +      [--format human|json] +      [--log-format human|jsonl] +      [--quiet] +      [--force-new-run]
 

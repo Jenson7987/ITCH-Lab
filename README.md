@@ -10,7 +10,7 @@ inspect/replay command slice are implemented. Replay routes the complete visible
 session/trading-state metadata, supports strict or budgeted permissive processing, emits bounded
 stderr progress and cancels safely at message boundaries. The production event-v1 binary writer is
 implemented alongside snapshot-v1 and atomic completed replay manifests. Public artefact
-validation, research conversion and simulation remain planned.
+validation is implemented; research conversion and simulation remain planned.
 
 Classification legend used throughout the documentation:
 
@@ -71,8 +71,9 @@ stage-aware strict/permissive error policy, stable error counts, degraded disclo
 human or JSONL progress and graceful SIGINT exit 130 with retained partial artefacts. The C++
 writers produce deterministic event-v1 and snapshot-v1 headers, dictionaries and records. Replay
 binds them to verified source/config/executable hashes and atomically publishes a completed,
-private-path-free manifest. Public validation, research and simulation commands are implemented by
-later tasks.
+private-path-free manifest. The read-only `validate` command checks completed replay directories or
+standalone interchange files in shallow or streamed deep mode. Research and simulation commands are
+implemented by later tasks.
 
 ## Local setup
 
@@ -130,7 +131,14 @@ The implemented synthetic vertical slice can be exercised without licensed marke
         --symbols AAPL
     ./build/dev/itchlab replay \
         --config configs/replay.diagnostic.example.json \
-        --output-root runs/task-014-example
+        --output-root runs/task-015-example
+    ./build/dev/itchlab validate \
+        --run runs/task-015-example/replay/<replay-id> \
+        --verify-source tests/fixtures/synthetic_minimal.itch \
+        --deep
+    ./build/dev/itchlab validate \
+        --file tests/golden/interchange/synthetic_events_v1.ilb \
+        --deep
 
 The replay command accepts one or more configured symbols, applies selected pre-session events to
 warm each book, and limits snapshots to the configured half-open session and optional tradable-state
@@ -139,6 +147,16 @@ filter. It writes `events.ilb`, `snapshots.ilb` and `replay-manifest.json` benea
 lineage/build metadata, reuses an already verified identical run by default and supports an
 explicit immutable `--force-new-run`. Failed or cancelled work remains in a `.partial` staging
 directory and never receives a completed manifest.
+
+`itchlab validate` defaults to shallow validation. For a completed replay it checks the strict
+manifest schema and lineage, child sizes and SHA-256 hashes, declared record counts, binary headers,
+symbol dictionaries and cross-file identity. For a standalone event-v1 or snapshot-v1 file it
+checks the supported schema, declared size/count and reports the computed SHA-256. Add `--deep` to
+stream every record and verify source ordering, validity flags, canonical null/depth encodings and,
+for a replay, reconstructed final book counts and digests. `--verify-source <path>` also hashes the
+exact stored source bytes against the recorded source identity. Use `--format json` for the stable
+result envelope. The command never repairs an artefact; invalid paths exit 3 and validation,
+tampering, partial-status or unsupported-version failures exit 7.
 
 Planned research workflow (implemented by later tasks):
 

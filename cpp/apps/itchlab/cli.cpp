@@ -12,6 +12,7 @@
 #include "itchlab/output/manifest.hpp"
 #include "itchlab/output/snapshot_writer.hpp"
 #include "itchlab/replay/replay_coordinator.hpp"
+#include "itchlab/validation/validator.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -90,6 +91,14 @@ struct ReplayArguments {
   LogFormat log_format{LogFormat::human};
   bool force_new_run{};
   bool quiet{};
+};
+
+struct ValidateArguments {
+  std::optional<std::filesystem::path> run;
+  std::optional<std::filesystem::path> file;
+  std::optional<std::filesystem::path> verify_source;
+  OutputFormat format{OutputFormat::human};
+  bool deep{};
 };
 
 template <typename T> struct ParsedArguments {
@@ -198,7 +207,8 @@ void print_global_help(std::ostream& output) {
          << "Usage: itchlab <command> [options]\n\n"
          << "Commands:\n"
          << "  inspect    Inspect bounded source framing and message composition.\n"
-         << "  replay     Replay selected symbols to immutable binary artefacts.\n\n"
+         << "  replay     Replay selected symbols to immutable binary artefacts.\n"
+         << "  validate   Validate a replay directory or standalone interchange file.\n\n"
          << "Global options:\n"
          << "  --help       Show this help text.\n"
          << "  --version    Show the application version.\n\n"
@@ -247,6 +257,25 @@ void print_replay_help(std::ostream& output) {
       << "  itchlab replay --config configs/replay.diagnostic.example.json --output-root runs\n\n"
       << "Exit categories: 0 success, 2 config, 3 input/framing, 4 decode, 5 book, 6 output, "
          "130 cancellation.\n";
+}
+
+void print_validate_help(std::ostream& output) {
+  output << "Validate a completed replay directory or standalone versioned interchange file.\n\n"
+         << "Usage: itchlab validate (--run <directory> | --file <artefact.ilb>) [options]\n\n"
+         << "Required (exactly one):\n"
+         << "  --run <directory>          Completed replay directory.\n"
+         << "  --file <artefact.ilb>      Standalone event-v1 or snapshot-v1 file.\n\n"
+         << "Options:\n"
+         << "  --verify-source <path>     Verify exact source bytes against recorded SHA-256.\n"
+         << "  --deep                     Stream records and validate flags and ordering.\n"
+         << "  --format <human|json>      Result format (default human).\n"
+         << "  --ascii                    Restrict presentation to ASCII.\n"
+         << "  --no-colour                Disable colour presentation.\n"
+         << "  --help                     Show this help text.\n\n"
+         << "Examples:\n"
+         << "  itchlab validate --run runs/replay/<replay-id> --deep\n"
+         << "  itchlab validate --file tests/golden/interchange/synthetic_events_v1.ilb --deep\n\n"
+         << "Exit categories: 0 success, 2 usage, 3 input path, 7 artefact validation/schema.\n";
 }
 
 [[nodiscard]] std::optional<std::string_view>
@@ -509,6 +538,83 @@ parse_replay_arguments(const std::span<const std::string_view> arguments) {
 
   if (!saw_config) {
     return {std::nullopt, usage_error("replay requires --config <path>.")};
+  }
+  return {std::move(parsed), std::nullopt};
+}
+
+[[nodiscard]] ParsedArguments<ValidateArguments>
+parse_validate_arguments(const std::span<const std::string_view> arguments) {
+  ValidateArguments parsed;
+  bool saw_run{};
+  bool saw_file{};
+  bool saw_source{};
+  bool saw_deep{};
+  bool saw_format{};
+
+  for (std::size_t index = 0; index < arguments.size(); ++index) {
+    const auto argument = arguments[index];
+    CommandError error;
+    if (argument == "--run") {
+      if (saw_run) {
+        return {std::nullopt, usage_error("--run may be supplied only once.")};
+      }
+      const auto value = required_value(arguments, index, argument, error);
+      if (!value) {
+        return {std::nullopt, std::move(error)};
+      }
+      parsed.run = std::filesystem::path{*value};
+      saw_run = true;
+    } else if (argument == "--file") {
+      if (saw_file) {
+        return {std::nullopt, usage_error("--file may be supplied only once.")};
+      }
+      const auto value = required_value(arguments, index, argument, error);
+      if (!value) {
+        return {std::nullopt, std::move(error)};
+      }
+      parsed.file = std::filesystem::path{*value};
+      saw_file = true;
+    } else if (argument == "--verify-source") {
+      if (saw_source) {
+        return {std::nullopt, usage_error("--verify-source may be supplied only once.")};
+      }
+      const auto value = required_value(arguments, index, argument, error);
+      if (!value) {
+        return {std::nullopt, std::move(error)};
+      }
+      parsed.verify_source = std::filesystem::path{*value};
+      saw_source = true;
+    } else if (argument == "--deep") {
+      if (saw_deep) {
+        return {std::nullopt, usage_error("--deep may be supplied only once.")};
+      }
+      parsed.deep = true;
+      saw_deep = true;
+    } else if (argument == "--format") {
+      if (saw_format) {
+        return {std::nullopt, usage_error("--format may be supplied only once.")};
+      }
+      const auto value = required_value(arguments, index, argument, error);
+      if (!value) {
+        return {std::nullopt, std::move(error)};
+      }
+      if (*value == "human") {
+        parsed.format = OutputFormat::human;
+      } else if (*value == "json") {
+        parsed.format = OutputFormat::json;
+      } else {
+        return {std::nullopt, usage_error("--format must be human or json.")};
+      }
+      saw_format = true;
+    } else if (argument == "--ascii" || argument == "--no-colour") {
+      // Current presentation is already ASCII and uncoloured.
+    } else {
+      return {std::nullopt, usage_error("Unrecognised validate option: " + std::string{argument})};
+    }
+  }
+
+  if (saw_run == saw_file) {
+    return {std::nullopt, usage_error("validate requires exactly one of --run or --file.")};
   }
   return {std::move(parsed), std::nullopt};
 }
@@ -791,6 +897,95 @@ int render_error(std::ostream& output, std::ostream& error, const std::string_vi
   return exit_code(failure.code);
 }
 
+[[nodiscard]] Json validation_report_json(const ArtefactValidationReport& report) {
+  auto checks = Json::array();
+  std::uint64_t records_examined{};
+  for (const auto& check : report.checks) {
+    checks.push_back({{"actual", check.actual ? Json(*check.actual) : Json(nullptr)},
+                      {"expected", check.expected ? Json(*check.expected) : Json(nullptr)},
+                      {"message", check.message},
+                      {"name", check.name},
+                      {"records_examined", check.records_examined},
+                      {"status", validation_check_status_name(check.status)}});
+  }
+  auto artefacts = Json::array();
+  for (const auto& artefact : report.artefacts) {
+    records_examined += artefact.records_examined;
+    artefacts.push_back({{"declared_records", artefact.declared_records},
+                         {"filename", artefact.filename},
+                         {"kind", artefact.kind},
+                         {"records_examined", artefact.records_examined},
+                         {"sha256", content_hash_to_hex(artefact.sha256)},
+                         {"size_bytes", artefact.size_bytes}});
+  }
+  return Json{{"artefacts", std::move(artefacts)},        {"checks", std::move(checks)},
+              {"mode", report.deep ? "deep" : "shallow"}, {"records_examined", records_examined},
+              {"target_kind", report.target_kind},        {"target_name", report.target_name}};
+}
+
+void render_validation_human(std::ostream& output, const ArtefactValidationReport& report,
+                             const bool completed) {
+  output << (completed ? "Validation completed.\n" : "Validation failed.\n")
+         << "Target: " << report.target_name << " (" << report.target_kind << ")\n"
+         << "Mode: " << (report.deep ? "deep" : "shallow") << '\n';
+  for (const auto& check : report.checks) {
+    output << '[';
+    if (check.status == ValidationCheckStatus::passed) {
+      output << "PASS";
+    } else if (check.status == ValidationCheckStatus::failed) {
+      output << "FAIL";
+    } else {
+      output << "NOT RUN";
+    }
+    output << "] " << check.name << ": " << check.message;
+    if (check.expected) {
+      output << " expected=" << *check.expected;
+    }
+    if (check.actual) {
+      output << " actual=" << *check.actual;
+    }
+    if (check.records_examined != 0) {
+      output << " records=" << check.records_examined;
+    }
+    output << '\n';
+  }
+}
+
+[[nodiscard]] CommandError validation_command_error(const ArtefactValidationResult& result) {
+  Json context = validation_report_json(result.report);
+  if (result.error->record_index) {
+    context["record_index"] = *result.error->record_index;
+  }
+  if (result.error->check) {
+    context["failed_check"] = *result.error->check;
+  }
+  if (result.error->expected) {
+    context["expected"] = *result.error->expected;
+  }
+  if (result.error->actual) {
+    context["actual"] = *result.error->actual;
+  }
+  return CommandError{result.error->code, result.error->message,
+                      result.error->code == ErrorCode::input_path
+                          ? "Correct the local validation path and rerun."
+                          : "Restore the exact completed artefact bytes or use matching schema "
+                            "software, then rerun validation.",
+                      std::move(context)};
+}
+
+int render_validation_failure(std::ostream& output, std::ostream& error, const OutputFormat format,
+                              const ArtefactValidationResult& result) {
+  const auto failure = validation_command_error(result);
+  if (format == OutputFormat::human) {
+    render_validation_human(output, result.report, false);
+  }
+  static_cast<void>(render_error(output, error, "validate", format, LogFormat::human, failure));
+  if (failure.code == ErrorCode::input_path) {
+    return 3;
+  }
+  return failure.code == ErrorCode::internal ? 70 : 7;
+}
+
 void render_warning(std::ostream& error, const std::string_view command, const LogFormat log_format,
                     const std::string_view event_code, const std::string_view message) {
   if (log_format == LogFormat::jsonl) {
@@ -1036,6 +1231,37 @@ int run_inspect(const std::span<const std::string_view> arguments, std::ostream&
       const auto event_code = index == 0 ? "INSPECTION_BOUNDED" : "SYMBOL_NOT_OBSERVED";
       render_warning(error, "inspect", options.log_format, event_code, warnings[index]);
     }
+  }
+  return 0;
+}
+
+int run_validate(const std::span<const std::string_view> arguments, std::ostream& output,
+                 std::ostream& error) {
+  if (std::find(arguments.begin(), arguments.end(), "--help") != arguments.end()) {
+    print_validate_help(output);
+    return 0;
+  }
+  if (arguments.size() == 1 && arguments.front() == "--version") {
+    output << kProgramName << ' ' << ITCHLAB_VERSION << '\n';
+    return 0;
+  }
+  const auto parsed = parse_validate_arguments(arguments);
+  const auto requested_format = wants_json(arguments) ? OutputFormat::json : OutputFormat::human;
+  if (parsed.error) {
+    return render_error(output, error, "validate", requested_format, LogFormat::human,
+                        *parsed.error);
+  }
+  const auto& options = *parsed.value;
+  const auto result =
+      options.run ? validate_replay_run(*options.run, options.deep, options.verify_source)
+                  : validate_interchange_file(*options.file, options.deep, options.verify_source);
+  if (!result.valid()) {
+    return render_validation_failure(output, error, options.format, result);
+  }
+  if (options.format == OutputFormat::json) {
+    render_success_json(output, "validate", "completed", validation_report_json(result.report), {});
+  } else {
+    render_validation_human(output, result.report, true);
   }
   return 0;
 }
@@ -1365,6 +1591,9 @@ int run(const std::span<const std::string_view> arguments, std::ostream& output,
     }
     if (arguments.front() == "replay") {
       return run_replay(arguments.subspan(1), output, error, runtime, progress_clock);
+    }
+    if (arguments.front() == "validate") {
+      return run_validate(arguments.subspan(1), output, error);
     }
 
     const auto format = wants_json(arguments) ? OutputFormat::json : OutputFormat::human;
