@@ -123,6 +123,13 @@ CT-JSON-001 validates the strict completed-manifest schema and rejects unknown k
   and 256 MiB process peak-RSS growth while preserving configured row-group bounds. Injected writer
   failure and service cancellation leave only partial output; a real subprocess SIGINT exits 130
   without a completed manifest.
+- TASK-019 UT-LABEL-001 fixes exact integer threshold semantics, batch-boundary horizons and null
+  tails. Partition properties reject overlap, disorder and immutable-key mismatch, and prove that
+  stride sampling uses the original qualifying ordinal after the disjoint history/tail filters.
+- IT-008 publishes three complete synthetic day partitions with independently pinned retained-row,
+  class and horizon-availability counts. It validates the strict manifest/child hashes and covers
+  reuse, forced immutability, parent/output tampering, missing days, unsafe paths, cancellation and
+  injected write failure.
 - Price4 conversions avoid binary-float values until presentation.
 - TASK-018 hand-calculated cases reconcile the exact catalogue/schema, current depth and
   microprice values, all 20/100/500 qualifying-transition boundaries, 100 ms/1 s event-rate
@@ -181,7 +188,7 @@ Each failing generated case is reduced and committed as a regression fixture whe
 | IT-005 | Interrupt replay during write | Partial suffix only; no completed manifest |
 | IT-006 | C++ binary artefacts into Python readers | Exact round-trip typed records |
 | IT-007 | Conversion to Parquet | Golden dtypes, nulls, integer values, partition paths, sort order and validated manifest match |
-| IT-008 | Feature/label pipeline | Hand-calculated rows and leakage guard pass |
+| IT-008 | Feature/label pipeline | Three complete synthetic days publish exact joined rows, disjoint drop/class/horizon counts, frozen splits and authenticated lineage; future mutation guards pass |
 | IT-009 | Training baselines | Expected output schemas and training-only preprocessing |
 | IT-010 | Event/prediction stream through simulator | Golden orders, fills, cash and inventory |
 | IT-011 | Report generation | Required headings, tables, limitations and reproduction commands |
@@ -442,7 +449,7 @@ A task is done only when:
 | UT-OUT-002 | Snapshot writer | Record size is 48 + 28×depth and null flags round-trip |
 | UT-CFG-001 | Config | Unknown key and overlapping dates fail |
 | UT-FEAT-001 | Causality | Future mutation cannot alter previous feature values |
-| UT-LABEL-001 | Labels | Hand sequence yields down/flat/up and null tails |
+| UT-LABEL-001 | Labels | Hand sequence yields exact-threshold down/flat/up and null primary/secondary tails across batch boundaries |
 | UT-MODEL-001 | Preprocessing | Fit indices are a subset of training-day indices |
 | UT-SIM-001 | Latency | Order cannot fill before effective timestamp |
 | UT-SIM-002 | Queue | Known ahead volume must deplete before fill |

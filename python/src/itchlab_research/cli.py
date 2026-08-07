@@ -15,9 +15,15 @@ from pathlib import Path
 from typing import Any, cast
 
 from itchlab_research import __version__
-from itchlab_research.config import ConversionConfig, load_config
+from itchlab_research.config import ConversionConfig, DatasetConfig, load_config
 from itchlab_research.conversion import ConversionProgress, convert_replays
-from itchlab_research.errors import ConfigValidationError, ConversionError, ErrorCode
+from itchlab_research.datasets import DatasetProgress, build_dataset
+from itchlab_research.errors import (
+    ConfigValidationError,
+    ConversionError,
+    DatasetBuildError,
+    ErrorCode,
+)
 
 _PROGRAM_NAME = "itchlab-research"
 _GLOBAL_HELP = f"""Offline research package for ITCH-Lab
@@ -26,6 +32,7 @@ Usage: {_PROGRAM_NAME} <command> [options]
 
 Commands:
   convert      Convert authenticated replay artefacts to partitioned Parquet.
+  build-dataset Build causal labels and frozen chronological dataset partitions.
 
 Global options:
   --help       Show this help text.
@@ -58,11 +65,46 @@ Exit categories: 0 success, 2 config, 3 input, 6 output, 7 validation, 70 intern
 130 cancellation.
 """
 
+_DATASET_HELP = f"""Build a causal dataset with frozen chronological day partitions.
+
+Usage: {_PROGRAM_NAME} build-dataset --config <dataset-config.json> [options]
+
+Required:
+  --config <path>             Version-1 dataset configuration.
+
+Options:
+  --force-new-run             Create another immutable run for the same identity.
+  --format <human|json>       Result format (default human).
+  --log-format <human|jsonl>  Progress format on stderr (default human).
+  --quiet                     Suppress non-error progress.
+  --ascii                     Restrict presentation to ASCII.
+  --no-colour                 Disable colour presentation.
+  --help                      Show this help text.
+
+Example:
+  {_PROGRAM_NAME} build-dataset --config configs/dataset.example.json
+
+Exit categories: 0 success, 2 config, 3 input, 6 output, 7 validation, 8 dataset,
+70 internal, 130 cancellation.
+"""
+
 
 def _convert_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog=f"{_PROGRAM_NAME} convert", add_help=False)
     parser.add_argument("--config")
     parser.add_argument("--allow-degraded", action="store_true")
+    parser.add_argument("--force-new-run", action="store_true")
+    parser.add_argument("--format", choices=("human", "json"), default="human")
+    parser.add_argument("--log-format", choices=("human", "jsonl"), default="human")
+    parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--ascii", action="store_true")
+    parser.add_argument("--no-colour", action="store_true")
+    return parser
+
+
+def _dataset_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog=f"{_PROGRAM_NAME} build-dataset", add_help=False)
+    parser.add_argument("--config")
     parser.add_argument("--force-new-run", action="store_true")
     parser.add_argument("--format", choices=("human", "json"), default="human")
     parser.add_argument("--log-format", choices=("human", "jsonl"), default="human")
@@ -95,6 +137,14 @@ def _exit_code(code: ErrorCode) -> int:
         return 130
     if code is ErrorCode.INTERNAL:
         return 70
+    if code in {
+        ErrorCode.HORIZON,
+        ErrorCode.PARTITION,
+        ErrorCode.ROW_STRIDE,
+        ErrorCode.EMPTY_DATASET,
+        ErrorCode.LEAKAGE_GUARD,
+    }:
+        return 8
     return 7
 
 
@@ -109,6 +159,7 @@ def _write_error(
     code: ErrorCode,
     message: str,
     *,
+    command: str,
     result_format: str,
     partial_exists: bool,
 ) -> None:
@@ -117,7 +168,7 @@ def _write_error(
             json.dumps(
                 {
                     "schema_version": 1,
-                    "command": "convert",
+                    "command": command,
                     "status": "failed" if code is not ErrorCode.CANCELLED else "cancelled",
                     "error": {
                         "code": code.value,
@@ -180,6 +231,48 @@ def _progress_callback(log_format: str, quiet: bool) -> Any:
     return report
 
 
+def _dataset_progress_callback(log_format: str, quiet: bool) -> Any:
+    started = time.monotonic()
+    last = started
+    reported = False
+
+    def report(progress: DatasetProgress) -> None:
+        nonlocal last, reported
+        if quiet:
+            return
+        now = time.monotonic()
+        if not reported:
+            if now - started < 5:
+                return
+            reported = True
+        elif now - last < 30:
+            return
+        last = now
+        if log_format == "jsonl":
+            print(
+                json.dumps(
+                    {
+                        "command": "build-dataset",
+                        "event": "progress",
+                        "stage": progress.stage,
+                        "partitions": progress.partitions_completed,
+                        "rows": progress.rows_processed,
+                        "elapsed_seconds": round(now - started, 3),
+                    },
+                    separators=(",", ":"),
+                ),
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"build-dataset: {progress.partitions_completed:,} partitions; "
+                f"{progress.rows_processed:,} qualifying rows ({now - started:.1f}s)",
+                file=sys.stderr,
+            )
+
+    return report
+
+
 def _run_convert(arguments: Sequence[str]) -> int:
     if arguments in (["--help"], ["-h"]):
         print(_CONVERT_HELP, end="")
@@ -216,6 +309,7 @@ def _run_convert(arguments: Sequence[str]) -> int:
         _write_error(
             error.issues[0].code,
             message,
+            command="convert",
             result_format=result_format,
             partial_exists=False,
         )
@@ -248,6 +342,7 @@ def _run_convert(arguments: Sequence[str]) -> int:
         _write_error(
             error.code,
             error.message,
+            command="convert",
             result_format=result_format,
             partial_exists=error.partial_exists,
         )
@@ -256,6 +351,7 @@ def _run_convert(arguments: Sequence[str]) -> int:
         _write_error(
             ErrorCode.CANCELLED,
             "Conversion was interrupted before completion.",
+            command="convert",
             result_format=result_format,
             partial_exists=True,
         )
@@ -264,6 +360,7 @@ def _run_convert(arguments: Sequence[str]) -> int:
         _write_error(
             ErrorCode.INTERNAL,
             "Unexpected conversion failure.",
+            command="convert",
             result_format=result_format,
             partial_exists=True,
         )
@@ -312,6 +409,153 @@ def _run_convert(arguments: Sequence[str]) -> int:
     return 0
 
 
+def _run_build_dataset(arguments: Sequence[str]) -> int:
+    if arguments in (["--help"], ["-h"]):
+        print(_DATASET_HELP, end="")
+        return 0
+    if arguments == ["--version"]:
+        print(f"{_PROGRAM_NAME} {__version__}")
+        return 0
+    if not arguments:
+        print(f"{_PROGRAM_NAME} build-dataset: --config is required.", file=sys.stderr)
+        return 2
+    duplicate = _duplicate_option(arguments)
+    if duplicate is not None:
+        print(
+            f"{_PROGRAM_NAME} build-dataset: duplicate option {duplicate}.",
+            file=sys.stderr,
+        )
+        return 2
+    parser = _dataset_parser()
+    try:
+        parsed = parser.parse_args(list(arguments))
+    except SystemExit:
+        return 2
+    if parsed.config is None:
+        print(f"{_PROGRAM_NAME} build-dataset: --config is required.", file=sys.stderr)
+        return 2
+
+    result_format = cast(str, parsed.format)
+    try:
+        loaded = load_config(Path(cast(str, parsed.config)), "dataset")
+        config = cast(DatasetConfig, loaded)
+    except ConfigValidationError as error:
+        message = "; ".join(
+            f"{issue.json_pointer or '/'} {issue.message}" for issue in error.issues
+        )
+        _write_error(
+            error.issues[0].code,
+            message,
+            command="build-dataset",
+            result_format=result_format,
+            partial_exists=False,
+        )
+        return _exit_code(error.issues[0].code)
+
+    cancelled = threading.Event()
+    signal_count = 0
+    previous_handler = signal.getsignal(signal.SIGINT)
+
+    def handle_interrupt(signum: int, frame: object) -> None:
+        del signum, frame
+        nonlocal signal_count
+        signal_count += 1
+        if signal_count == 1:
+            cancelled.set()
+            if not cast(bool, parsed.quiet):
+                print("Cancellation requested; closing partial outputs.", file=sys.stderr)
+            return
+        raise KeyboardInterrupt
+
+    try:
+        signal.signal(signal.SIGINT, handle_interrupt)
+        result = build_dataset(
+            config,
+            force_new_run=cast(bool, parsed.force_new_run),
+            cancel_requested=cancelled.is_set,
+            progress=_dataset_progress_callback(
+                cast(str, parsed.log_format), cast(bool, parsed.quiet)
+            ),
+        )
+    except DatasetBuildError as error:
+        _write_error(
+            error.code,
+            error.message,
+            command="build-dataset",
+            result_format=result_format,
+            partial_exists=error.partial_exists,
+        )
+        return _exit_code(error.code)
+    except KeyboardInterrupt:
+        _write_error(
+            ErrorCode.CANCELLED,
+            "Dataset construction was interrupted before completion.",
+            command="build-dataset",
+            result_format=result_format,
+            partial_exists=True,
+        )
+        return 130
+    except Exception:
+        _write_error(
+            ErrorCode.INTERNAL,
+            "Unexpected dataset construction failure.",
+            command="build-dataset",
+            result_format=result_format,
+            partial_exists=True,
+        )
+        return 70
+    finally:
+        signal.signal(signal.SIGINT, previous_handler)
+
+    manifest = _safe_display_path(result.manifest_path)
+    partition_rows = dict(result.partition_rows)
+    class_counts = dict(result.class_counts)
+    if result_format == "json":
+        print(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "command": "build-dataset",
+                    "status": result.status,
+                    "run_id": result.dataset_id,
+                    "summary": {
+                        "manifest_path": manifest,
+                        "retained_rows": result.retained_rows,
+                        "parquet_files": result.parquet_files,
+                        "parent_conversion_ids": list(result.parent_conversion_ids),
+                        "partition_rows": partition_rows,
+                        "class_counts": class_counts,
+                        "reused": result.reused,
+                        "next_command": (
+                            f"{_PROGRAM_NAME} train --config configs/experiment.example.json"
+                        ),
+                    },
+                    "warnings": [],
+                },
+                separators=(",", ":"),
+            )
+        )
+    else:
+        action = "Reused" if result.reused else "Completed"
+        print(f"{action} dataset {result.dataset_id} ({result.status}).")
+        print(f"Manifest: {manifest}")
+        print(f"Rows: {result.retained_rows:,} retained across {result.parquet_files:,} files.")
+        print(
+            "Partitions: "
+            + "; ".join(
+                f"{name}={partition_rows[name]:,}" for name in ("train", "validation", "test")
+            )
+            + "."
+        )
+        print(
+            "Classes: "
+            + "; ".join(f"{name}={class_counts[name]:,}" for name in ("down", "flat", "up"))
+            + "."
+        )
+        print(f"Next: {_PROGRAM_NAME} train --config configs/experiment.example.json")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the research CLI and return a process-compatible exit code."""
     arguments = list(sys.argv[1:] if argv is None else argv)
@@ -323,6 +567,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if arguments[0] == "convert":
         return _run_convert(arguments[1:])
+    if arguments[0] == "build-dataset":
+        return _run_build_dataset(arguments[1:])
     print(f"{_PROGRAM_NAME}: unrecognised command or argument.", file=sys.stderr)
     print(f"Try '{_PROGRAM_NAME} --help' for usage.", file=sys.stderr)
     return 2

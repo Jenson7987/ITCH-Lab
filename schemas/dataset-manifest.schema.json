@@ -1,0 +1,395 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://itchlab.local/schemas/dataset-manifest.schema.json",
+  "title": "ITCH-Lab completed dataset manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset_id",
+    "status",
+    "started_at",
+    "completed_at",
+    "config",
+    "config_sha256",
+    "identity_config_sha256",
+    "identity_sha256",
+    "tool",
+    "parents",
+    "partition_keys",
+    "sort_keys",
+    "partitions",
+    "feature_catalogue",
+    "labels",
+    "schema",
+    "counts",
+    "artefacts",
+    "supporting_artefacts"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "dataset_id": {"$ref": "#/$defs/runId"},
+    "status": {"const": "completed"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"},
+    "config": {"$ref": "https://itchlab.local/schemas/dataset-config.schema.json"},
+    "config_sha256": {"$ref": "#/$defs/sha256"},
+    "identity_config_sha256": {"$ref": "#/$defs/sha256"},
+    "identity_sha256": {"$ref": "#/$defs/sha256"},
+    "tool": {"$ref": "#/$defs/tool"},
+    "parents": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/parent"}
+    },
+    "partition_keys": {
+      "type": "array",
+      "prefixItems": [
+        {"const": "partition"},
+        {"const": "trading_date"},
+        {"const": "symbol"}
+      ],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "sort_keys": {
+      "type": "array",
+      "prefixItems": [{"const": "message_index"}],
+      "items": false,
+      "minItems": 1,
+      "maxItems": 1
+    },
+    "partitions": {"$ref": "#/$defs/partitions"},
+    "feature_catalogue": {"$ref": "#/$defs/featureCatalogue"},
+    "labels": {"$ref": "#/$defs/labels"},
+    "schema": {"$ref": "#/$defs/parquetSchema"},
+    "counts": {"$ref": "#/$defs/counts"},
+    "artefacts": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/artefact"}
+    },
+    "supporting_artefacts": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/supportingArtefact"}
+    }
+  },
+  "$defs": {
+    "runId": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}\\.[0-9]{9}Z-[0-9a-f]{12}$"
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "count": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+    "symbol": {"type": "string", "pattern": "^[!-~](?:[ -~]{0,6}[!-~])?$"},
+    "dates": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "format": "date"}
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "application_version",
+        "content_digest_kind",
+        "sha256",
+        "python_version",
+        "pyarrow_version"
+      ],
+      "properties": {
+        "application_version": {"type": "string", "minLength": 1},
+        "content_digest_kind": {"const": "python-package-content-v1"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "python_version": {"type": "string", "minLength": 1},
+        "pyarrow_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "parent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "conversion_id",
+        "manifest_sha256",
+        "config_sha256",
+        "identity_sha256",
+        "trading_dates"
+      ],
+      "properties": {
+        "conversion_id": {"$ref": "#/$defs/runId"},
+        "manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "config_sha256": {"$ref": "#/$defs/sha256"},
+        "identity_sha256": {"$ref": "#/$defs/sha256"},
+        "trading_dates": {"$ref": "#/$defs/dates"}
+      }
+    },
+    "partitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["train_dates", "validation_dates", "test_dates"],
+      "properties": {
+        "train_dates": {"$ref": "#/$defs/dates"},
+        "validation_dates": {"$ref": "#/$defs/dates"},
+        "test_dates": {"$ref": "#/$defs/dates"}
+      }
+    },
+    "featureCatalogue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "features"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "features": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/feature"}
+        }
+      }
+    },
+    "feature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "dtype",
+        "nullable",
+        "formula",
+        "lookback",
+        "unit",
+        "null_policy",
+        "owner"
+      ],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "dtype": {"type": "string", "minLength": 1},
+        "nullable": {"type": "boolean"},
+        "formula": {"type": "string", "minLength": 1},
+        "lookback": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "value"],
+          "properties": {
+            "kind": {"type": "string", "minLength": 1},
+            "value": {
+              "oneOf": [
+                {"type": "null"},
+                {"type": "integer", "minimum": 1, "maximum": 9007199254740991}
+              ]
+            }
+          }
+        },
+        "unit": {"type": "string", "minLength": 1},
+        "null_policy": {"type": "string", "minLength": 1},
+        "owner": {"const": "itchlab_research.datasets.features"}
+      }
+    },
+    "labels": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary_horizon", "horizons", "dtype", "classes", "tail_policy"],
+      "properties": {
+        "primary_horizon": {"const": 100},
+        "horizons": {
+          "type": "array",
+          "prefixItems": [{"const": 20}, {"const": 100}, {"const": 500}],
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "dtype": {"const": "int8"},
+        "classes": {
+          "type": "array",
+          "prefixItems": [
+            {"type": "object", "additionalProperties": false, "required": ["name", "value"], "properties": {"name": {"const": "down"}, "value": {"const": -1}}},
+            {"type": "object", "additionalProperties": false, "required": ["name", "value"], "properties": {"name": {"const": "flat"}, "value": {"const": 0}}},
+            {"type": "object", "additionalProperties": false, "required": ["name", "value"], "properties": {"name": {"const": "up"}, "value": {"const": 1}}}
+          ],
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "tail_policy": {"const": "exclude_unavailable_primary_retain_nullable_secondary"}
+      }
+    },
+    "parquetField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "dtype", "nullable"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "dtype": {"type": "string", "minLength": 1},
+        "nullable": {"type": "boolean"}
+      }
+    },
+    "parquetSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fields", "sha256"],
+      "properties": {
+        "fields": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/parquetField"}},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "rows": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "qualifying_rows",
+        "dropped_incomplete_history",
+        "dropped_unavailable_primary_label",
+        "dropped_by_row_stride",
+        "retained_rows"
+      ],
+      "properties": {
+        "qualifying_rows": {"$ref": "#/$defs/count"},
+        "dropped_incomplete_history": {"$ref": "#/$defs/count"},
+        "dropped_unavailable_primary_label": {"$ref": "#/$defs/count"},
+        "dropped_by_row_stride": {"$ref": "#/$defs/count"},
+        "retained_rows": {"$ref": "#/$defs/count"}
+      }
+    },
+    "classes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["down", "flat", "up"],
+      "properties": {
+        "down": {"$ref": "#/$defs/count"},
+        "flat": {"$ref": "#/$defs/count"},
+        "up": {"$ref": "#/$defs/count"}
+      }
+    },
+    "labelAvailability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["horizon", "available", "unavailable"],
+      "properties": {
+        "horizon": {"enum": [20, 100, 500]},
+        "available": {"$ref": "#/$defs/count"},
+        "unavailable": {"$ref": "#/$defs/count"}
+      }
+    },
+    "partitionCount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["partition", "rows", "classes"],
+      "properties": {
+        "partition": {"enum": ["train", "validation", "test"]},
+        "rows": {"$ref": "#/$defs/rows"},
+        "classes": {"$ref": "#/$defs/classes"}
+      }
+    },
+    "daySymbolCount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "partition",
+        "trading_date",
+        "symbol",
+        "rows",
+        "classes",
+        "label_availability"
+      ],
+      "properties": {
+        "partition": {"enum": ["train", "validation", "test"]},
+        "trading_date": {"type": "string", "format": "date"},
+        "symbol": {"$ref": "#/$defs/symbol"},
+        "rows": {"$ref": "#/$defs/rows"},
+        "classes": {"$ref": "#/$defs/classes"},
+        "label_availability": {
+          "type": "array",
+          "prefixItems": [
+            {"allOf": [{"$ref": "#/$defs/labelAvailability"}, {"properties": {"horizon": {"const": 20}}}]},
+            {"allOf": [{"$ref": "#/$defs/labelAvailability"}, {"properties": {"horizon": {"const": 100}}}]},
+            {"allOf": [{"$ref": "#/$defs/labelAvailability"}, {"properties": {"horizon": {"const": 500}}}]}
+          ],
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rows", "classes", "label_availability", "by_partition", "by_day_symbol"],
+      "properties": {
+        "rows": {"$ref": "#/$defs/rows"},
+        "classes": {"$ref": "#/$defs/classes"},
+        "label_availability": {
+          "type": "array",
+          "prefixItems": [
+            {"allOf": [{"$ref": "#/$defs/labelAvailability"}, {"properties": {"horizon": {"const": 20}}}]},
+            {"allOf": [{"$ref": "#/$defs/labelAvailability"}, {"properties": {"horizon": {"const": 100}}}]},
+            {"allOf": [{"$ref": "#/$defs/labelAvailability"}, {"properties": {"horizon": {"const": 500}}}]}
+          ],
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "by_partition": {
+          "type": "array",
+          "prefixItems": [
+            {"allOf": [{"$ref": "#/$defs/partitionCount"}, {"properties": {"partition": {"const": "train"}}}]},
+            {"allOf": [{"$ref": "#/$defs/partitionCount"}, {"properties": {"partition": {"const": "validation"}}}]},
+            {"allOf": [{"$ref": "#/$defs/partitionCount"}, {"properties": {"partition": {"const": "test"}}}]}
+          ],
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "by_day_symbol": {
+          "type": "array",
+          "minItems": 3,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/daySymbolCount"}
+        }
+      }
+    },
+    "artefact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "path",
+        "sha256",
+        "size_bytes",
+        "row_count",
+        "partition",
+        "trading_date",
+        "symbol"
+      ],
+      "properties": {
+        "kind": {"const": "dataset"},
+        "path": {
+          "type": "string",
+          "pattern": "^dataset/partition=(?:train|validation|test)/trading_date=[0-9]{4}-[0-9]{2}-[0-9]{2}/symbol=(?:[A-Za-z0-9._~-]|%[0-9A-F]{2})+/part-0\\.parquet$"
+        },
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "size_bytes": {"$ref": "#/$defs/count"},
+        "row_count": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+        "partition": {"enum": ["train", "validation", "test"]},
+        "trading_date": {"type": "string", "format": "date"},
+        "symbol": {"$ref": "#/$defs/symbol"}
+      }
+    },
+    "supportingArtefact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "path", "sha256", "size_bytes"],
+      "properties": {
+        "kind": {"enum": ["feature_catalogue", "data_quality"]},
+        "path": {"enum": ["feature-catalogue.json", "data-quality.json"]},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "size_bytes": {"$ref": "#/$defs/count"}
+      }
+    }
+  }
+}

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from pathlib import Path
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,4 +34,35 @@ class FeatureDefinition:
     owner: str
 
 
-__all__ = ["FeatureDefinition", "FeaturePartitionContext"]
+@dataclass(frozen=True, slots=True)
+class DatasetProgress:
+    """One bounded progress observation emitted between complete dataset batches."""
+
+    stage: str
+    partitions_completed: int
+    rows_processed: int
+    parquet_files: int
+    output_bytes: int
+
+
+@dataclass(frozen=True, slots=True)
+class DatasetResult:
+    """A completed or safely reused immutable dataset run."""
+
+    dataset_id: str
+    status: str
+    manifest_path: Path
+    retained_rows: int
+    parquet_files: int
+    parent_conversion_ids: tuple[str, ...]
+    partition_rows: tuple[tuple[str, int], ...]
+    class_counts: tuple[tuple[str, int], ...]
+    reused: bool
+
+
+__all__ = [
+    "DatasetProgress",
+    "DatasetResult",
+    "FeatureDefinition",
+    "FeaturePartitionContext",
+]

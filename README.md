@@ -79,8 +79,10 @@ snapshot-v1 readers expose typed, validated records in bounded chunks. The Pytho
 now validates replay lineage and child hashes, preserves integer/null semantics in typed Parquet,
 and atomically publishes a conversion manifest with complete lineage and child hashes. Feature
 construction now has a partition-scoped PyArrow service with an exact catalogue, causal rolling
-state and explicit warm-up nulls. The `build-dataset` command, labels, modelling and simulation are
-implemented by later tasks.
+state and explicit warm-up nulls. The Python `build-dataset` command independently computes bounded
+future labels, enforces immutable-key joins and chronological whole-day splits, applies explicit
+history/tail/ordinal filtering, and atomically publishes joined Parquet with a validated frozen
+dataset manifest. Modelling and simulation are implemented by later tasks.
 
 ## Local setup
 
@@ -175,9 +177,16 @@ Degraded replay parents require `allow_degraded`; cancellation or write failure 
 `.partial` run. Use `--format json` for a stable machine-readable result, or `--force-new-run` to
 create another immutable timestamped directory for the same content identity.
 
+Before running `build-dataset`, set safe relative `conversion_manifests`, the exact selected symbols
+and tick sizes, feature/label settings and non-overlapping chronological day lists in
+`configs/dataset.example.json`. The command revalidates all conversion and replay lineage, writes
+joined Zstandard Parquet beneath `runs/dataset/<dataset-id>/`, and publishes a strict manifest only
+after row-drop, label-availability, class and split counts reconcile. Cancellation or write failure
+retains only a `.partial` run. Use `--format json` for stable output, or `--force-new-run` for another
+immutable timestamped directory with the same identity.
+
 Remaining planned research workflow (implemented by later tasks):
 
-    python -m itchlab_research build-dataset --config configs/dataset.example.json
     python -m itchlab_research train --config configs/experiment.example.json
     python -m itchlab_research simulate --config configs/simulation.example.json
     python -m itchlab_research report --run-id <run-id>

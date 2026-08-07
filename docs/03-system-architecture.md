@@ -351,9 +351,10 @@ There is no production server. “Deployment” means a versioned local release 
 
     schemas/
     ├── replay-config.schema.json
+    ├── replay-manifest.schema.json
     ├── conversion-config.schema.json
     ├── conversion-manifest.schema.json
     ├── dataset-config.schema.json
+    ├── dataset-manifest.schema.json
     ├── experiment-config.schema.json
-    ├── simulation-config.schema.json
-    └── manifests/
+    └── simulation-config.schema.json

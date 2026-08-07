@@ -267,17 +267,23 @@ Stored in dataset-manifest.json with Parquet artefacts.
 | Field | Type | Nullable | Default | Constraints |
 | --- | --- | --- | --- | --- |
 | dataset_id | string | No | generated | Content-addressed identity |
-| parent_replay_ids | array[string] | No | — | Minimum three distinct days for publishable MVP |
 | schema_version | uint16 | No | 1 | Dataset schema |
-| feature_config | object | No | — | Names, windows, null policy |
-| label_config | object | No | — | Primary/secondary horizons and target definition |
+| parents | array[object] | No | — | Authenticated conversion IDs, hashes and covered days |
+| config/config hashes | object/string | No | — | Canonical dataset config and full/identity hashes |
+| tool | object | No | — | Package-content digest and runtime versions |
 | partitions | object | No | — | Non-overlapping whole-day lists |
-| feature_catalogue | array | No | — | Name, dtype, formula, lookback and owner |
-| counts | object | No | — | Rows before/after filtering, by day/symbol/class |
-| artefacts | array | No | — | Paths, sizes and hashes |
+| feature_catalogue | object | No | — | Ordered names, dtypes, formulae, lookbacks and owners |
+| labels | object | No | — | Horizons, int8 class map and tail policy |
+| schema | object | No | — | Joined logical fields plus canonical schema hash |
+| counts | object | No | — | Disjoint row drops, classes and label availability globally and by split/day/symbol |
+| artefacts | array | No | — | Joined Parquet paths, partitions, rows, sizes and hashes |
+| supporting_artefacts | array | No | — | Hashed feature catalogue and data-quality documents |
 | status | enum | No | completed | Completed only after validation |
 
-Recommended Parquet partitioning: partition/trading_date/symbol, with row-group statistics on message_index and timestamp_ns. These are physical pruning aids, not database indexes.
+Version 1 physically partitions beneath `dataset/partition=<name>/trading_date=<date>/symbol=<encoded>`
+and sorts each child by `message_index`. The three partition columns are reconstructed from the
+Hive path and are present in the logical schema, not duplicated in each Parquet child. These are
+physical pruning aids, not database indexes.
 
 ### FeatureRow and feature catalogue v1
 
@@ -296,6 +302,21 @@ exact version-1 names and definitions are authoritative in `12-feature-catalogue
 Feature calculation is partition-scoped to one trading date and source symbol. Session bounds come
 from the authenticated replay config and tick size comes from the dataset config. Rolling state
 resets between partitions. Events with a message index after the feature row are never incorporated.
+
+### LabelRow and frozen dataset schema v1
+
+TASK-019 computes labels independently over the same qualifying snapshots. A raw label row repeats
+the immutable identity metadata through `qualifying_ordinal` and adds nullable int8
+`label_horizon_20`, `label_horizon_100` and `label_horizon_500` columns. Values are down `-1`, flat
+`0` and up `1`. For horizon `H`, the calculation compares `mid2(t+H) - mid2(t)` against the exact
+integer threshold `2 × tick_size4 × flat_threshold_ticks`; equality is flat.
+
+Feature and label streams must agree on trading date, symbol, message index, symbol ID, timestamp
+and qualifying ordinal. Filtering is disjoint and ordered: remove incomplete history, remove null
+primary-horizon labels, then retain rows whose original qualifying ordinal modulo `row_stride` is
+zero. Secondary tail labels remain nullable. The published primary label is non-nullable. State and
+horizons reset at every complete trading-date/symbol boundary, and no date may cross a train,
+validation or test boundary.
 
 ### Prediction
 

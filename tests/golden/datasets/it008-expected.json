@@ -1,0 +1,33 @@
+{
+  "rows": {
+    "qualifying_rows": 1809,
+    "dropped_incomplete_history": 1500,
+    "dropped_unavailable_primary_label": 300,
+    "dropped_by_row_stride": 0,
+    "retained_rows": 9
+  },
+  "classes": {
+    "down": 3,
+    "flat": 3,
+    "up": 3
+  },
+  "label_availability": [
+    {"horizon": 20, "available": 1749, "unavailable": 60},
+    {"horizon": 100, "available": 1509, "unavailable": 300},
+    {"horizon": 500, "available": 309, "unavailable": 1500}
+  ],
+  "per_day": {
+    "rows": {
+      "qualifying_rows": 603,
+      "dropped_incomplete_history": 500,
+      "dropped_unavailable_primary_label": 100,
+      "dropped_by_row_stride": 0,
+      "retained_rows": 3
+    },
+    "classes": {
+      "down": 1,
+      "flat": 1,
+      "up": 1
+    }
+  }
+}

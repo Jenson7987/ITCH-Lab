@@ -17,7 +17,7 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | FR-009 | 04 ReplayRun; 03 ManifestBuilder | TASK-002 (config contract), TASK-014 (manifest) | UT-CFG-001, CT-JSON-001, IT-004 |
 | FR-010 | 03 Python conversion; 04 ConversionRun/Parquet v1; 05 convert | TASK-016, TASK-017 | CT-BIN-001, IT-006, IT-007, conversion manifest/schema/tamper tests |
 | FR-011 | 04 FeatureRow/DatasetRun; 05 feature service/build-dataset; 12 catalogue | TASK-018 | UT-FEAT-001, catalogue golden, hand-calculated current/rolling/rate/flow cases |
-| FR-012 | 02 UF-003; 05 dataset config | TASK-019 | UT-LABEL-001, IT-008, partition properties |
+| FR-012 | 02 UF-003; 04 LabelRow/DatasetRun; 05 build-dataset | TASK-019 | UT-LABEL-001, IT-008, immutable-key/partition properties, stride/filter-count and tamper/partial tests |
 | FR-013 | 02 UF-004; 05 train | TASK-020 | UT-MODEL-001, IT-009, metric hand cases |
 | FR-014 | 02 UF-005/state diagram; 04 SimulatedOrder | TASK-022 | UT-SIM-001, UT-SIM-003, state properties |
 | FR-015 | ADR-004; 04 Fill/SimulatedOrder | TASK-023 | UT-SIM-002, queue properties, IT-010 |
@@ -36,13 +36,13 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | NFR-001 | ADR-003; 03 state/performance | TASK-006, TASK-013, TASK-029 | TASK-013 byte-for-byte event golden/source-order test, repeated-run byte/digest tests, E2E-001 |
 | NFR-002 | 03 performance/scalability | TASK-004, TASK-016, TASK-017, TASK-029 | PERF-005/007/008, large-stream memory test |
 | NFR-003 | 03 performance; 09 release criteria | TASK-029 | PERF-004 plus platform benchmark report |
-| NFR-004 | 03 errors/file contracts | TASK-012, TASK-013, TASK-014, TASK-017 | TASK-013/TASK-014 injected writer failures, TASK-017 injected write/real-SIGINT partial-only tests, atomic publication tests, E2E-004, IT-005 |
+| NFR-004 | 03 errors/file contracts | TASK-012, TASK-013, TASK-014, TASK-017, TASK-019 | TASK-013/TASK-014 injected writer failures, TASK-017/TASK-019 write/cancellation partial-only tests, atomic publication tests, E2E-004, IT-005 |
 | NFR-005 | ADR-002; 09 build | TASK-001, TASK-016, TASK-030 | macOS/Linux build, CT-BIN-001 |
 | NFR-006 | 03 state/file contracts; 09 release | TASK-001, TASK-002, TASK-014, TASK-020, TASK-030 | Canonical-hash, TASK-014 identity/build-lineage, clean-install and E2E-001 |
 | NFR-007 | 03 logging; 06 progress | TASK-007, TASK-012 | TASK-012 rate-limit and non-TTY JSONL/stderr/quiet tests |
 | NFR-008 | 07 SEC-001/002/012 | TASK-004, TASK-005, TASK-028 | UT-DEC-002, SEC-FUZZ-001, sanitizers |
 | NFR-009 | 08 coverage/CI | TASK-008, TASK-028, TASK-030 | Coverage gates and CI matrix |
-| NFR-010 | ADR-004; 02 UF-003–005 | TASK-018–020, TASK-023–027, TASK-031 | UT-FEAT-001, UT-MODEL-001, simulator properties |
+| NFR-010 | ADR-004; 02 UF-003–005 | TASK-018–020, TASK-023–027, TASK-031 | UT-FEAT-001, UT-LABEL-001, IT-008, partition properties, UT-MODEL-001, simulator properties |
 | NFR-011 | 06 accessibility | TASK-007, TASK-021, TASK-030 | NO_COLOR/TERM, HTML accessibility and plot tests |
 | NFR-012 | ADR-001–004; AGENTS.md | TASK-001, TASK-032 | API docs review, docs/traceability lint |
 

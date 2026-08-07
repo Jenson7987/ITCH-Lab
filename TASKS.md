@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-019: Implement labels, splits and leakage guards
-  - Dependencies: TASK-018
-  - Acceptance criteria: Three-class horizons, chronological whole days, frozen manifest
-  - Tests: UT-LABEL-001, IT-008
-  - Documentation to update: Final horizon/split decision
-
 - [ ] TASK-020: Train/evaluate predictive baselines
   - Dependencies: TASK-019
   - Acceptance criteria: Prior/logistic/gradient boosting with train-only preprocessing and single test evaluation
@@ -91,6 +85,21 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-019: Implement labels, splits and leakage guards
+  - Completed: 2026-08-07
+  - Evidence: The `itchlab-research build-dataset` command revalidates completed conversion and
+    replay lineage, independently streams past-only features and bounded 20/100/500 future labels,
+    joins exact immutable row metadata, and applies disjoint history, primary-tail and original-
+    ordinal stride filters before assigning complete chronological days to frozen train, validation
+    and test partitions. It writes joined Zstandard Parquet plus hashed feature/data-quality
+    metadata and atomically publishes a strict, private-path-free dataset manifest with reconciled
+    row-drop, class and label-availability counts. UT-LABEL-001, partition/join properties and
+    IT-008 cover exact thresholds/null tails, future-mutation leakage, all three classes, identity
+    reuse/forced immutability, parent/output tampering, unsafe/missing input, cancellation and
+    injected write failure. All 200 Python tests, Ruff formatting/lint, strict mypy, both fixture
+    checks and wheel/sdist build passed. All 129 CTest entries passed in dev, Release and ASan/UBSan
+    presets; the authorised official-sample entry skipped as designed.
 
 - [x] TASK-018: Implement causal feature catalogue
   - Completed: 2026-08-07

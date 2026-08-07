@@ -117,11 +117,45 @@ class FeatureComputationError(ValueError):
         super().__init__(f"{code.value}: {message}")
 
 
+class LabelComputationError(ValueError):
+    """One stable, row-safe failure from future-label calculation."""
+
+    def __init__(
+        self,
+        code: ErrorCode,
+        message: str,
+        *,
+        message_index: int | None = None,
+    ) -> None:
+        self.code = code
+        self.message = message
+        self.message_index = message_index
+        super().__init__(f"{code.value}: {message}")
+
+
+class DatasetBuildError(RuntimeError):
+    """One stable, path-safe failure from dataset construction or publication."""
+
+    def __init__(
+        self,
+        code: ErrorCode,
+        message: str,
+        *,
+        partial_exists: bool = False,
+    ) -> None:
+        self.code = code
+        self.message = message
+        self.partial_exists = partial_exists
+        super().__init__(f"{code.value}: {message}")
+
+
 __all__ = [
     "ConfigIssue",
     "ConfigValidationError",
     "ConversionError",
+    "DatasetBuildError",
     "ErrorCode",
     "FeatureComputationError",
     "InterchangeReadError",
+    "LabelComputationError",
 ]

@@ -379,6 +379,25 @@ def _semantic_issues(document: dict[str, JSONValue], kind: ConfigKind) -> tuple[
                     )
                 )
     elif kind == "dataset":
+        for index, locator in enumerate(cast(list[str], document["conversion_manifests"])):
+            normalised = locator.replace("\\", "/")
+            path = Path(normalised)
+            segments = normalised.split("/")
+            if (
+                normalised.startswith("/")
+                or (len(normalised) >= 2 and normalised[1] == ":")
+                or path.is_absolute()
+                or path.drive
+                or any(part in {"", ".", ".."} or part.endswith(".partial") for part in segments)
+            ):
+                issues.append(
+                    ConfigIssue(
+                        f"/conversion_manifests/{index}",
+                        ErrorCode.INPUT_PATH,
+                        "Dataset manifest locators must be safe relative paths without "
+                        "partial components.",
+                    )
+                )
         symbols = cast(list[str], document["symbols"])
         tick_sizes = cast(dict[str, JSONValue], document["tick_size4_by_symbol"])
         if set(symbols) != set(tick_sizes):

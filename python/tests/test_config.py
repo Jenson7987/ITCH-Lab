@@ -174,6 +174,28 @@ def test_task_002_tick_map_must_exactly_match_symbols() -> None:
     assert captured.value.issues[0].json_pointer == "/tick_size4_by_symbol"
 
 
+@pytest.mark.parametrize(
+    "locator",
+    [
+        "../conversion-manifest.json",
+        "/tmp/conversion-manifest.json",
+        "runs/conversion.partial/conversion-manifest.json",
+        "runs//conversion-manifest.json",
+    ],
+)
+def test_task_019_dataset_conversion_locators_must_be_safe_relative_paths(
+    locator: str,
+) -> None:
+    document = json.loads((VALID_ROOT / "dataset.json").read_text(encoding="utf-8"))
+    document["conversion_manifests"][0] = locator
+
+    with pytest.raises(ConfigValidationError) as captured:
+        parse_config(json.dumps(document), "dataset")
+
+    assert captured.value.issues[0].code is ErrorCode.INPUT_PATH
+    assert captured.value.issues[0].json_pointer == "/conversion_manifests/0"
+
+
 def test_task_002_signal_strategy_requires_prediction_manifest() -> None:
     document = json.loads((VALID_ROOT / "simulation.json").read_text(encoding="utf-8"))
     document["prediction_manifest"] = None

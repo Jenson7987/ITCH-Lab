@@ -313,11 +313,35 @@ The displayed dates are examples, not confirmed study dates.
 
 Output:
 
-- dataset-manifest.json.
-- features and labels Parquet partitions.
-- data-quality.json and feature-catalogue.json.
+- `runs/dataset/<dataset-id>/dataset-manifest.json`.
+- Joined feature/label Parquet children beneath
+  `dataset/partition=<train|validation|test>/trading_date=.../symbol=.../part-0.parquet`.
+- Hashed `data-quality.json` and `feature-catalogue.json` supporting artefacts.
 
-Idempotency follows immutable run identity.
+Behaviour:
+
+- Accepts only safe relative completed conversion-manifest locators. It revalidates each conversion
+  schema, count, child hash/size/order and authenticated replay lineage before data use; degraded
+  conversions, missing days/symbols and insufficient snapshot depth fail before staging output.
+- Computes feature and label batches independently for one complete day/symbol at a time and joins
+  them only when trading date, symbol, message index, symbol ID, timestamp and qualifying ordinal
+  agree exactly.
+- The primary horizon is 100 qualifying rows and secondary horizons are 20 and 500. Labels compare
+  future and current integer `mid2`; exact threshold equality is flat. Primary null tails are
+  excluded while secondary null tails are retained.
+- Applies disjoint filters in the fixed order `history_complete`, primary-label availability, then
+  `qualifying_ordinal % row_stride == 0`. The stride never renumbers rows after an earlier filter.
+- Requires sorted, non-overlapping chronological whole-day train, validation and test lists; every
+  split must retain rows and the complete dataset must retain down, flat and up primary classes.
+- Writes bounded Zstandard Parquet row groups below a run-owned `.partial` directory, rechecks all
+  parent file identities, validates the strict dataset-manifest schema and publishes the manifest
+  last with a same-filesystem atomic directory rename. SIGINT and write failure cannot publish a
+  completed manifest.
+
+Idempotency follows the canonical dataset config, ordered conversion-manifest hashes and Python
+package-content digest. A matching run is reused only after its lineage, supporting documents,
+Parquet schemas/order/counts/classes and all child hashes are revalidated. `--force-new-run` creates
+a new immutable timestamped directory with the same full identity.
 
 ### train
 
@@ -567,8 +591,23 @@ Contract:
         config: FeatureConfig,
         context: FeaturePartitionContext,
     ) -> Iterator[RecordBatch]: ...
-    def build_labels(snapshots: LazyFrame, config: LabelConfig) -> LazyFrame: ...
-    def create_partitions(frame: LazyFrame, config: PartitionConfig) -> PartitionedDataset: ...
+    def label_schema(config: LabelConfig) -> Schema: ...
+    def build_label_batches(
+        snapshots: Iterable[RecordBatch],
+        config: LabelConfig,
+        context: FeaturePartitionContext,
+    ) -> Iterator[RecordBatch]: ...
+    def join_feature_label_batches(
+        feature_batches: Iterable[RecordBatch],
+        label_batches: Iterable[RecordBatch],
+        feature_config: FeatureConfig,
+        label_config: LabelConfig,
+        sampling: SamplingConfig,
+        partitions: PartitionConfig,
+        expected_date: date,
+        counts: PartitionJoinCounts,
+    ) -> Iterator[RecordBatch]: ...
+    def build_dataset(config: DatasetConfig, *, force_new_run: bool = False) -> DatasetResult: ...
     def train_baselines(dataset: PartitionedDataset, config: ExperimentConfig) -> ExperimentResult: ...
     def simulate(inputs: SimulationInputs, config: SimulationConfig) -> SimulationResult: ...
 
@@ -606,7 +645,11 @@ Contracts:
 - The feature catalogue and Arrow schema are deterministic functions of the validated version-1
   feature config. Warm-up nulls and intentional semantic nulls are distinguished by catalogue null
   policy plus the row's `history_complete` metadata.
-- Label functions are isolated so their future access cannot leak into feature expressions.
+- Label functions are isolated so their future access cannot leak into feature expressions. Their
+  bounded future buffer advances only on qualifying snapshots and resets for every day/symbol.
+- Dataset publication requires exact feature/label immutable-key agreement, chronological disjoint
+  whole-day splits and reconciled row/class/label-availability counts. Expected dataset failures
+  raise `DatasetBuildError` with a stable `ErrorCode` and no raw payload or absolute path.
 - PartitionedDataset exposes test rows for final evaluation, not training selection.
 - Simulation performs a causal as-of selection of the latest same-symbol prediction at or before each decision and records that prediction's exact immutable row identity.
 

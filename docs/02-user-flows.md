@@ -146,9 +146,11 @@ cancelled status through the CLI envelope and retains the run-owned `.partial` s
 5. Rows are ordered by day, symbol and message index.
 6. Causal rolling features are generated using current and past rows only.
 7. Future mid-price labels are generated separately.
-8. Warm-up and unlabelled tail rows are counted and removed.
+8. Incomplete-history rows and primary-label tails are counted and removed, then the configured
+   stride is applied to the original qualifying ordinal.
 9. Complete days are assigned to train, validation and test partitions.
-10. Dataset statistics, feature definitions and content hashes are written to a dataset manifest.
+10. The joined Parquet schema, row/class/label counts, feature definitions, parent identities and
+    child content hashes are frozen in a validated dataset manifest.
 
 ```mermaid
 flowchart TD
@@ -158,7 +160,7 @@ flowchart TD
     C --> E["Compute future labels separately"]
     D --> F["Join by immutable row key"]
     E --> F
-    F --> G["Drop warm-up and unlabelled tails"]
+    F --> G["Drop warm-up/tails, then apply ordinal stride"]
     G --> H{"Day splits overlap?"}
     H -- Yes --> I["Fail ERR_PARTITION"]
     H -- No --> J["Freeze dataset manifest"]
