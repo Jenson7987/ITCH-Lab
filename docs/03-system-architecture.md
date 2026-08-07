@@ -47,7 +47,7 @@ flowchart TD
 | C++ tests | Catch2 | Unit and integration test ergonomics |
 | Microbenchmarks | Google Benchmark | Repeatable benchmark harness and counters |
 | Python packaging | pyproject.toml, src layout | Modern isolated package and test imports |
-| Tabular engine | Polars and PyArrow/Parquet | Typed columnar processing without pandas object fallbacks |
+| Tabular engine | PyArrow/Parquet with bounded Python state | Typed columnar batches without pandas object fallbacks; Polars remains optional until a measured later-stage need |
 | Baseline models | scikit-learn | Transparent, established baselines |
 | Reporting | Markdown plus optional static HTML and PNG/SVG plots | Reviewable in Git and usable offline |
 
@@ -183,7 +183,7 @@ Subcommands: inspect, replay, validate and benchmark. Detailed contracts are in 
 | --- | --- |
 | interchange | Safe readers for supported event/snapshot schemas; no pickle |
 | conversion | Authenticated bounded conversion to typed Parquet and an atomic conversion manifest |
-| features | Past-only feature calculations and feature metadata |
+| features | Bounded past-only event/snapshot calculations and deterministic feature metadata |
 | labels | Future-horizon labels in a separate computation stage |
 | splits | Whole-day chronological partitions and leakage assertions |
 | models | Prior, logistic and gradient-boosting baselines |
@@ -241,7 +241,8 @@ Dependencies must be pinned or constrained, licence-reviewed and scanned in CI. 
 5. Normalised events are serialised for warm-up through session end, while snapshots are limited to the configured session.
 6. Artefacts are hashed, validated and atomically published.
 7. Python converts validated records in chunks.
-8. Feature and label stages write separate columns before a controlled join.
+8. Feature and label stages write separate columns before a controlled join; feature state consumes
+   only events at or before each decision message index.
 9. Models emit predictions keyed by immutable day/symbol/message index.
 10. Simulator joins predictions only at matching or earlier decision indices.
 11. Metrics and reports read immutable run manifests.

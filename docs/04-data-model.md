@@ -279,6 +279,24 @@ Stored in dataset-manifest.json with Parquet artefacts.
 
 Recommended Parquet partitioning: partition/trading_date/symbol, with row-group statistics on message_index and timestamp_ns. These are physical pruning aids, not database indexes.
 
+### FeatureRow and feature catalogue v1
+
+TASK-018 computes one row for every qualifying snapshot before sampling. The row identity columns
+are `trading_date` date32, `symbol` UTF-8, `symbol_id` uint16, `message_index` uint64,
+`timestamp_ns` uint64 and zero-based `qualifying_ordinal` uint64. `history_complete` is a non-feature
+boolean that is true only when every required event and clock lookback is complete. It lets the
+dataset stage distinguish warm-up nulls from intentional semantic nulls such as absent observable
+aggressor direction.
+
+Every continuous feature uses Arrow float64; `aggressor_sign` uses nullable int8. Derived values
+must be finite. The deterministic feature catalogue records, in output-column order, each feature's
+name, dtype, nullability, formula, lookback kind/value, units, null policy and owning module. The
+exact version-1 names and definitions are authoritative in `12-feature-catalogue.md`.
+
+Feature calculation is partition-scoped to one trading date and source symbol. Session bounds come
+from the authenticated replay config and tick size comes from the dataset config. Rolling state
+resets between partitions. Events with a message index after the feature row are never incorporated.
+
 ### Prediction
 
 Persisted as predictions.parquet.

@@ -65,23 +65,44 @@ These definitions are **recommendations** that remove ambiguity from FR-011 thro
 
 For each qualifying row:
 
-- spread_ticks = (a_t − b_t) / tick_size4.
-- imbalance_d = (B_t(d) − A_t(d)) / (B_t(d) + A_t(d)) for d in {1, 5, 10}; null only when the denominator is zero.
-- microprice_t = (a_t × B_t(1) + b_t × A_t(1)) / (B_t(1) + A_t(1)).
-- microprice_displacement_ticks = (microprice_t − mid2_t / 2) / tick_size4.
+- `spread_ticks = (a_t − b_t) / tick_size4`.
+- `imbalance_d = (B_t(d) − A_t(d)) / (B_t(d) + A_t(d))` for d in {1, 5, 10};
+  absent depth slots contribute zero and the result is null only when the denominator is zero.
+- `microprice4 = (a_t × B_t(1) + b_t × A_t(1)) / (B_t(1) + A_t(1))`.
+- `microprice_displacement_ticks = (microprice4 − mid2_t / 2) / tick_size4`.
 - Top-of-book order-flow increment:
 
   e_t = I[b_t ≥ b_(t−1)]B_t(1) − I[b_t ≤ b_(t−1)]B_(t−1)(1)
         − I[a_t ≤ a_(t−1)]A_t(1) + I[a_t ≥ a_(t−1)]A_(t−1)(1).
 
-- ofi_W is the sum of e over the trailing W qualifying rows. ofi_normalised_W divides that sum by the trailing sum of B(1)+A(1), returning null only for a zero denominator.
-- Event rates count add, cancel/delete and execution events by resting side in the half-open clock window (t−window, t], divided by window seconds. Required clock windows are 100 ms and 1 s.
-- realised_volatility_W is sqrt(sum(log(m_j/m_(j−1))²)) over trailing qualifying rows, where m_j = mid2_j / (2×10000). It is not annualised.
+- `ofi_W` sums the W increments ending at t. Because e_0 has no predecessor, it first becomes
+  valid at qualifying ordinal W. `ofi_normalised_W` divides that sum by the corresponding trailing
+  sum of `B(1)+A(1)`, returning null only for a zero denominator.
+- Event rates count add, cancel/delete and execution events by resting side in the half-open clock
+  window `(t−window, t]`, divided by window seconds. Events at the decision timestamp are eligible
+  only when their message index is at or before the feature-row message index. Required clock
+  windows are 100 ms and 1 s. Version 1 counts `add`, `cancel`/`delete` and
+  `execute`/`execute_price` respectively; `replace`, P, Q and B are not silently reclassified.
+- `realised_volatility_W` is `sqrt(sum(log(m_j/m_(j−1))²))` over the W returns ending
+  at t, where `m_j = mid2_j / (2×10000)`. It is not annualised and first becomes valid at
+  qualifying ordinal W.
 - session_progress is (timestamp_ns−session_start_ns)/(session_end_ns−session_start_ns), clipped to [0,1]; session_progress_squared captures intraday curvature.
-- For E/C events, aggressor_sign is the negative of the known resting-order side. P and Q messages do not provide dependable aggressor direction and are excluded from signed-flow features. execution_imbalance_W is signed executed quantity divided by total eligible executed quantity over the window; it is zero when no eligible execution occurs.
-- A B broken-trade message never rewrites an earlier feature row or restores the historical book. At break time, net trade-volume features subtract the referenced match only while it remains in their causal rolling window; displayed-book execution-rate features retain the original E/C mutation.
+- For E/C events that exactly trigger the qualifying snapshot, `aggressor_sign` is the negative of
+  the known resting-order side; it is null on other feature rows. P and Q messages do not provide
+  dependable aggressor direction and are excluded from signed-flow features.
+  `execution_imbalance_W` uses E/C executions in
+  `(message_index_(t−W), message_index_t]`: signed executed quantity divided by total eligible
+  executed quantity. It first becomes valid at qualifying ordinal W and is zero when the complete
+  window contains no eligible execution.
+- A B broken-trade message never rewrites an earlier feature row or restores the historical book.
+  At break time, `execution_imbalance_W` removes the referenced E/C match while that original
+  execution remains in the causal event window; displayed-book execution-rate features retain the
+  original E/C mutation. Unknown, P/Q or already broken matches do not create signed flow.
 
-Required event windows are 20, 100 and 500 qualifying rows. Infinite values are invalid. Warm-up rows without complete required windows are counted and excluded.
+Required event windows are 20, 100 and 500 qualifying transitions. Clock windows are incomplete
+until that much session time has elapsed. Infinite values are invalid. The feature output retains
+all qualifying rows with individual warm-up values set to null and an explicit `history_complete`
+flag; TASK-019 counts and excludes rows without every required history window before sampling.
 
 ### Labels
 

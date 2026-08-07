@@ -559,7 +559,14 @@ Contract:
         chunk_records: int,
     ) -> Iterator[SnapshotBatch]: ...
     def validate_replay(manifest: Path, *, deep: bool = False) -> ValidationReport: ...
-    def build_features(snapshots: LazyFrame, config: FeatureConfig) -> LazyFrame: ...
+    def feature_schema(config: FeatureConfig) -> Schema: ...
+    def feature_catalogue(config: FeatureConfig) -> tuple[FeatureDefinition, ...]: ...
+    def build_feature_batches(
+        events: Iterable[RecordBatch],
+        snapshots: Iterable[RecordBatch],
+        config: FeatureConfig,
+        context: FeaturePartitionContext,
+    ) -> Iterator[RecordBatch]: ...
     def build_labels(snapshots: LazyFrame, config: LabelConfig) -> LazyFrame: ...
     def create_partitions(frame: LazyFrame, config: PartitionConfig) -> PartitionedDataset: ...
     def train_baselines(dataset: PartitionedDataset, config: ExperimentConfig) -> ExperimentResult: ...
@@ -591,7 +598,14 @@ Contracts:
   zero-based record index; messages omit raw payloads and absolute paths.
 - Readers use explicit little-endian field decoding and bounded reads. They do not use native struct
   packing, mmap, pickle, joblib, eval or exec and perform no network or filesystem writes.
-- Feature functions may inspect current/past rows only.
+- Feature calculation operates on one `(trading_date, symbol)` partition at a time. Context supplies
+  the authenticated replay session bounds, configured tick size and expected day-local symbol ID.
+- Event and snapshot batches must use the documented conversion schemas and strict message-index
+  order. The feature engine consumes no event with an index after the current decision index and
+  retains only bounded event/clock-window state.
+- The feature catalogue and Arrow schema are deterministic functions of the validated version-1
+  feature config. Warm-up nulls and intentional semantic nulls are distinguished by catalogue null
+  policy plus the row's `history_complete` metadata.
 - Label functions are isolated so their future access cannot leak into feature expressions.
 - PartitionedDataset exposes test rows for final evaluation, not training selection.
 - Simulation performs a causal as-of selection of the latest same-symbol prediction at or before each decision and records that prediction's exact immutable row identity.

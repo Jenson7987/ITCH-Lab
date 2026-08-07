@@ -645,6 +645,7 @@ __all__ = [
     "ConversionParquetConfig",
     "DatasetConfig",
     "ExperimentConfig",
+    "FeatureConfig",
     "MAX_IJSON_INTEGER",
     "ReplayConfig",
     "SimulationConfig",

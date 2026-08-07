@@ -4,8 +4,9 @@ This is the Python foundation for the offline ITCH-Lab research platform. It pro
 entry points, strict configuration, stable-error and canonical-hashing contracts, plus authenticated
 chunked readers for the event-v1 and snapshot-v1 C++ interchange files. The implemented `convert`
 command validates completed replay lineage, writes typed Zstandard Parquet in bounded batches and
-atomically publishes an immutable conversion manifest. Feature, model and simulation commands are
-implemented by later tasks.
+atomically publishes an immutable conversion manifest. The package also exposes a partition-scoped
+causal feature service and deterministic version-1 feature catalogue. Dataset publication, labels,
+model and simulation commands are implemented by later tasks.
 
 From the repository root, point `configs/conversion.example.json` at completed replay manifests,
 then run:

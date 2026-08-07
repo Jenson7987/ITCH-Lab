@@ -101,10 +101,27 @@ class ConversionError(RuntimeError):
         super().__init__(f"{code.value}: {message}")
 
 
+class FeatureComputationError(ValueError):
+    """One stable, row-safe failure from causal feature calculation."""
+
+    def __init__(
+        self,
+        code: ErrorCode,
+        message: str,
+        *,
+        message_index: int | None = None,
+    ) -> None:
+        self.code = code
+        self.message = message
+        self.message_index = message_index
+        super().__init__(f"{code.value}: {message}")
+
+
 __all__ = [
     "ConfigIssue",
     "ConfigValidationError",
     "ConversionError",
     "ErrorCode",
+    "FeatureComputationError",
     "InterchangeReadError",
 ]

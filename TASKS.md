@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-018: Implement causal feature catalogue
-  - Dependencies: TASK-017
-  - Acceptance criteria: Required past-only features and metadata
-  - Tests: UT-FEAT-001
-  - Documentation to update: Feature catalogue and 01 requirements
-
 - [ ] TASK-019: Implement labels, splits and leakage guards
   - Dependencies: TASK-018
   - Acceptance criteria: Three-class horizons, chronological whole days, frozen manifest
@@ -97,6 +91,21 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-018: Implement causal feature catalogue
+  - Completed: 2026-08-07
+  - Evidence: The partition-scoped PyArrow service streams exact event-v1 and snapshot-v1 batches
+    into 33 documented version-1 features with immutable row metadata, explicit per-feature warm-up
+    nulls and a complete-history flag. It implements spread, depth-1/5/10 imbalance, microprice and
+    displacement, 20/100/500 OFI and realised-volatility windows, resting-side 100 ms/1 s event
+    rates, observable E/C aggressor direction and B-corrected execution imbalance using only events
+    at or before each decision index. The deterministic catalogue records dtypes, formulae,
+    lookbacks, units, null policies and ownership. Thirteen TASK-018 tests include independent
+    catalogue and hand-calculated goldens, exact window boundaries, causal B correction,
+    equal-timestamp ordering, non-qualifying rows, stable invalid-input errors and UT-FEAT-001's
+    unchanged-prefix future-mutation guard. All 168 Python tests, Ruff formatting/lint, strict mypy,
+    the 25-file fixture check and wheel/sdist build passed. The Release C++ build passed; 128 CTest
+    entries passed and the authorised official-sample entry skipped as designed.
 
 - [x] TASK-017: Convert interchange to Parquet
   - Completed: 2026-08-07

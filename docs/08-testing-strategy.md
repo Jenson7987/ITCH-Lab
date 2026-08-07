@@ -124,8 +124,14 @@ CT-JSON-001 validates the strict completed-manifest schema and rejects unknown k
   failure and service cancellation leave only partial output; a real subprocess SIGINT exits 130
   without a completed manifest.
 - Price4 conversions avoid binary-float values until presentation.
-- Each rolling feature on a hand-calculated event sequence.
-- Future perturbation does not change earlier features.
+- TASK-018 hand-calculated cases reconcile the exact catalogue/schema, current depth and
+  microprice values, all 20/100/500 qualifying-transition boundaries, 100 ms/1 s event-rate
+  boundaries, realised volatility, observable E/C direction and causal B corrections.
+- UT-FEAT-001 mutates later event/snapshot input and proves the complete earlier Arrow prefix is
+  byte-for-byte equivalent. Equal-timestamp events after the decision index are also excluded.
+- Feature boundary tests reject schema/depth, partition/order, session-context, price and quantity
+  violations with stable typed errors, and prove non-qualifying snapshots do not advance rolling
+  windows.
 - Labels for up/flat/down and unavailable tails.
 - Whole-day partition overlap rejection.
 - Imputer/scaler fit calls receive training partition only.

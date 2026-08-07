@@ -10,8 +10,9 @@ inspect/replay command slice are implemented. Replay routes the complete visible
 session/trading-state metadata, supports strict or budgeted permissive processing, emits bounded
 stderr progress and cancels safely at message boundaries. The production event-v1 binary writer is
 implemented alongside snapshot-v1 and atomic completed replay manifests. Public artefact
-validation and authenticated, bounded conversion to partitioned Parquet are implemented; feature,
-model and simulation stages remain planned.
+validation and authenticated, bounded conversion to partitioned Parquet are implemented. The
+version-1 causal feature catalogue and bounded event/snapshot feature service are also implemented;
+dataset publication, labels, models and simulation remain planned.
 
 Classification legend used throughout the documentation:
 
@@ -27,7 +28,7 @@ Classification legend used throughout the documentation:
 | Performance core | C++20, CMake, Clang/GCC | Confirmed requirement |
 | Compression | zlib-compatible streaming reader | Recommendation |
 | C++ testing | Catch2 and Google Benchmark | Recommendation |
-| Research package | Python 3.11+, NumPy, Polars, scikit-learn, PyArrow | Confirmed requirement for Python; libraries are recommendations |
+| Research package | Python 3.11+, PyArrow; NumPy/scikit-learn when later tasks require them | Confirmed requirement for Python; libraries are recommendations |
 | Python quality | pytest, Ruff, mypy | Recommendation |
 | Configuration | Version-controlled JSON validated against JSON Schema | Recommendation |
 | Data storage | Raw ITCH files, versioned binary interchange files, Parquet research tables, JSON manifests | Recommendation |
@@ -77,7 +78,9 @@ standalone interchange files in shallow or streamed deep mode. Authenticated Pyt
 snapshot-v1 readers expose typed, validated records in bounded chunks. The Python `convert` command
 now validates replay lineage and child hashes, preserves integer/null semantics in typed Parquet,
 and atomically publishes a conversion manifest with complete lineage and child hashes. Feature
-construction, modelling and simulation commands are implemented by later tasks.
+construction now has a partition-scoped PyArrow service with an exact catalogue, causal rolling
+state and explicit warm-up nulls. The `build-dataset` command, labels, modelling and simulation are
+implemented by later tasks.
 
 ## Local setup
 
@@ -218,6 +221,7 @@ The release benchmark command is added by `TASK-029`:
 - [Deployment and releases](docs/09-deployment.md)
 - [Implementation plan](docs/10-implementation-plan.md)
 - [Traceability matrix](docs/11-traceability.md)
+- [Feature catalogue](docs/12-feature-catalogue.md)
 - [Architecture decisions](docs/decisions/)
 - [Consolidated specification](FULL_PROJECT_SPECIFICATION.md)
 
