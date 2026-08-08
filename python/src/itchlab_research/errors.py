@@ -165,6 +165,22 @@ class ModelTrainingError(RuntimeError):
         super().__init__(f"{code.value}: {message}")
 
 
+class ReportGenerationError(RuntimeError):
+    """One stable, path-safe failure from research-report generation."""
+
+    def __init__(
+        self,
+        code: ErrorCode,
+        message: str,
+        *,
+        partial_exists: bool = False,
+    ) -> None:
+        self.code = code
+        self.message = message
+        self.partial_exists = partial_exists
+        super().__init__(f"{code.value}: {message}")
+
+
 __all__ = [
     "ConfigIssue",
     "ConfigValidationError",
@@ -175,4 +191,5 @@ __all__ = [
     "InterchangeReadError",
     "LabelComputationError",
     "ModelTrainingError",
+    "ReportGenerationError",
 ]

@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import stat
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -50,6 +51,7 @@ from itchlab_research.models.gradient_boosting import (
 )
 from itchlab_research.models.logistic import fit_logistic_candidates, logistic_probabilities
 from itchlab_research.models.models import (
+    AuthenticatedExperiment,
     DatasetArtefact,
     ExperimentProgress,
     ExperimentResult,
@@ -72,6 +74,7 @@ _INPUT_BATCH_ROWS: Final = 65_536
 _ROW_GROUP_ROWS: Final = 65_536
 _PARTITION_KEYS: Final = ("partition", "trading_date", "symbol")
 _MODEL_ORDER: Final = ("prior", "logistic_regression", "hist_gradient_boosting")
+_RUN_ID_PATTERN: Final = re.compile(r"^[0-9]{8}T[0-9]{6}\.[0-9]{9}Z-[0-9a-f]{12}$")
 
 CancelCheck: TypeAlias = Callable[[], bool]
 ProgressCallback: TypeAlias = Callable[[ExperimentProgress], None]
@@ -1363,6 +1366,93 @@ def _verify_existing(
     return _result_from_manifest(manifest_path, document, reused=True)
 
 
+def load_completed_experiment(
+    run_id: str,
+    *,
+    base_directory: Path | None = None,
+    cancel_requested: CancelCheck | None = None,
+) -> AuthenticatedExperiment:
+    """Authenticate a completed predictive experiment for read-only consumers."""
+    base = (Path.cwd() if base_directory is None else base_directory).resolve()
+    cancellation = cancel_requested or (lambda: False)
+    _check_cancel(cancellation)
+    if not isinstance(run_id, str) or _RUN_ID_PATTERN.fullmatch(run_id) is None:
+        raise _fail(ErrorCode.INPUT_PATH, "The experiment run ID is invalid.")
+
+    directory = base / _EXPERIMENT_RUN_ROOT / run_id
+    manifest_path = directory / _MANIFEST_NAME
+    manifest_content, manifest_identity = _read_regular_file(manifest_path, _MAX_JSON_BYTES)
+    document = _strict_json(manifest_content, description="Experiment manifest")
+    _validate_manifest(document, "experiment")
+    if document.get("experiment_id") != run_id:
+        raise _fail(ErrorCode.HASH_MISMATCH, "Experiment manifest identity is inconsistent.")
+    try:
+        parsed_config = parse_config(
+            json.dumps(document["config"], ensure_ascii=False, allow_nan=False),
+            "experiment",
+        )
+    except (ConfigValidationError, KeyError, TypeError, ValueError) as error:
+        raise _fail(ErrorCode.SCHEMA_VERSION, "Experiment manifest config is invalid.") from error
+    if not isinstance(parsed_config, ExperimentConfig):
+        raise _fail(ErrorCode.SCHEMA_VERSION, "Experiment manifest config type is invalid.")
+
+    dataset = load_partitioned_dataset(
+        parsed_config,
+        base_directory=base,
+        cancel_requested=cancellation,
+    )
+    hashes = config_hashes(parsed_config)
+    expected_identity = _stage_identity(
+        b"itchlab-experiment-v1",
+        [dataset.manifest_sha256],
+        hashes.identity_config_sha256,
+        cast(str, cast(dict[str, Any], document["tool"])["sha256"]),
+    )
+    verified = _verify_existing(
+        directory,
+        expected_identity,
+        parsed_config,
+        dataset,
+        cast(str, cast(dict[str, Any], document["tool"])["sha256"]),
+        cancellation,
+    )
+    if verified is None:
+        raise _fail(ErrorCode.HASH_MISMATCH, "Experiment content identity is inconsistent.")
+
+    final_content, final_identity = _read_regular_file(manifest_path, _MAX_JSON_BYTES)
+    if final_content != manifest_content or final_identity != manifest_identity:
+        raise _fail(ErrorCode.HASH_MISMATCH, "Experiment manifest changed during validation.")
+
+    evidence: dict[str, dict[str, Any]] = {}
+    for entry in cast(list[dict[str, Any]], document["artefacts"]):
+        kind = cast(str, entry["kind"])
+        if kind not in {"metrics_validation", "metrics_test", "diagnostics"}:
+            continue
+        content, _identity_value = _read_regular_file(
+            directory / cast(str, entry["path"]), _MAX_JSON_BYTES
+        )
+        if (
+            len(content) != cast(int, entry["size_bytes"])
+            or hashlib.sha256(content).hexdigest() != entry["sha256"]
+        ):
+            raise _fail(ErrorCode.HASH_MISMATCH, "Experiment evidence changed after validation.")
+        evidence[kind] = _strict_json(content, description="Experiment reporting evidence")
+    if set(evidence) != {"metrics_validation", "metrics_test", "diagnostics"}:
+        raise _fail(ErrorCode.HASH_MISMATCH, "Experiment reporting evidence is incomplete.")
+
+    return AuthenticatedExperiment(
+        experiment_id=run_id,
+        manifest_path=manifest_path,
+        manifest_sha256=hashlib.sha256(manifest_content).hexdigest(),
+        config=parsed_config,
+        dataset=dataset,
+        manifest=document,
+        validation_metrics=evidence["metrics_validation"],
+        test_metrics=evidence["metrics_test"],
+        diagnostics=evidence["diagnostics"],
+    )
+
+
 def _prepare_run(
     root: Path,
     identity_sha256: str,
@@ -1821,4 +1911,4 @@ def train_baselines(
     )
 
 
-__all__ = ["load_partitioned_dataset", "train_baselines"]
+__all__ = ["load_completed_experiment", "load_partitioned_dataset", "train_baselines"]

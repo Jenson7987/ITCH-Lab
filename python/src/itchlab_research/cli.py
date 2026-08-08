@@ -24,12 +24,14 @@ from itchlab_research.errors import (
     DatasetBuildError,
     ErrorCode,
     ModelTrainingError,
+    ReportGenerationError,
 )
 from itchlab_research.models import (
     ExperimentProgress,
     load_partitioned_dataset,
     train_baselines,
 )
+from itchlab_research.reporting import ReportFormat, generate_report
 
 _PROGRAM_NAME = "itchlab-research"
 _MODEL_ORDER_FOR_DISPLAY = (
@@ -45,6 +47,7 @@ Commands:
   convert      Convert authenticated replay artefacts to partitioned Parquet.
   build-dataset Build causal labels and frozen chronological dataset partitions.
   train        Train, select and evaluate the required predictive baselines.
+  report       Generate an accessible predictive research report.
 
 Global options:
   --help       Show this help text.
@@ -122,6 +125,29 @@ Exit categories: 0 success, 2 config, 3 input, 6 output, 7 validation, 8 model,
 70 internal, 130 cancellation.
 """
 
+_REPORT_HELP = f"""Generate an accessible report from a completed predictive experiment.
+
+Usage: {_PROGRAM_NAME} report --run-id <experiment-id> [options]
+
+Required:
+  --run-id <id>               Completed predictive experiment ID.
+
+Options:
+  --output-format <value>     markdown, html or both (default markdown).
+  --format <human|json>       Result format (default human).
+  --quiet                     Suppress non-error progress.
+  --ascii                     Restrict command presentation to ASCII.
+  --no-colour                 Disable colour presentation.
+  --help                      Show this help text.
+
+Example:
+  {_PROGRAM_NAME} report --run-id 20260808T120000.000000000Z-a1b2c3d4e5f6 \\
+      --output-format both
+
+Exit categories: 0 success, 2 config, 3 input, 6 output, 7 validation, 8 model,
+70 internal, 130 cancellation.
+"""
+
 
 def _convert_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog=f"{_PROGRAM_NAME} convert", add_help=False)
@@ -154,6 +180,17 @@ def _train_parser() -> argparse.ArgumentParser:
     parser.add_argument("--force-new-run", action="store_true")
     parser.add_argument("--format", choices=("human", "json"), default="human")
     parser.add_argument("--log-format", choices=("human", "jsonl"), default="human")
+    parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--ascii", action="store_true")
+    parser.add_argument("--no-colour", action="store_true")
+    return parser
+
+
+def _report_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog=f"{_PROGRAM_NAME} report", add_help=False)
+    parser.add_argument("--run-id")
+    parser.add_argument("--output-format", choices=("markdown", "html", "both"), default="markdown")
+    parser.add_argument("--format", choices=("human", "json"), default="human")
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--ascii", action="store_true")
     parser.add_argument("--no-colour", action="store_true")
@@ -763,9 +800,7 @@ def _run_train(arguments: Sequence[str]) -> int:
                         "selected_parameters": selected,
                         "test_metrics": test_metrics,
                         "reused": result.reused,
-                        "next_command": (
-                            f"{_PROGRAM_NAME} simulate --config configs/simulation.example.json"
-                        ),
+                        "next_command": (f"{_PROGRAM_NAME} report --run-id {result.experiment_id}"),
                     },
                     "warnings": list(result.warnings),
                 },
@@ -785,7 +820,114 @@ def _run_train(arguments: Sequence[str]) -> int:
         )
         for warning in result.warnings:
             print(f"Warning: {warning}", file=sys.stderr)
-        print(f"Next: {_PROGRAM_NAME} simulate --config configs/simulation.example.json")
+        print(f"Next: {_PROGRAM_NAME} report --run-id {result.experiment_id}")
+    return 0
+
+
+def _run_report(arguments: Sequence[str]) -> int:
+    if arguments in (["--help"], ["-h"]):
+        print(_REPORT_HELP, end="")
+        return 0
+    if arguments == ["--version"]:
+        print(f"{_PROGRAM_NAME} {__version__}")
+        return 0
+    if not arguments:
+        print(f"{_PROGRAM_NAME} report: --run-id is required.", file=sys.stderr)
+        return 2
+    duplicate = _duplicate_option(arguments)
+    if duplicate is not None:
+        print(f"{_PROGRAM_NAME} report: duplicate option {duplicate}.", file=sys.stderr)
+        return 2
+    parser = _report_parser()
+    try:
+        parsed = parser.parse_args(list(arguments))
+    except SystemExit:
+        return 2
+    if parsed.run_id is None:
+        print(f"{_PROGRAM_NAME} report: --run-id is required.", file=sys.stderr)
+        return 2
+
+    result_format = cast(str, parsed.format)
+    cancelled = threading.Event()
+    signal_count = 0
+    previous_handler = signal.getsignal(signal.SIGINT)
+
+    def handle_interrupt(signum: int, frame: object) -> None:
+        del signum, frame
+        nonlocal signal_count
+        signal_count += 1
+        if signal_count == 1:
+            cancelled.set()
+            if not cast(bool, parsed.quiet):
+                print("Cancellation requested; closing partial report output.", file=sys.stderr)
+            return
+        raise KeyboardInterrupt
+
+    try:
+        signal.signal(signal.SIGINT, handle_interrupt)
+        result = generate_report(
+            cast(str, parsed.run_id),
+            output_format=cast(ReportFormat, parsed.output_format),
+            cancel_requested=cancelled.is_set,
+        )
+    except ReportGenerationError as error:
+        _write_error(
+            error.code,
+            error.message,
+            command="report",
+            result_format=result_format,
+            partial_exists=error.partial_exists,
+        )
+        return _exit_code(error.code)
+    except KeyboardInterrupt:
+        _write_error(
+            ErrorCode.CANCELLED,
+            "Predictive report generation was interrupted before completion.",
+            command="report",
+            result_format=result_format,
+            partial_exists=True,
+        )
+        return 130
+    except Exception:
+        _write_error(
+            ErrorCode.INTERNAL,
+            "Unexpected predictive report failure.",
+            command="report",
+            result_format=result_format,
+            partial_exists=True,
+        )
+        return 70
+    finally:
+        signal.signal(signal.SIGINT, previous_handler)
+
+    output_directory = _safe_display_path(result.output_directory)
+    if result_format == "json":
+        print(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "command": "report",
+                    "status": result.status,
+                    "run_id": result.experiment_id,
+                    "summary": {
+                        "output_directory": output_directory,
+                        "output_format": result.output_format,
+                        "artefacts": list(result.artefacts),
+                        "reused": result.reused,
+                    },
+                    "warnings": list(result.warnings),
+                },
+                separators=(",", ":"),
+            )
+        )
+    else:
+        action = "Reused" if result.reused else "Completed"
+        print(f"{action} predictive report for {result.experiment_id}.")
+        print(f"Output: {output_directory}")
+        print(f"Format: {result.output_format}.")
+        print(f"Artefacts: {len(result.artefacts):,} files.")
+        for warning in result.warnings:
+            print(f"Warning: {warning}", file=sys.stderr)
     return 0
 
 
@@ -804,6 +946,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_build_dataset(arguments[1:])
     if arguments[0] == "train":
         return _run_train(arguments[1:])
+    if arguments[0] == "report":
+        return _run_report(arguments[1:])
     print(f"{_PROGRAM_NAME}: unrecognised command or argument.", file=sys.stderr)
     print(f"Try '{_PROGRAM_NAME} --help' for usage.", file=sys.stderr)
     return 2

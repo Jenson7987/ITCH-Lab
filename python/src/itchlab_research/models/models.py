@@ -10,6 +10,8 @@ import numpy as np
 import pyarrow as pa
 from numpy.typing import NDArray
 
+from itchlab_research.config import ExperimentConfig
+
 PartitionName = Literal["train", "validation", "test"]
 ModelName = Literal["prior", "logistic_regression", "hist_gradient_boosting"]
 FileIdentity = tuple[int, int, int, int, int]
@@ -45,6 +47,21 @@ class PartitionedDataset:
     feature_names: tuple[str, ...]
     primary_label: str
     artefacts: tuple[DatasetArtefact, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class AuthenticatedExperiment:
+    """A completed predictive experiment and its authenticated reporting evidence."""
+
+    experiment_id: str
+    manifest_path: Path
+    manifest_sha256: str
+    config: ExperimentConfig
+    dataset: PartitionedDataset
+    manifest: dict[str, Any]
+    validation_metrics: dict[str, Any]
+    test_metrics: dict[str, Any]
+    diagnostics: dict[str, Any]
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,6 +130,7 @@ class ExperimentResult:
 
 
 __all__ = [
+    "AuthenticatedExperiment",
     "DatasetArtefact",
     "ExperimentProgress",
     "ExperimentResult",

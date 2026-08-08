@@ -9,6 +9,7 @@ from collections.abc import Callable
 from datetime import date
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -566,7 +567,7 @@ def dataset_conversion_factory(tmp_path: Path) -> Callable[..., Path]:
                 [field for field in logical_schema if field.name not in {"trading_date", "symbol"}]
             )
             for trading_date in trading_dates:
-                encoded_symbol = symbol.replace("/", "%2F")
+                encoded_symbol = quote(symbol, safe="")
                 relative = (
                     Path(kind)
                     / f"trading_date={trading_date}"

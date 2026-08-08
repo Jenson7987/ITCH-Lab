@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-021: Generate predictive report section
-  - Dependencies: TASK-020
-  - Acceptance criteria: Reproducible accessible report with negative results/limitations
-  - Tests: IT-011 and injection/accessibility
-  - Documentation to update: README report example
-
 - [ ] TASK-022: Implement order state machine and latency
   - Dependencies: TASK-017, TASK-019
   - Acceptance criteria: Valid deterministic lifecycle and action timing
@@ -79,6 +73,23 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-021: Generate predictive report section
+  - Completed: 2026-08-08
+  - Evidence: The `itchlab-research report` command reauthenticates a completed predictive
+    experiment and its dataset, conversion and replay manifest lineage before publishing a
+    format-scoped immutable report bundle. Deterministic Markdown and optional semantic HTML cover
+    source/code lineage, chronological splits, feature definitions, every model candidate,
+    validation/test aggregate and per-symbol metrics, confidence intervals, confusion matrices,
+    calibration, negative results, limitations and relative reproduction commands. Bundles include
+    canonical config snapshots, machine-readable calibration data and six labelled static SVGs
+    with captions and adjacent text summaries; mismatched completed bundles are never overwritten.
+    IT-011 plus CLI, injection, accessibility, lineage/output tamper and write-failure tests cover
+    deterministic reuse, all output-format choices, safe partial retention, path privacy, escaped
+    data, semantic tables, relative links and distinguishable plot colour/line/marker encodings. All
+    223 Python tests, Ruff formatting/lint, strict mypy and wheel/sdist build passed. The Release C++
+    build passed; all 128 runnable CTest entries passed and the authorised external-data test
+    skipped as designed.
 
 - [x] TASK-020: Train/evaluate predictive baselines
   - Completed: 2026-08-08

@@ -12,8 +12,8 @@ stderr progress and cancels safely at message boundaries. The production event-v
 implemented alongside snapshot-v1 and atomic completed replay manifests. Public artefact
 validation and authenticated, bounded conversion to partitioned Parquet are implemented. The
 version-1 causal feature catalogue, bounded event/snapshot feature service, frozen dataset
-publication, and required predictive baselines are also implemented. Simulation and reports remain
-planned.
+publication, required predictive baselines and predictive experiment reporting are also
+implemented. Simulation and simulation reporting remain planned.
 
 Classification legend used throughout the documentation:
 
@@ -87,7 +87,9 @@ dataset manifest. The Python `train` command authenticates that frozen dataset, 
 prior/logistic/histogram-gradient-boosting baselines with training-only preprocessing, selects on
 validation log loss, evaluates test rows once, and publishes predictions, metrics, calibration and
 safe diagnostics without serialising executable model objects. Simulation is implemented by a
-later task.
+later task. The Python `report` command authenticates the completed experiment and its full
+dataset/conversion/replay lineage before atomically publishing deterministic Markdown and/or HTML,
+static SVG calibration plots, text summaries and relative reproduction commands.
 
 ## Local setup
 
@@ -159,6 +161,9 @@ The implemented synthetic vertical slice can be exercised without licensed marke
         --config configs/dataset.example.json
     python -m itchlab_research train \
         --config configs/experiment.example.json
+    python -m itchlab_research report \
+        --run-id <experiment-id> \
+        --output-format both
 
 The replay command accepts one or more configured symbols, applies selected pre-session events to
 warm each book, and limits snapshots to the configured half-open session and optional tradable-state
@@ -201,10 +206,17 @@ and test predictions, metrics and safe diagnostics are complete. It never reads 
 objects; reproduction retrains from the recorded config, seed, parent hash and package-content
 digest. A matching completed run is revalidated and reused unless `--force-new-run` is supplied.
 
+Run `report` with the completed experiment ID printed by `train`. The command reauthenticates the
+experiment and its dataset, conversion and replay manifests, then writes an immutable bundle beneath
+`runs/report/<experiment-id>/<markdown|html|both>/`. The bundle includes the requested report form,
+canonical config snapshots, machine-readable calibration data and accessible static SVG plots. A
+byte-identical completed bundle is reused; an inconsistent completed bundle or retained partial
+bundle is never overwritten. Report reproduction commands and links use relative paths, and no
+runtime download is attempted.
+
 Remaining planned research workflow (implemented by later tasks):
 
     python -m itchlab_research simulate --config configs/simulation.example.json
-    python -m itchlab_research report --run-id <run-id>
 
 ## Testing and quality commands
 

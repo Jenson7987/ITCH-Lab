@@ -471,9 +471,23 @@ Validation rejects marketable orders in passive-only mode, negative latency, inv
 
 ### report
 
-    itchlab-research report +      --run-id <simulation-or-experiment-id> +      [--output-format markdown|html|both]
+    itchlab-research report \
+        --run-id <experiment-id> \
+        [--output-format markdown|html|both] \
+        [--format human|json]
 
-The report command reads completed manifests only. It writes report.md, optional report.html, plot data and static plots. It includes exact reproduction commands with relative paths.
+TASK-021 accepts a completed predictive experiment ID. TASK-027 extends the command to completed
+simulation IDs when simulation reporting exists. The default output format is `markdown`; `html`
+writes only HTML and `both` writes both human-readable forms. The command locates the input beneath
+`runs/experiment/<experiment-id>/` and publishes a separate immutable bundle beneath
+`runs/report/<experiment-id>/<output-format>/`, so it never modifies a completed experiment.
+
+The command authenticates the completed experiment, dataset and manifest lineage before rendering.
+It writes the selected `report.md` and/or `report.html`, canonical reproduction-config snapshots,
+machine-readable calibration plot data and static SVG plots. Every plot has labelled axes, alt text,
+a caption and an adjacent textual summary. Reproduction commands contain only relative paths.
+Publication uses a format-scoped partial directory and atomic rename. A byte-identical existing
+bundle is reused; an inconsistent completed bundle or matching partial/lock fails without overwrite.
 
 ## C++ public module interfaces
 
@@ -644,6 +658,17 @@ Contract:
     ) -> Iterator[RecordBatch]: ...
     def build_dataset(config: DatasetConfig, *, force_new_run: bool = False) -> DatasetResult: ...
     def train_baselines(dataset: PartitionedDataset, config: ExperimentConfig) -> ExperimentResult: ...
+    def load_completed_experiment(
+        run_id: str,
+        *,
+        base_directory: Path | None = None,
+    ) -> AuthenticatedExperiment: ...
+    def generate_report(
+        run_id: str,
+        *,
+        output_format: Literal["markdown", "html", "both"] = "markdown",
+        base_directory: Path | None = None,
+    ) -> ReportResult: ...
     def simulate(inputs: SimulationInputs, config: SimulationConfig) -> SimulationResult: ...
 
 Contracts:
@@ -672,6 +697,13 @@ Contracts:
   zero-based record index; messages omit raw payloads and absolute paths.
 - Readers use explicit little-endian field decoding and bounded reads. They do not use native struct
   packing, mmap, pickle, joblib, eval or exec and perform no network or filesystem writes.
+- `load_completed_experiment` validates the strict experiment manifest, its dataset and every
+  declared experiment artefact before returning reporting evidence; content changes during
+  validation fail with a stable hash error.
+- `generate_report` additionally authenticates conversion and replay manifest lineage, escapes all
+  data-derived presentation fields, rejects private absolute paths and publishes through a
+  format-scoped partial directory and atomic rename. It reuses only a byte-identical completed
+  report bundle and never modifies a completed experiment.
 - Feature calculation operates on one `(trading_date, symbol)` partition at a time. Context supplies
   the authenticated replay session bounds, configured tick size and expected day-local symbol ID.
 - Event and snapshot batches must use the documented conversion schemas and strict message-index

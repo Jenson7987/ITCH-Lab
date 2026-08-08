@@ -72,6 +72,9 @@ def test_task_020_train_cli_json_success_has_clean_channels(
         "logistic_regression",
         "hist_gradient_boosting",
     }
+    assert result["summary"]["next_command"] == (
+        f"itchlab-research report --run-id {result['run_id']}"
+    )
     assert not Path(result["summary"]["manifest_path"]).is_absolute()
 
 
