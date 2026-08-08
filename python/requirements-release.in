@@ -1,6 +1,8 @@
 # Build dependencies used for an isolated release environment.
 jsonschema>=4.25,<5
+numpy>=1.26,<3
 pyarrow>=11,<24
 rfc8785>=0.1.4,<1
+scikit-learn>=1.8,<1.10
 setuptools>=83,<84
 wheel>=0.47,<1

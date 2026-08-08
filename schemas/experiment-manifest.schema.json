@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://itchlab.local/schemas/experiment-manifest.schema.json",
+  "title": "ITCH-Lab completed predictive experiment manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "experiment_id", "status", "started_at", "completed_at",
+    "config", "config_sha256", "identity_config_sha256", "identity_sha256",
+    "tool", "parent", "classes", "feature_names", "selection",
+    "test_evaluation_count", "prediction_schema", "artefacts", "warnings"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "experiment_id": {"$ref": "#/$defs/runId"},
+    "status": {"const": "completed"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"},
+    "config": {"$ref": "https://itchlab.local/schemas/experiment-config.schema.json"},
+    "config_sha256": {"$ref": "#/$defs/sha256"},
+    "identity_config_sha256": {"$ref": "#/$defs/sha256"},
+    "identity_sha256": {"$ref": "#/$defs/sha256"},
+    "tool": {"$ref": "#/$defs/tool"},
+    "parent": {"$ref": "#/$defs/parent"},
+    "classes": {
+      "type": "array", "minItems": 3, "maxItems": 3,
+      "prefixItems": [
+        {"type": "object", "additionalProperties": false, "required": ["name", "value"], "properties": {"name": {"const": "down"}, "value": {"const": -1}}},
+        {"type": "object", "additionalProperties": false, "required": ["name", "value"], "properties": {"name": {"const": "flat"}, "value": {"const": 0}}},
+        {"type": "object", "additionalProperties": false, "required": ["name", "value"], "properties": {"name": {"const": "up"}, "value": {"const": 1}}}
+      ],
+      "items": false
+    },
+    "feature_names": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "selection": {
+      "type": "object", "additionalProperties": false,
+      "required": ["metric", "tie_tolerance", "models"],
+      "properties": {
+        "metric": {"const": "multiclass_log_loss"},
+        "tie_tolerance": {"const": 0.000001},
+        "models": {
+          "type": "array", "minItems": 3, "maxItems": 3,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["model_name", "status", "selected_parameters", "validation_log_loss"],
+            "properties": {
+              "model_name": {"enum": ["prior", "logistic_regression", "hist_gradient_boosting"]},
+              "status": {"const": "completed"},
+              "selected_parameters": {"type": "object"},
+              "validation_log_loss": {"type": "number", "minimum": 0}
+            }
+          }
+        }
+      }
+    },
+    "test_evaluation_count": {"const": 1},
+    "prediction_schema": {"$ref": "#/$defs/schema"},
+    "artefacts": {
+      "type": "array", "minItems": 4, "maxItems": 4, "uniqueItems": true,
+      "items": {"$ref": "#/$defs/artefact"}
+    },
+    "warnings": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+  },
+  "$defs": {
+    "runId": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{6}\\.[0-9]{9}Z-[0-9a-f]{12}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "count": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+    "safePath": {"type": "string", "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)(?:\\.\\.?)(?:/|$))(?!.*\\.partial$)[^\\\\]+$"},
+    "tool": {
+      "type": "object", "additionalProperties": false,
+      "required": ["application_version", "content_digest_kind", "sha256", "python_version", "pyarrow_version", "numpy_version", "scikit_learn_version"],
+      "properties": {
+        "application_version": {"type": "string", "minLength": 1},
+        "content_digest_kind": {"const": "python-package-content-v1"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "python_version": {"type": "string", "minLength": 1},
+        "pyarrow_version": {"type": "string", "minLength": 1},
+        "numpy_version": {"type": "string", "minLength": 1},
+        "scikit_learn_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "parent": {
+      "type": "object", "additionalProperties": false,
+      "required": ["dataset_id", "manifest_sha256", "config_sha256", "identity_sha256", "schema_sha256", "partitions"],
+      "properties": {
+        "dataset_id": {"$ref": "#/$defs/runId"},
+        "manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "config_sha256": {"$ref": "#/$defs/sha256"},
+        "identity_sha256": {"$ref": "#/$defs/sha256"},
+        "schema_sha256": {"$ref": "#/$defs/sha256"},
+        "partitions": {"$ref": "#/$defs/partitions"}
+      }
+    },
+    "partitions": {
+      "type": "object", "additionalProperties": false,
+      "required": ["train_dates", "validation_dates", "test_dates"],
+      "properties": {
+        "train_dates": {"$ref": "#/$defs/dates"},
+        "validation_dates": {"$ref": "#/$defs/dates"},
+        "test_dates": {"$ref": "#/$defs/dates"}
+      }
+    },
+    "dates": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "format": "date"}},
+    "field": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "dtype", "nullable"],
+      "properties": {"name": {"type": "string", "minLength": 1}, "dtype": {"type": "string", "minLength": 1}, "nullable": {"type": "boolean"}}
+    },
+    "schema": {
+      "type": "object", "additionalProperties": false, "required": ["fields", "sha256"],
+      "properties": {"fields": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/field"}}, "sha256": {"$ref": "#/$defs/sha256"}}
+    },
+    "artefact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "path", "sha256", "size_bytes", "row_count"],
+      "properties": {
+        "kind": {"enum": ["predictions", "metrics_validation", "metrics_test", "diagnostics"]},
+        "path": {"$ref": "#/$defs/safePath"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "size_bytes": {"$ref": "#/$defs/count"},
+        "row_count": {"$ref": "#/$defs/count"}
+      }
+    }
+  }
+}

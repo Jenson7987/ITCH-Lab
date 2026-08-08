@@ -149,6 +149,22 @@ class DatasetBuildError(RuntimeError):
         super().__init__(f"{code.value}: {message}")
 
 
+class ModelTrainingError(RuntimeError):
+    """One stable, path-safe failure from predictive model training/publication."""
+
+    def __init__(
+        self,
+        code: ErrorCode,
+        message: str,
+        *,
+        partial_exists: bool = False,
+    ) -> None:
+        self.code = code
+        self.message = message
+        self.partial_exists = partial_exists
+        super().__init__(f"{code.value}: {message}")
+
+
 __all__ = [
     "ConfigIssue",
     "ConfigValidationError",
@@ -158,4 +174,5 @@ __all__ = [
     "FeatureComputationError",
     "InterchangeReadError",
     "LabelComputationError",
+    "ModelTrainingError",
 ]

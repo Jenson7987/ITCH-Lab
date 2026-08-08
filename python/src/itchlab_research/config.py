@@ -434,6 +434,26 @@ def _semantic_issues(document: dict[str, JSONValue], kind: ConfigKind) -> tuple[
                     "Train, validation and test dates must be chronological.",
                 )
             )
+    elif kind == "experiment":
+        locator = cast(str, document["dataset_manifest"])
+        normalised = locator.replace("\\", "/")
+        path = Path(normalised)
+        segments = normalised.split("/")
+        if (
+            normalised.startswith("/")
+            or (len(normalised) >= 2 and normalised[1] == ":")
+            or path.is_absolute()
+            or path.drive
+            or any(part in {"", ".", ".."} or part.endswith(".partial") for part in segments)
+        ):
+            issues.append(
+                ConfigIssue(
+                    "/dataset_manifest",
+                    ErrorCode.INPUT_PATH,
+                    "Experiment dataset locator must be a safe relative path without "
+                    "partial components.",
+                )
+            )
     elif kind == "simulation":
         strategy = cast(dict[str, JSONValue], document["strategy"])
         if cast(int, strategy["inventory_limit"]) < cast(int, strategy["order_quantity"]):

@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-020: Train/evaluate predictive baselines
-  - Dependencies: TASK-019
-  - Acceptance criteria: Prior/logistic/gradient boosting with train-only preprocessing and single test evaluation
-  - Tests: UT-MODEL-001, IT-009
-  - Documentation to update: Experiment config/metrics
-
 - [ ] TASK-021: Generate predictive report section
   - Dependencies: TASK-020
   - Acceptance criteria: Reproducible accessible report with negative results/limitations
@@ -85,6 +79,23 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-020: Train/evaluate predictive baselines
+  - Completed: 2026-08-08
+  - Evidence: The `itchlab-research train` command authenticates a completed frozen dataset before
+    fitting the training-frequency prior and pooled multinomial-logistic/histogram-gradient-
+    boosting grids with training-only median imputation, family-specific scaling and dense
+    unknown-safe symbol encoding. Validation multiclass log loss and documented conservative
+    tie-breaks freeze each candidate before the test partition is loaded and evaluated exactly once.
+    The immutable experiment publishes a strict content-identified manifest, validation/test
+    aggregate and per-symbol metrics, fixed-order confusion matrices, ten-bin calibration,
+    seeded whole-day confidence intervals or an explicit omission, schema-validated predictions
+    and safe diagnostics without model serialisation. UT-MODEL-001, metric hand cases and IT-009
+    cover known/no signal, tie rules, train-only fits, unseen symbols, single test loading, lineage,
+    CLI output, reuse, tampering and cancellation partials. All 216 Python tests, Ruff formatting/
+    lint, strict mypy and wheel/sdist build passed. Dev, Release and ASan/UBSan builds passed; all
+    128 runnable CTest entries passed in each preset and the authorised external-data test skipped
+    as designed.
 
 - [x] TASK-019: Implement labels, splits and leakage guards
   - Completed: 2026-08-07

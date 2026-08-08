@@ -189,7 +189,7 @@ Each failing generated case is reduced and committed as a regression fixture whe
 | IT-006 | C++ binary artefacts into Python readers | Exact round-trip typed records |
 | IT-007 | Conversion to Parquet | Golden dtypes, nulls, integer values, partition paths, sort order and validated manifest match |
 | IT-008 | Feature/label pipeline | Three complete synthetic days publish exact joined rows, disjoint drop/class/horizon counts, frozen splits and authenticated lineage; future mutation guards pass |
-| IT-009 | Training baselines | Expected output schemas and training-only preprocessing |
+| IT-009 | Training baselines | Authenticated frozen data selects on validation, loads/evaluates test once, publishes required schemas/metrics without model serialisation, reuses valid output and leaves cancellation partial |
 | IT-010 | Event/prediction stream through simulator | Golden orders, fills, cash and inventory |
 | IT-011 | Report generation | Required headings, tables, limitations and reproduction commands |
 | IT-012 | Hash tampering | Downstream validation fails before data use |
@@ -450,7 +450,7 @@ A task is done only when:
 | UT-CFG-001 | Config | Unknown key and overlapping dates fail |
 | UT-FEAT-001 | Causality | Future mutation cannot alter previous feature values |
 | UT-LABEL-001 | Labels | Hand sequence yields exact-threshold down/flat/up and null primary/secondary tails across batch boundaries |
-| UT-MODEL-001 | Preprocessing | Fit indices are a subset of training-day indices |
+| UT-MODEL-001 | Baselines/preprocessing | Known-signal and no-signal data fit all required models; fit dates are training-only and unseen symbols encode all-zero |
 | UT-SIM-001 | Latency | Order cannot fill before effective timestamp |
 | UT-SIM-002 | Queue | Known ahead volume must deplete before fill |
 | UT-SIM-003 | Cancellation race | Fill before cancellation-effective time is retained |

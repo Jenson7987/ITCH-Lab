@@ -196,6 +196,28 @@ def test_task_019_dataset_conversion_locators_must_be_safe_relative_paths(
     assert captured.value.issues[0].json_pointer == "/conversion_manifests/0"
 
 
+@pytest.mark.parametrize(
+    "locator",
+    [
+        "../dataset-manifest.json",
+        "/tmp/dataset-manifest.json",
+        "runs/experiment.partial/dataset-manifest.json",
+        "runs//dataset-manifest.json",
+    ],
+)
+def test_task_020_experiment_dataset_locator_must_be_a_safe_relative_path(
+    locator: str,
+) -> None:
+    document = json.loads((VALID_ROOT / "experiment.json").read_text(encoding="utf-8"))
+    document["dataset_manifest"] = locator
+
+    with pytest.raises(ConfigValidationError) as captured:
+        parse_config(json.dumps(document), "experiment")
+
+    assert captured.value.issues[0].code is ErrorCode.INPUT_PATH
+    assert captured.value.issues[0].json_pointer == "/dataset_manifest"
+
+
 def test_task_002_signal_strategy_requires_prediction_manifest() -> None:
     document = json.loads((VALID_ROOT / "simulation.json").read_text(encoding="utf-8"))
     document["prediction_manifest"] = None

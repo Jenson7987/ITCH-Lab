@@ -318,6 +318,39 @@ zero. Secondary tail labels remain nullable. The published primary label is non-
 horizons reset at every complete trading-date/symbol boundary, and no date may cross a train,
 validation or test boundary.
 
+### ExperimentRun and predictive metrics v1
+
+TASK-020 stores a completed predictive run in `experiment-manifest.json`. The manifest records the
+canonical experiment config and full/identity hashes, the authenticated dataset-manifest hash and
+dataset/schema identities, the Python package-content digest, Python/PyArrow/NumPy/scikit-learn
+versions, fixed class order, input feature order, selected parameters and validation log loss for
+all three required models, a test-evaluation count of exactly one, the prediction schema, and the
+size/SHA-256/row count of every child artefact. The run ID is timestamped and ends with the first 12
+hexadecimal characters of the content identity. The manifest is published last; only a
+`status=completed` run is consumable.
+
+The four children are `predictions.parquet`, `metrics-validation.json`, `metrics-test.json` and
+`model-diagnostics.json`. No executable model object is serialised. Reproduction retrains from the
+recorded config, seed, dataset hash and package digest. Diagnostics contain training-only
+preprocessing statistics, the class prior, logistic coefficients/intercepts, selected boosting
+iteration count and every candidate outcome; they contain no absolute input path or raw row.
+If a nullable feature has no finite training observation, version 1 preserves its column and uses a
+recorded zero fallback; validation/test values still cannot influence that choice.
+
+Each metrics document identifies its frozen partition and dates and contains, in fixed model order,
+the class distribution, multiclass natural-log loss, balanced accuracy, macro F1, a 3×3 confusion
+matrix with true rows and predicted columns in down/flat/up order, and ten equal-width one-vs-rest
+calibration bins. The same values are reported for each symbol. Balanced accuracy averages recall
+over true classes present in the evaluated slice; macro F1 always averages the fixed three classes
+and uses zero for an undefined class score. Empty calibration bins retain their bounds/count and
+use null mean probability and observed frequency.
+
+Test metrics additionally contain a seeded 1,000-repetition whole-trading-day percentile bootstrap
+at 95% confidence for log loss, balanced accuracy and macro F1. The interval is explicitly omitted
+with its observed day count when fewer than five test days are available. Validation metrics retain
+every declared candidate as completed or failed with a safe reason, so an unfavourable or failed
+candidate cannot disappear from the research record.
+
 ### Prediction
 
 Persisted as predictions.parquet.

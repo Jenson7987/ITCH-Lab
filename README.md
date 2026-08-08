@@ -11,8 +11,9 @@ session/trading-state metadata, supports strict or budgeted permissive processin
 stderr progress and cancels safely at message boundaries. The production event-v1 binary writer is
 implemented alongside snapshot-v1 and atomic completed replay manifests. Public artefact
 validation and authenticated, bounded conversion to partitioned Parquet are implemented. The
-version-1 causal feature catalogue and bounded event/snapshot feature service are also implemented;
-dataset publication, labels, models and simulation remain planned.
+version-1 causal feature catalogue, bounded event/snapshot feature service, frozen dataset
+publication, and required predictive baselines are also implemented. Simulation and reports remain
+planned.
 
 Classification legend used throughout the documentation:
 
@@ -28,7 +29,7 @@ Classification legend used throughout the documentation:
 | Performance core | C++20, CMake, Clang/GCC | Confirmed requirement |
 | Compression | zlib-compatible streaming reader | Recommendation |
 | C++ testing | Catch2 and Google Benchmark | Recommendation |
-| Research package | Python 3.11+, PyArrow; NumPy/scikit-learn when later tasks require them | Confirmed requirement for Python; libraries are recommendations |
+| Research package | Python 3.11+, PyArrow, NumPy and scikit-learn | Confirmed requirement for Python; libraries are recommendations |
 | Python quality | pytest, Ruff, mypy | Recommendation |
 | Configuration | Version-controlled JSON validated against JSON Schema | Recommendation |
 | Data storage | Raw ITCH files, versioned binary interchange files, Parquet research tables, JSON manifests | Recommendation |
@@ -82,7 +83,11 @@ construction now has a partition-scoped PyArrow service with an exact catalogue,
 state and explicit warm-up nulls. The Python `build-dataset` command independently computes bounded
 future labels, enforces immutable-key joins and chronological whole-day splits, applies explicit
 history/tail/ordinal filtering, and atomically publishes joined Parquet with a validated frozen
-dataset manifest. Modelling and simulation are implemented by later tasks.
+dataset manifest. The Python `train` command authenticates that frozen dataset, fits the required
+prior/logistic/histogram-gradient-boosting baselines with training-only preprocessing, selects on
+validation log loss, evaluates test rows once, and publishes predictions, metrics, calibration and
+safe diagnostics without serialising executable model objects. Simulation is implemented by a
+later task.
 
 ## Local setup
 
@@ -150,6 +155,10 @@ The implemented synthetic vertical slice can be exercised without licensed marke
         --deep
     python -m itchlab_research convert \
         --config configs/conversion.example.json
+    python -m itchlab_research build-dataset \
+        --config configs/dataset.example.json
+    python -m itchlab_research train \
+        --config configs/experiment.example.json
 
 The replay command accepts one or more configured symbols, applies selected pre-session events to
 warm each book, and limits snapshots to the configured half-open session and optional tradable-state
@@ -185,9 +194,15 @@ after row-drop, label-availability, class and split counts reconcile. Cancellati
 retains only a `.partial` run. Use `--format json` for stable output, or `--force-new-run` for another
 immutable timestamped directory with the same identity.
 
+Before running `train`, set `dataset_manifest` in `configs/experiment.example.json` to a completed
+dataset manifest. The command authenticates every dataset child, writes beneath
+`runs/experiment/<experiment-id>/`, and publishes `experiment-manifest.json` only after validation
+and test predictions, metrics and safe diagnostics are complete. It never reads pickle/joblib model
+objects; reproduction retrains from the recorded config, seed, parent hash and package-content
+digest. A matching completed run is revalidated and reused unless `--force-new-run` is supplied.
+
 Remaining planned research workflow (implemented by later tasks):
 
-    python -m itchlab_research train --config configs/experiment.example.json
     python -m itchlab_research simulate --config configs/simulation.example.json
     python -m itchlab_research report --run-id <run-id>
 

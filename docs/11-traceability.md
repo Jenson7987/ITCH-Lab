@@ -18,7 +18,7 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | FR-010 | 03 Python conversion; 04 ConversionRun/Parquet v1; 05 convert | TASK-016, TASK-017 | CT-BIN-001, IT-006, IT-007, conversion manifest/schema/tamper tests |
 | FR-011 | 04 FeatureRow/DatasetRun; 05 feature service/build-dataset; 12 catalogue | TASK-018 | UT-FEAT-001, catalogue golden, hand-calculated current/rolling/rate/flow cases |
 | FR-012 | 02 UF-003; 04 LabelRow/DatasetRun; 05 build-dataset | TASK-019 | UT-LABEL-001, IT-008, immutable-key/partition properties, stride/filter-count and tamper/partial tests |
-| FR-013 | 02 UF-004; 05 train | TASK-020 | UT-MODEL-001, IT-009, metric hand cases |
+| FR-013 | 02 UF-004; 04 ExperimentRun/predictive metrics; 05 train | TASK-020 | UT-MODEL-001, IT-009, metric hand cases, candidate tie/reuse/tamper/cancellation tests |
 | FR-014 | 02 UF-005/state diagram; 04 SimulatedOrder | TASK-022 | UT-SIM-001, UT-SIM-003, state properties |
 | FR-015 | ADR-004; 04 Fill/SimulatedOrder | TASK-023 | UT-SIM-002, queue properties, IT-010 |
 | FR-016 | 02 UF-005; 04 SimulationRun | TASK-022, TASK-024, TASK-027 | UT-SIM-001/004, scenario-grid assertions |

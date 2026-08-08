@@ -345,7 +345,11 @@ a new immutable timestamped directory with the same full identity.
 
 ### train
 
-    itchlab-research train --config <experiment-config.json>
+    itchlab-research train --config <experiment-config.json> \
+      [--force-new-run] \
+      [--format human|json] \
+      [--log-format human|jsonl] \
+      [--quiet] [--ascii] [--no-colour]
 
 Experiment config v1:
 
@@ -379,16 +383,47 @@ Experiment config v1:
       "seed": 7987
     }
 
-The candidate arrays are the complete ordered version-1 grids, not arbitrary user extensions. Prior, logistic regression and histogram gradient boosting are all required. Changing the grids or preprocessing rules creates a new experiment contract rather than an unrecorded default.
+The candidate arrays are the complete ordered version-1 grids, not arbitrary user extensions. Prior,
+logistic regression and histogram gradient boosting are all required. Changing the grids or
+preprocessing rules creates a new experiment contract rather than an unrecorded default.
 
-The command must not accept test dates different from the dataset manifest. It writes:
+The dataset locator must be safe and relative. Before fitting, the command validates the completed
+dataset-manifest schema and identity, logical/physical Arrow schemas, every child path/hash/size/row
+count, strict message-index order, finite-or-null features, primary-label domain and recorded class
+counts. Training must contain all three classes. The loader exposes authenticated metadata; train
+and validation rows load first, and test rows remain unloaded until both train-fitted candidate
+families have been selected and frozen.
+
+All feature imputation, scaling and symbol categories fit on training rows only. The prior uses
+training class frequencies. The complete logistic and histogram-gradient-boosting grids are fitted
+against the same training partition; failed candidates remain in validation metrics with stable,
+payload-free reasons. Selection uses validation multiclass log loss and the documented 1e-6
+tie-breaks. Each frozen selected estimator then produces test probabilities exactly once. No test
+metric or test row changes model selection.
+
+The command writes beneath `runs/experiment/<experiment-id>/`:
 
 - experiment-manifest.json.
 - metrics-validation.json and metrics-test.json.
 - predictions.parquet.
-- coefficients/features or safe model diagnostics.
+- model-diagnostics.json containing coefficients, preprocessing statistics and safe fit metadata.
 
-Arbitrary pickle/joblib input loading is prohibited. If a library-native model artefact is retained, it is output-only and labelled trusted-local; reproduction retrains from config.
+`predictions.parquet` contains validation and test rows for all three models using the Prediction
+schema in 04-data-model.md. Metric documents contain aggregate and per-symbol class distributions,
+log loss, balanced accuracy, fixed-three-class macro F1, fixed-order confusion matrices and ten-bin
+one-vs-rest calibration. Test metrics add a seeded 1,000-repetition whole-day block bootstrap when
+at least five days exist, or an explicit omission reason otherwise.
+
+The experiment manifest uses `itchlab-experiment-v1` identity over the dataset-manifest hash,
+locator-free experiment config, package-content digest and schema version. It authenticates all four
+children and is published last by same-filesystem rename. A matching completed run is reused only
+after lineage, hashes, JSON and prediction content are revalidated. `--force-new-run` creates a new
+immutable timestamped directory for the same identity. Cancellation and failures leave only a
+`.partial` directory and no completed manifest. Exit 8 covers model/dataset failures; graceful
+cancellation exits 130.
+
+Arbitrary pickle/joblib loading is prohibited, and version 1 writes no model object. Reproduction
+retrains from the recorded config, seed, parent hash and package-content digest.
 
 ### simulate
 

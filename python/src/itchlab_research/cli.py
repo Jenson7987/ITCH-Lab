@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from itchlab_research import __version__
-from itchlab_research.config import ConversionConfig, DatasetConfig, load_config
+from itchlab_research.config import ConversionConfig, DatasetConfig, ExperimentConfig, load_config
 from itchlab_research.conversion import ConversionProgress, convert_replays
 from itchlab_research.datasets import DatasetProgress, build_dataset
 from itchlab_research.errors import (
@@ -23,9 +23,20 @@ from itchlab_research.errors import (
     ConversionError,
     DatasetBuildError,
     ErrorCode,
+    ModelTrainingError,
+)
+from itchlab_research.models import (
+    ExperimentProgress,
+    load_partitioned_dataset,
+    train_baselines,
 )
 
 _PROGRAM_NAME = "itchlab-research"
+_MODEL_ORDER_FOR_DISPLAY = (
+    "prior",
+    "logistic_regression",
+    "hist_gradient_boosting",
+)
 _GLOBAL_HELP = f"""Offline research package for ITCH-Lab
 
 Usage: {_PROGRAM_NAME} <command> [options]
@@ -33,12 +44,12 @@ Usage: {_PROGRAM_NAME} <command> [options]
 Commands:
   convert      Convert authenticated replay artefacts to partitioned Parquet.
   build-dataset Build causal labels and frozen chronological dataset partitions.
+  train        Train, select and evaluate the required predictive baselines.
 
 Global options:
   --help       Show this help text.
   --version    Show the application version.
 
-Later research commands are implemented by subsequent tasks.
 """
 
 _CONVERT_HELP = f"""Convert authenticated replay artefacts to partitioned Parquet.
@@ -88,6 +99,29 @@ Exit categories: 0 success, 2 config, 3 input, 6 output, 7 validation, 8 dataset
 70 internal, 130 cancellation.
 """
 
+_TRAIN_HELP = f"""Train and evaluate required predictive baselines.
+
+Usage: {_PROGRAM_NAME} train --config <experiment-config.json> [options]
+
+Required:
+  --config <path>             Version-1 experiment configuration.
+
+Options:
+  --force-new-run             Create another immutable run for the same identity.
+  --format <human|json>       Result format (default human).
+  --log-format <human|jsonl>  Progress format on stderr (default human).
+  --quiet                     Suppress non-error progress.
+  --ascii                     Restrict presentation to ASCII.
+  --no-colour                 Disable colour presentation.
+  --help                      Show this help text.
+
+Example:
+  {_PROGRAM_NAME} train --config configs/experiment.example.json
+
+Exit categories: 0 success, 2 config, 3 input, 6 output, 7 validation, 8 model,
+70 internal, 130 cancellation.
+"""
+
 
 def _convert_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog=f"{_PROGRAM_NAME} convert", add_help=False)
@@ -104,6 +138,18 @@ def _convert_parser() -> argparse.ArgumentParser:
 
 def _dataset_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog=f"{_PROGRAM_NAME} build-dataset", add_help=False)
+    parser.add_argument("--config")
+    parser.add_argument("--force-new-run", action="store_true")
+    parser.add_argument("--format", choices=("human", "json"), default="human")
+    parser.add_argument("--log-format", choices=("human", "jsonl"), default="human")
+    parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--ascii", action="store_true")
+    parser.add_argument("--no-colour", action="store_true")
+    return parser
+
+
+def _train_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog=f"{_PROGRAM_NAME} train", add_help=False)
     parser.add_argument("--config")
     parser.add_argument("--force-new-run", action="store_true")
     parser.add_argument("--format", choices=("human", "json"), default="human")
@@ -143,6 +189,8 @@ def _exit_code(code: ErrorCode) -> int:
         ErrorCode.ROW_STRIDE,
         ErrorCode.EMPTY_DATASET,
         ErrorCode.LEAKAGE_GUARD,
+        ErrorCode.MODEL_TRAINING,
+        ErrorCode.PREDICTION_KEY,
     }:
         return 8
     return 7
@@ -267,6 +315,50 @@ def _dataset_progress_callback(log_format: str, quiet: bool) -> Any:
             print(
                 f"build-dataset: {progress.partitions_completed:,} partitions; "
                 f"{progress.rows_processed:,} qualifying rows ({now - started:.1f}s)",
+                file=sys.stderr,
+            )
+
+    return report
+
+
+def _experiment_progress_callback(log_format: str, quiet: bool) -> Any:
+    started = time.monotonic()
+    last = started
+    reported = False
+
+    def report(progress: ExperimentProgress) -> None:
+        nonlocal last, reported
+        if quiet:
+            return
+        now = time.monotonic()
+        if not reported:
+            if now - started < 5:
+                return
+            reported = True
+        elif now - last < 30:
+            return
+        last = now
+        if log_format == "jsonl":
+            print(
+                json.dumps(
+                    {
+                        "command": "train",
+                        "event": "progress",
+                        "stage": progress.stage,
+                        "candidates_completed": progress.candidates_completed,
+                        "candidates_total": progress.candidates_total,
+                        "models_completed": progress.models_completed,
+                        "elapsed_seconds": round(now - started, 3),
+                    },
+                    separators=(",", ":"),
+                ),
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"train: {progress.stage}: {progress.candidates_completed}/"
+                f"{progress.candidates_total} candidates; "
+                f"{progress.models_completed}/3 models ({now - started:.1f}s)",
                 file=sys.stderr,
             )
 
@@ -556,6 +648,147 @@ def _run_build_dataset(arguments: Sequence[str]) -> int:
     return 0
 
 
+def _run_train(arguments: Sequence[str]) -> int:
+    if arguments in (["--help"], ["-h"]):
+        print(_TRAIN_HELP, end="")
+        return 0
+    if arguments == ["--version"]:
+        print(f"{_PROGRAM_NAME} {__version__}")
+        return 0
+    if not arguments:
+        print(f"{_PROGRAM_NAME} train: --config is required.", file=sys.stderr)
+        return 2
+    duplicate = _duplicate_option(arguments)
+    if duplicate is not None:
+        print(f"{_PROGRAM_NAME} train: duplicate option {duplicate}.", file=sys.stderr)
+        return 2
+    parser = _train_parser()
+    try:
+        parsed = parser.parse_args(list(arguments))
+    except SystemExit:
+        return 2
+    if parsed.config is None:
+        print(f"{_PROGRAM_NAME} train: --config is required.", file=sys.stderr)
+        return 2
+
+    result_format = cast(str, parsed.format)
+    try:
+        loaded = load_config(Path(cast(str, parsed.config)), "experiment")
+        config = cast(ExperimentConfig, loaded)
+    except ConfigValidationError as error:
+        message = "; ".join(
+            f"{issue.json_pointer or '/'} {issue.message}" for issue in error.issues
+        )
+        _write_error(
+            error.issues[0].code,
+            message,
+            command="train",
+            result_format=result_format,
+            partial_exists=False,
+        )
+        return _exit_code(error.issues[0].code)
+
+    cancelled = threading.Event()
+    signal_count = 0
+    previous_handler = signal.getsignal(signal.SIGINT)
+
+    def handle_interrupt(signum: int, frame: object) -> None:
+        del signum, frame
+        nonlocal signal_count
+        signal_count += 1
+        if signal_count == 1:
+            cancelled.set()
+            if not cast(bool, parsed.quiet):
+                print("Cancellation requested; closing partial outputs.", file=sys.stderr)
+            return
+        raise KeyboardInterrupt
+
+    try:
+        signal.signal(signal.SIGINT, handle_interrupt)
+        dataset = load_partitioned_dataset(config, cancel_requested=cancelled.is_set)
+        result = train_baselines(
+            dataset,
+            config,
+            force_new_run=cast(bool, parsed.force_new_run),
+            cancel_requested=cancelled.is_set,
+            progress=_experiment_progress_callback(
+                cast(str, parsed.log_format), cast(bool, parsed.quiet)
+            ),
+        )
+    except ModelTrainingError as error:
+        _write_error(
+            error.code,
+            error.message,
+            command="train",
+            result_format=result_format,
+            partial_exists=error.partial_exists,
+        )
+        return _exit_code(error.code)
+    except KeyboardInterrupt:
+        _write_error(
+            ErrorCode.CANCELLED,
+            "Predictive training was interrupted before completion.",
+            command="train",
+            result_format=result_format,
+            partial_exists=True,
+        )
+        return 130
+    except Exception:
+        _write_error(
+            ErrorCode.INTERNAL,
+            "Unexpected predictive training failure.",
+            command="train",
+            result_format=result_format,
+            partial_exists=True,
+        )
+        return 70
+    finally:
+        signal.signal(signal.SIGINT, previous_handler)
+
+    manifest = _safe_display_path(result.manifest_path)
+    selected = dict(result.selected_parameters)
+    test_metrics = dict(result.test_metrics)
+    if result_format == "json":
+        print(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "command": "train",
+                    "status": result.status,
+                    "run_id": result.experiment_id,
+                    "summary": {
+                        "manifest_path": manifest,
+                        "dataset_id": result.dataset_id,
+                        "prediction_rows": result.prediction_rows,
+                        "selected_parameters": selected,
+                        "test_metrics": test_metrics,
+                        "reused": result.reused,
+                        "next_command": (
+                            f"{_PROGRAM_NAME} simulate --config configs/simulation.example.json"
+                        ),
+                    },
+                    "warnings": list(result.warnings),
+                },
+                separators=(",", ":"),
+            )
+        )
+    else:
+        action = "Reused" if result.reused else "Completed"
+        print(f"{action} experiment {result.experiment_id} ({result.status}).")
+        print(f"Manifest: {manifest}")
+        print(f"Dataset: {result.dataset_id}.")
+        print(f"Predictions: {result.prediction_rows:,} rows.")
+        print(
+            "Selected: "
+            + "; ".join(f"{name}={selected[name]}" for name in _MODEL_ORDER_FOR_DISPLAY)
+            + "."
+        )
+        for warning in result.warnings:
+            print(f"Warning: {warning}", file=sys.stderr)
+        print(f"Next: {_PROGRAM_NAME} simulate --config configs/simulation.example.json")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the research CLI and return a process-compatible exit code."""
     arguments = list(sys.argv[1:] if argv is None else argv)
@@ -569,6 +802,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_convert(arguments[1:])
     if arguments[0] == "build-dataset":
         return _run_build_dataset(arguments[1:])
+    if arguments[0] == "train":
+        return _run_train(arguments[1:])
     print(f"{_PROGRAM_NAME}: unrecognised command or argument.", file=sys.stderr)
     print(f"Try '{_PROGRAM_NAME} --help' for usage.", file=sys.stderr)
     return 2
