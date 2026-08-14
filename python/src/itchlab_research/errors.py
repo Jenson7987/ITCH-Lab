@@ -181,6 +181,24 @@ class ReportGenerationError(RuntimeError):
         super().__init__(f"{code.value}: {message}")
 
 
+class SimulationError(ValueError):
+    """One stable, payload-free simulated-order or scheduler failure."""
+
+    def __init__(
+        self,
+        code: ErrorCode,
+        message: str,
+        *,
+        simulated_order_id: int | None = None,
+        message_index: int | None = None,
+    ) -> None:
+        self.code = code
+        self.message = message
+        self.simulated_order_id = simulated_order_id
+        self.message_index = message_index
+        super().__init__(f"{code.value}: {message}")
+
+
 __all__ = [
     "ConfigIssue",
     "ConfigValidationError",
@@ -192,4 +210,5 @@ __all__ = [
     "LabelComputationError",
     "ModelTrainingError",
     "ReportGenerationError",
+    "SimulationError",
 ]

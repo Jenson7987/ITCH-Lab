@@ -11,8 +11,10 @@ baselines with training-only preprocessing, and atomically publishes predictions
 metrics and safe diagnostics. The `report` command authenticates a completed predictive experiment
 and all upstream manifests, then publishes deterministic Markdown and/or HTML with static SVG
 calibration plots, adjacent text
-summaries, canonical config snapshots and relative reproduction commands. Simulation commands are
-implemented by later tasks.
+summaries, canonical config snapshots and relative reproduction commands. The immutable
+simulated-order lifecycle and deterministic integer-nanosecond latency scheduler are implemented;
+queue modelling, accounting and simulation commands remain assigned to later tasks. Equal-time
+source messages precede effective actions, preserving conservative fill-before-cancel races.
 
 From the repository root, point `configs/conversion.example.json` at completed replay manifests,
 then run:

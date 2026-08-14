@@ -401,10 +401,17 @@ Stored in simulation-manifest.json plus orders/fills/metrics Parquet files.
 | original_quantity | uint64 | No | — | Positive |
 | remaining_quantity | uint64 | No | — | 0 through original |
 | queue_ahead_initial | uint64 | Yes | null | Null when rejected before activation |
-| state | enum | No | pending_submit | State machine in user flows, including terminal invalidated |
+| state | enum | No | pending_submit | `pending_submit`, `active`, `partially_filled`, `pending_cancel`, `filled`, `cancelled`, `expired`, `rejected` or `invalidated` |
 | cancel_requested_ns | uint64 | Yes | null | Required for pending cancel |
 | terminal_timestamp_ns | uint64 | Yes | null | Required for terminal state |
 | rejection_reason | enum | Yes | null | Required when rejected or counterfactually invalidated |
+
+Submission and cancellation effective at the same timestamp as source messages are applied after
+all such source messages. Equal-time effective actions retain request order. A cancellation request
+made before activation retains `pending_submit` until submission or cancellation becomes effective;
+submission first exposes the order as `pending_cancel`, while cancellation first terminates it as
+`cancelled`. Partial fills in `pending_cancel` retain that state until the remainder fills or a
+terminal action wins.
 
 ### Fill
 

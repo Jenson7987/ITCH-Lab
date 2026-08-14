@@ -121,7 +121,8 @@ Target personas are a systems developer, quantitative researcher and technical r
 
 ### Simulation
 
-- Simulated passive orders have pending, active, partial, filled, cancel-pending, cancelled and expired states.
+- Simulated passive orders have pending, active, partial, filled, cancel-pending, cancelled,
+  expired, rejected and counterfactually invalidated states.
 - Submission/cancellation latency controls when actions become effective.
 - New passive orders join behind known visible queue.
 - Known ahead-order lifecycle events update queue position.
@@ -299,12 +300,19 @@ A lack of out-of-sample improvement is a valid result.
 stateDiagram-v2
     [*] --> PendingSubmit
     PendingSubmit --> Active: latency elapsed
+    PendingSubmit --> PendingCancel: activates after cancel request
+    PendingSubmit --> Cancelled: cancellation effective first
+    PendingSubmit --> Rejected: non-passive at activation
+    PendingSubmit --> Expired: session end
     Active --> PartiallyFilled: eligible execution
     PartiallyFilled --> Filled: remaining filled
     Active --> PendingCancel: cancel request
     PartiallyFilled --> PendingCancel: cancel request
     PendingCancel --> Cancelled: cancel latency elapsed
+    PendingCancel --> PendingCancel: partial fill arrives first
     PendingCancel --> Filled: fill arrives first
+    PendingCancel --> Invalidated: historical path crosses remainder
+    PendingCancel --> Expired: session end
     Active --> Invalidated: historical path crosses unfilled limit
     PartiallyFilled --> Invalidated: historical path crosses remainder
     Active --> Expired: session end
@@ -313,6 +321,7 @@ stateDiagram-v2
     Cancelled --> [*]
     Invalidated --> [*]
     Expired --> [*]
+    Rejected --> [*]
 ```
 
 The simulator does not recreate the counterfactual market. At activation, a passive order joins behind visible queue at its price. Exact known ahead orders can be tracked because the source is level 3. Hidden liquidity and other venues remain unknown and are never assumed favourable. Quotes that would be marketable are rejected in passive-only mode. If the historical path crosses an unfilled hypothetical limit without sufficient eligible displayed execution, that order is invalidated rather than granted an optimistic fill.

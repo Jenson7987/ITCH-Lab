@@ -13,7 +13,9 @@ implemented alongside snapshot-v1 and atomic completed replay manifests. Public 
 validation and authenticated, bounded conversion to partitioned Parquet are implemented. The
 version-1 causal feature catalogue, bounded event/snapshot feature service, frozen dataset
 publication, required predictive baselines and predictive experiment reporting are also
-implemented. Simulation and simulation reporting remain planned.
+implemented. The immutable simulated-order lifecycle and integer-nanosecond latency scheduler are
+implemented; visible queue modelling, accounting, strategies and simulation reporting remain
+planned.
 
 Classification legend used throughout the documentation:
 
@@ -86,9 +88,11 @@ history/tail/ordinal filtering, and atomically publishes joined Parquet with a v
 dataset manifest. The Python `train` command authenticates that frozen dataset, fits the required
 prior/logistic/histogram-gradient-boosting baselines with training-only preprocessing, selects on
 validation log loss, evaluates test rows once, and publishes predictions, metrics, calibration and
-safe diagnostics without serialising executable model objects. Simulation is implemented by a
-later task. The Python `report` command authenticates the completed experiment and its full
-dataset/conversion/replay lineage before atomically publishing deterministic Markdown and/or HTML,
+safe diagnostics without serialising executable model objects. The Python package also exposes the
+validated simulated-order state machine and deterministic market-first latency scheduler; queue,
+accounting and the `simulate` command are implemented by later tasks. The Python `report` command
+authenticates a completed experiment and its full dataset/conversion/replay lineage before
+atomically publishing deterministic Markdown and/or HTML,
 static SVG calibration plots, text summaries and relative reproduction commands.
 
 ## Local setup

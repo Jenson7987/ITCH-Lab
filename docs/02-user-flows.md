@@ -227,7 +227,10 @@ Changing features, horizons, hyperparameters or selection rules after viewing te
 stateDiagram-v2
     [*] --> PendingSubmit
     PendingSubmit --> Active: submission latency elapsed
-    PendingSubmit --> Cancelled: cancelled before activation
+    PendingSubmit --> PendingCancel: activates after cancel request
+    PendingSubmit --> Cancelled: cancellation effective before activation
+    PendingSubmit --> Rejected: non-passive at activation
+    PendingSubmit --> Expired: session ends
     Active --> PartiallyFilled: observed execution after queue depletion
     PartiallyFilled --> PartiallyFilled: additional partial fill
     Active --> Filled: full fill
@@ -235,17 +238,28 @@ stateDiagram-v2
     Active --> PendingCancel: cancel requested
     PartiallyFilled --> PendingCancel: cancel requested
     PendingCancel --> Cancelled: cancellation latency elapsed
+    PendingCancel --> PendingCancel: partial fill before cancellation effective
     PendingCancel --> Filled: fill before cancellation effective
     Active --> Invalidated: historical path crosses without eligible fill
     PartiallyFilled --> Invalidated: historical path crosses remainder
     PendingCancel --> Invalidated: historical path crosses remainder
     Active --> Expired: session ends
     PartiallyFilled --> Expired: session ends
+    PendingCancel --> Expired: session ends
     Filled --> [*]
     Cancelled --> [*]
     Invalidated --> [*]
     Expired --> [*]
+    Rejected --> [*]
 ```
+
+The persisted version-1 state literals are `pending_submit`, `active`, `partially_filled`,
+`pending_cancel`, `filled`, `cancelled`, `expired`, `rejected` and `invalidated`. A cancellation
+request does not itself remove exposure. If it is requested before activation, its effective time
+is compared with submission in integer nanoseconds; equal effective actions retain request order.
+Market messages at an effective timestamp are processed first, so a same-timestamp eligible fill
+is retained and any later scheduled cancellation is superseded. A partial fill while cancellation
+is pending leaves the remainder in `pending_cancel`.
 
 ### Alternative and failure paths
 

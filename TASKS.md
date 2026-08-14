@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-022: Implement order state machine and latency
-  - Dependencies: TASK-017, TASK-019
-  - Acceptance criteria: Valid deterministic lifecycle and action timing
-  - Tests: UT-SIM-001/003 and properties
-  - Documentation to update: 02-user-flows.md if transitions change
-
 - [ ] TASK-023: Implement queue tracking and partial fills
   - Dependencies: TASK-022
   - Acceptance criteria: Known visible queue logic; no invented/over fills
@@ -73,6 +67,20 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-022: Implement order state machine and latency
+  - Completed: 2026-08-14
+  - Evidence: The Python simulation domain now owns immutable attempted passive orders across the
+    documented pending-submit, active, partially-filled, pending-cancel, filled, cancelled,
+    expired, rejected and counterfactually-invalidated states, with atomic typed failures and one
+    non-terminal order per symbol/side. Its checked integer-nanosecond scheduler applies actions
+    strictly before later market events, defers equal-time actions until every source message at
+    that timestamp, retains request order for equal-time actions and safely supersedes losing
+    activation/cancellation races. UT-SIM-001/003, the complete golden transition trace and
+    generated lifecycle properties cover latency boundaries, every transition, fill/cancel races,
+    slot release, quantity invariants and atomic invalid operations. All 315 Python tests, Ruff
+    formatting/lint, strict mypy and wheel/sdist build passed. The Release C++ build passed; all 128
+    runnable CTest entries passed and the authorised official-sample entry skipped as designed.
 
 - [x] TASK-021: Generate predictive report section
   - Completed: 2026-08-08
