@@ -145,6 +145,9 @@ flag; TASK-019 counts and excludes rows without every required history window be
 - An E/C execution at the simulated order's resting side/price first consumes known queue ahead; remaining eligible quantity may fill the simulated order at its limit price.
 - If the historical book path would cross through an active simulated limit without eligible displayed execution sufficient to fill it, the order becomes counterfactually invalidated with no assumed fill; the scenario records a diagnostic.
 - A B message that references a market match used to cause a simulated fill aborts that scenario with ERR_BROKEN_SIM_FILL; the MVP does not invent order reinstatement after a trade break. Other B messages are recorded but do not mutate queue/book state.
+- Version 1 configures an explicit non-negative max_queue_anomalies budget. Only inconsistent known
+  visible lifecycle events consume it; expected counterfactual invalidations and unrelated broken-
+  trade observations remain separately counted diagnostics. The checked-in strict example uses 0.
 - Market impact, hidden priority and other venues are unobserved and disclosed, never filled optimistically.
 
 ### Inventory-aware baseline
@@ -313,6 +316,7 @@ Acceptance criteria:
 | Partition | Complete days, chronological, non-empty and non-overlapping | ERR_PARTITION |
 | Latency | Integer nanoseconds from 0 through 10 seconds | ERR_LATENCY |
 | Fee/rebate | Signed integer microusd per share with absolute value at most 1,000,000 | ERR_COST |
+| Queue anomaly budget | Integer from 0 through 2^53−1 | ERR_QUEUE_STATE |
 | Random seed | Unsigned 64-bit integer recorded in the manifest | ERR_SEED |
 | Existing run | Completed directory is immutable unless a new run ID is requested | ERR_RUN_EXISTS |
 

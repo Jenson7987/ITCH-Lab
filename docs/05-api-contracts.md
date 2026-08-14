@@ -454,12 +454,13 @@ Simulation config v1:
         "maker_fee_microusd_per_share": -2000,
         "taker_fee_microusd_per_share": 3000,
         "queue_policy": "known_orders_conservative",
+        "max_queue_anomalies": 0,
         "terminal_liquidation": "cross_visible_spread"
       },
       "seed": 7987
     }
 
-The `inventory_aware_avellaneda_stoikov` strategy uses the same shape with `prediction_manifest` set to null and `signal_weight_ticks` set to 0. The signal-adjusted strategy requires a non-null prediction manifest and a signal weight from the declared version-1 candidate set. `order_quantity` and `inventory_limit` are positive, inventory limit is at least one order quantity, gamma/risk horizon/volatility window are positive, latency is 0 through 10 seconds in nanoseconds, and each fee/rebate has absolute value at most 1,000,000 microusd per share. Version 1 requires passive-only execution, `known_orders_conservative` queue policy and `cross_visible_spread` terminal liquidation.
+The `inventory_aware_avellaneda_stoikov` strategy uses the same shape with `prediction_manifest` set to null and `signal_weight_ticks` set to 0. The signal-adjusted strategy requires a non-null prediction manifest and a signal weight from the declared version-1 candidate set. `order_quantity` and `inventory_limit` are positive, inventory limit is at least one order quantity, gamma/risk horizon/volatility window are positive, latency is 0 through 10 seconds in nanoseconds, each fee/rebate has absolute value at most 1,000,000 microusd per share, and `max_queue_anomalies` is an explicit integer from 0 through 2^53−1. Version 1 requires passive-only execution, `known_orders_conservative` queue policy and `cross_visible_spread` terminal liquidation. Inconsistent visible-lifecycle events are diagnosed and skipped for simulated effects only while they remain within that budget; the first excess aborts with `ERR_SIMULATION_ANOMALY`.
 
 Outputs:
 

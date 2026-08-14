@@ -191,6 +191,7 @@ class ExecutionConfig:
     maker_fee_microusd_per_share: int
     taker_fee_microusd_per_share: int
     queue_policy: Literal["known_orders_conservative"]
+    max_queue_anomalies: int
     terminal_liquidation: Literal["cross_visible_spread"]
 
 
@@ -242,7 +243,15 @@ def _validate_ijson(value: JSONValue, pointer: str = "") -> tuple[ConfigIssue, .
             issues.append(
                 ConfigIssue(
                     pointer,
-                    ErrorCode.SEED if pointer.endswith("/seed") else ErrorCode.CONFIG_SCHEMA,
+                    (
+                        ErrorCode.SEED
+                        if pointer.endswith("/seed")
+                        else (
+                            ErrorCode.QUEUE_STATE
+                            if pointer.endswith("/max_queue_anomalies")
+                            else ErrorCode.CONFIG_SCHEMA
+                        )
+                    ),
                     "Integer exceeds the RFC 8785/I-JSON exact range.",
                 )
             )
@@ -298,6 +307,8 @@ def _schema_error_code(error: ValidationError) -> ErrorCode:
         return ErrorCode.COST
     if pointer.endswith("/inventory_limit"):
         return ErrorCode.INVENTORY_LIMIT
+    if pointer.endswith("/max_queue_anomalies"):
+        return ErrorCode.QUEUE_STATE
     if pointer == "/schema_version":
         return ErrorCode.SCHEMA_VERSION
     return ErrorCode.CONFIG_SCHEMA
@@ -640,6 +651,7 @@ def _build_simulation(document: dict[str, JSONValue]) -> SimulationConfig:
             maker_fee_microusd_per_share=cast(int, execution["maker_fee_microusd_per_share"]),
             taker_fee_microusd_per_share=cast(int, execution["taker_fee_microusd_per_share"]),
             queue_policy="known_orders_conservative",
+            max_queue_anomalies=cast(int, execution["max_queue_anomalies"]),
             terminal_liquidation="cross_visible_spread",
         ),
         seed=cast(int, document["seed"]),

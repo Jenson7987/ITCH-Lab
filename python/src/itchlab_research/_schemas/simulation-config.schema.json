@@ -57,6 +57,7 @@
         "maker_fee_microusd_per_share",
         "taker_fee_microusd_per_share",
         "queue_policy",
+        "max_queue_anomalies",
         "terminal_liquidation"
       ],
       "properties": {
@@ -66,6 +67,11 @@
         "maker_fee_microusd_per_share": {"type": "integer", "minimum": -1000000, "maximum": 1000000},
         "taker_fee_microusd_per_share": {"type": "integer", "minimum": -1000000, "maximum": 1000000},
         "queue_policy": {"const": "known_orders_conservative"},
+        "max_queue_anomalies": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
         "terminal_liquidation": {"const": "cross_visible_spread"}
       }
     },

@@ -125,8 +125,10 @@ Target personas are a systems developer, quantitative researcher and technical r
   expired, rejected and counterfactually invalidated states.
 - Submission/cancellation latency controls when actions become effective.
 - New passive orders join behind known visible queue.
-- Known ahead-order lifecycle events update queue position.
-- Observed eligible execution flow causes partial/full fills.
+- Exact known-ahead E/C/X/D/U lifecycle events update queue position; replacements and later adds
+  join behind at the same price.
+- Once known ahead is empty, observed same-price E/C flow against later visible references causes
+  partial/full fills bounded by event quantity and simulated remainder. P/Q never fill.
 - Costs/rebates, inventory limits and terminal liquidation affect P&L.
 - Compare an Avellaneda–Stoikov-inspired inventory-aware strategy with one bounded signal adjustment.
 - Run at least three latency and two cost settings.
@@ -324,7 +326,7 @@ stateDiagram-v2
     Rejected --> [*]
 ```
 
-The simulator does not recreate the counterfactual market. At activation, a passive order joins behind visible queue at its price. Exact known ahead orders can be tracked because the source is level 3. Hidden liquidity and other venues remain unknown and are never assumed favourable. Quotes that would be marketable are rejected in passive-only mode. If the historical path crosses an unfilled hypothetical limit without sufficient eligible displayed execution, that order is invalidated rather than granted an optimistic fill.
+The simulator does not recreate the counterfactual market. At activation, a passive order joins behind visible queue at its price. Exact known ahead orders can be tracked because the source is level 3. Later adds and replacement references remain behind. Only same-price E/C flow against later visible references can fill after known ahead is empty; C eligibility uses its displayed resting price, while P/Q never fill. Hidden liquidity and other venues remain unknown and are never assumed favourable. Quotes that would be marketable are rejected in passive-only mode. If the historical path crosses an unfilled hypothetical limit without sufficient eligible displayed execution, that order is invalidated rather than granted an optimistic fill. Inconsistent queue events are diagnosed under the explicit `max_queue_anomalies` budget, and breaking a match used for a simulated fill aborts the scenario.
 
 At each 100 ms decision boundary, the strategy acts at the first subsequent source event using the latest same-symbol prediction at or before that event. Equal-timestamp market messages are processed before an action becomes effective. The exact prediction key is recorded.
 

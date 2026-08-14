@@ -158,6 +158,13 @@ CT-JSON-001 validates the strict completed-manifest schema and rejects unknown k
 - Reservation price moves opposite inventory risk.
 - Signal weight zero equals baseline.
 
+TASK-023's UT-SIM-002 hand trace fixes the exact initial reference set, E/C/X/D/U depletion,
+replacement priority reset and two bounded fills. Deterministic generated quantities assert that
+current queue equals the exact ahead-reference sum and that cumulative/event fill limits hold.
+The IT-010 subset additionally covers equal-timestamp activation, C display-price semantics,
+P/Q exclusion, fill-before-cancel, counterfactual invalidation, broken fills and the exact queue
+anomaly budget.
+
 ## Property-based testing
 
 Recommended frameworks: RapidCheck or a small deterministic generator for C++; Hypothesis for Python.

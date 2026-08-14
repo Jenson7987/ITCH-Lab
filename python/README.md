@@ -12,9 +12,11 @@ metrics and safe diagnostics. The `report` command authenticates a completed pre
 and all upstream manifests, then publishes deterministic Markdown and/or HTML with static SVG
 calibration plots, adjacent text
 summaries, canonical config snapshots and relative reproduction commands. The immutable
-simulated-order lifecycle and deterministic integer-nanosecond latency scheduler are implemented;
-queue modelling, accounting and simulation commands remain assigned to later tasks. Equal-time
-source messages precede effective actions, preserving conservative fill-before-cancel races.
+simulated-order lifecycle, deterministic integer-nanosecond latency scheduler and exact-known
+visible queue/partial-fill model are implemented; accounting and simulation commands remain
+assigned to later tasks. Equal-time source messages precede effective actions, preserving
+conservative fill-before-cancel races. Hidden P and cross Q events never fill displayed simulated
+orders, and a broken E/C match used for a fill aborts rather than inventing reinstatement.
 
 From the repository root, point `configs/conversion.example.json` at completed replay manifests,
 then run:

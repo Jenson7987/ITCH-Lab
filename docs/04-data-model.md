@@ -413,6 +413,12 @@ submission first exposes the order as `pending_cancel`, while cancellation first
 `cancelled`. Partial fills in `pending_cancel` retain that state until the remainder fills or a
 terminal action wins.
 
+For `known_orders_conservative`, `queue_ahead_initial` is the checked sum of the remaining shares
+of every exact visible order at the same symbol, side and displayed price at activation. The
+current reference-to-quantity queue is transient simulator state: it is deterministically
+reconstructable from the authenticated event stream and is not duplicated in the version-1 order
+output. Orders rejected as marketable before activation retain a null initial queue.
+
 ### Fill
 
 | Field | Type | Nullable | Default | Constraints |

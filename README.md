@@ -14,8 +14,8 @@ validation and authenticated, bounded conversion to partitioned Parquet are impl
 version-1 causal feature catalogue, bounded event/snapshot feature service, frozen dataset
 publication, required predictive baselines and predictive experiment reporting are also
 implemented. The immutable simulated-order lifecycle and integer-nanosecond latency scheduler are
-implemented; visible queue modelling, accounting, strategies and simulation reporting remain
-planned.
+implemented alongside exact-known visible queue tracking, conservative partial fills and bounded
+queue diagnostics; accounting, strategies and simulation reporting remain planned.
 
 Classification legend used throughout the documentation:
 
@@ -89,8 +89,9 @@ dataset manifest. The Python `train` command authenticates that frozen dataset, 
 prior/logistic/histogram-gradient-boosting baselines with training-only preprocessing, selects on
 validation log loss, evaluates test rows once, and publishes predictions, metrics, calibration and
 safe diagnostics without serialising executable model objects. The Python package also exposes the
-validated simulated-order state machine and deterministic market-first latency scheduler; queue,
-accounting and the `simulate` command are implemented by later tasks. The Python `report` command
+validated simulated-order state machine, deterministic market-first latency scheduler and
+exact-known visible queue/fill model; accounting and the `simulate` command are implemented by
+later tasks. The Python `report` command
 authenticates a completed experiment and its full dataset/conversion/replay lineage before
 atomically publishing deterministic Markdown and/or HTML,
 static SVG calibration plots, text summaries and relative reproduction commands.

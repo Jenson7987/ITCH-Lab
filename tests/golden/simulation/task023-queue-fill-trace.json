@@ -1,0 +1,113 @@
+{
+  "activation": {
+    "order": {
+      "queue_ahead_initial": 100,
+      "remaining_quantity": 70,
+      "state": "active"
+    },
+    "queue": {
+      "ahead_references": [
+        [
+          101,
+          60
+        ],
+        [
+          102,
+          40
+        ]
+      ],
+      "current_quantity": 100,
+      "initial_quantity": 100,
+      "simulated_order_id": 1
+    }
+  },
+  "events": [
+    {
+      "diagnostics": [],
+      "event_kind": "add",
+      "fills": [],
+      "message_index": 3,
+      "order_remaining": 70,
+      "order_state": "active",
+      "queue_ahead": 100
+    },
+    {
+      "diagnostics": [],
+      "event_kind": "execute",
+      "fills": [],
+      "message_index": 4,
+      "order_remaining": 70,
+      "order_state": "active",
+      "queue_ahead": 80
+    },
+    {
+      "diagnostics": [],
+      "event_kind": "cancel",
+      "fills": [],
+      "message_index": 5,
+      "order_remaining": 70,
+      "order_state": "active",
+      "queue_ahead": 70
+    },
+    {
+      "diagnostics": [],
+      "event_kind": "delete",
+      "fills": [],
+      "message_index": 6,
+      "order_remaining": 70,
+      "order_state": "active",
+      "queue_ahead": 40
+    },
+    {
+      "diagnostics": [],
+      "event_kind": "replace",
+      "fills": [],
+      "message_index": 7,
+      "order_remaining": 70,
+      "order_state": "active",
+      "queue_ahead": 0
+    },
+    {
+      "diagnostics": [],
+      "event_kind": "execute",
+      "fills": [
+        {
+          "market_message_index": 8,
+          "match_number": 502,
+          "price4": 10000,
+          "quantity": 30,
+          "queue_ahead_after": 0,
+          "queue_ahead_before": 0,
+          "remaining_quantity_after": 40,
+          "simulated_order_id": 1,
+          "timestamp_ns": 180
+        }
+      ],
+      "message_index": 8,
+      "order_remaining": 40,
+      "order_state": "partially_filled",
+      "queue_ahead": 0
+    },
+    {
+      "diagnostics": [],
+      "event_kind": "execute",
+      "fills": [
+        {
+          "market_message_index": 9,
+          "match_number": 503,
+          "price4": 10000,
+          "quantity": 40,
+          "queue_ahead_after": 0,
+          "queue_ahead_before": 0,
+          "remaining_quantity_after": 0,
+          "simulated_order_id": 1,
+          "timestamp_ns": 190
+        }
+      ],
+      "message_index": 9,
+      "order_remaining": 0,
+      "order_state": "filled",
+      "queue_ahead": 0
+    }
+  ]
+}

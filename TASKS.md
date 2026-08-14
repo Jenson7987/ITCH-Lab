@@ -2,15 +2,9 @@
 
 Authoritative task details and evidence requirements are in docs/10-implementation-plan.md. Work on one item at a time.
 
-## Current milestone — M3 Causal dataset and predictive baselines
+## Current milestone — M4 Conservative strategy comparison
 
 ## Queued
-
-- [ ] TASK-023: Implement queue tracking and partial fills
-  - Dependencies: TASK-022
-  - Acceptance criteria: Known visible queue logic; no invented/over fills
-  - Tests: UT-SIM-002 and queue properties
-  - Documentation to update: Queue assumption ADR
 
 - [ ] TASK-024: Implement accounting, costs, risk and liquidation
   - Dependencies: TASK-023
@@ -67,6 +61,24 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-023: Implement queue tracking and partial fills
+  - Completed: 2026-08-14
+  - Evidence: The Python simulation domain now adapts validated normalised lifecycle rows into an
+    exact-known visible-order model and snapshots every same-symbol/side/Price4 reference ahead at
+    the market-first activation boundary. E/C/X/D/U events update only exact ahead references;
+    later adds and replacement references remain behind. Once ahead is empty, same-price E/C flow
+    can produce causal partial/full fills capped by both observed event quantity and simulated
+    remainder, while C uses its displayed resting price and P/Q never fill. Cross-through
+    remainders invalidate without invented liquidity, used-match B events fail with
+    ERR_BROKEN_SIM_FILL, and atomic queue anomalies obey the explicit max_queue_anomalies config
+    budget. ADR-004 records the complete policy. UT-SIM-002, the hand-reconciled IT-010 subset and
+    generated queue properties cover exact activation/depletion, replacement priority,
+    equal-timestamp ordering, fill/cancel races, overfill bounds, hidden/cross exclusions, broken
+    trades, invalidation and anomaly limits. All 363 Python tests, Ruff formatting/lint, strict
+    mypy and wheel/sdist build passed. The Release and ASan/UBSan C++ builds passed; all 128 runnable
+    CTest entries passed in both presets and the authorised official-sample entry skipped as
+    designed.
 
 - [x] TASK-022: Implement order state machine and latency
   - Completed: 2026-08-14

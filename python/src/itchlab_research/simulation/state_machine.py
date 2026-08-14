@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from enum import StrEnum
+from typing import TypeAlias
 
 from itchlab_research.errors import ErrorCode, SimulationError
 from itchlab_research.simulation.order import (
@@ -50,6 +52,10 @@ class OrderTransition:
     market_message_index: int | None
     quantity: int | None
     rejection_reason: RejectionReason | None
+
+
+# A resolver returns the checked exact queue-ahead shares; None requests passive-only rejection.
+ActivationQueueResolver: TypeAlias = Callable[[SimulatedOrder], int | None]
 
 
 def _fail(
@@ -112,16 +118,25 @@ class OrderStateMachine:
         return self._scheduler.pending_actions
 
     def before_market_event(
-        self, timestamp_ns: int, message_index: int
+        self,
+        timestamp_ns: int,
+        message_index: int,
+        *,
+        activation_queue_resolver: ActivationQueueResolver | None = None,
     ) -> tuple[OrderTransition, ...]:
         """Apply actions strictly earlier than one ordered source market message."""
         actions = self._scheduler.actions_before_market(timestamp_ns, message_index)
-        return self._apply_actions(actions)
+        return self._apply_actions(actions, activation_queue_resolver)
 
-    def after_market_timestamp(self, timestamp_ns: int) -> tuple[OrderTransition, ...]:
+    def after_market_timestamp(
+        self,
+        timestamp_ns: int,
+        *,
+        activation_queue_resolver: ActivationQueueResolver | None = None,
+    ) -> tuple[OrderTransition, ...]:
         """Apply equal-time actions after all source messages at that timestamp."""
         actions = self._scheduler.actions_after_market_timestamp(timestamp_ns)
-        return self._apply_actions(actions)
+        return self._apply_actions(actions, activation_queue_resolver)
 
     def submit(self, request: OrderRequest) -> OrderTransition:
         """Create one pending order and schedule its submission activation."""
@@ -404,15 +419,23 @@ class OrderStateMachine:
             timestamp_ns=timestamp_ns,
         )
 
-    def _apply_actions(self, actions: tuple[ScheduledAction, ...]) -> tuple[OrderTransition, ...]:
+    def _apply_actions(
+        self,
+        actions: tuple[ScheduledAction, ...],
+        activation_queue_resolver: ActivationQueueResolver | None,
+    ) -> tuple[OrderTransition, ...]:
         transitions: list[OrderTransition] = []
         for action in actions:
-            transition = self._apply_action(action)
+            transition = self._apply_action(action, activation_queue_resolver)
             if transition is not None:
                 transitions.append(transition)
         return tuple(transitions)
 
-    def _apply_action(self, action: ScheduledAction) -> OrderTransition | None:
+    def _apply_action(
+        self,
+        action: ScheduledAction,
+        activation_queue_resolver: ActivationQueueResolver | None,
+    ) -> OrderTransition | None:
         expected = self._scheduled_actions.get(action.sequence)
         if expected != action:
             raise _fail(
@@ -427,12 +450,43 @@ class OrderStateMachine:
         if action.kind is ScheduledActionKind.ACTIVATE:
             if order.state is not OrderState.PENDING_SUBMIT:
                 raise self._invalid_transition(order, "activate")
+            queue_ahead_initial = order.queue_ahead_initial
+            if activation_queue_resolver is not None:
+                queue_ahead_initial = activation_queue_resolver(order)
+                if queue_ahead_initial is not None and not _valid_int(
+                    queue_ahead_initial, minimum=0, maximum=MAX_UINT64
+                ):
+                    raise _fail(
+                        ErrorCode.QUEUE_STATE,
+                        "Activation queue resolver returned an invalid quantity.",
+                        simulated_order_id=order.simulated_order_id,
+                    )
+            if activation_queue_resolver is not None and queue_ahead_initial is None:
+                updated = replace(
+                    order,
+                    state=OrderState.REJECTED,
+                    terminal_timestamp_ns=action.effective_timestamp_ns,
+                    rejection_reason=RejectionReason.MARKETABLE_AT_ACTIVATION,
+                )
+                transition = self._commit(
+                    order,
+                    updated,
+                    cause=TransitionCause.REJECTED,
+                    timestamp_ns=action.effective_timestamp_ns,
+                    rejection_reason=RejectionReason.MARKETABLE_AT_ACTIVATION,
+                )
+                del self._scheduled_actions[action.sequence]
+                return transition
             next_state = (
                 OrderState.PENDING_CANCEL
                 if order.cancel_requested_ns is not None
                 else OrderState.ACTIVE
             )
-            updated = replace(order, state=next_state)
+            updated = replace(
+                order,
+                queue_ahead_initial=queue_ahead_initial,
+                state=next_state,
+            )
             transition = self._commit(
                 order,
                 updated,
@@ -533,4 +587,9 @@ class OrderStateMachine:
         )
 
 
-__all__ = ["OrderStateMachine", "OrderTransition", "TransitionCause"]
+__all__ = [
+    "ActivationQueueResolver",
+    "OrderStateMachine",
+    "OrderTransition",
+    "TransitionCause",
+]

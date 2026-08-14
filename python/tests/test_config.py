@@ -14,6 +14,7 @@ from itchlab_research.config import (
     ConfigKind,
     ConversionConfig,
     ReplayConfig,
+    SimulationConfig,
     load_config,
     parse_config,
 )
@@ -226,3 +227,24 @@ def test_task_002_signal_strategy_requires_prediction_manifest() -> None:
         parse_config(json.dumps(document), "simulation")
 
     assert captured.value.issues[0].code is ErrorCode.CONFIG_SCHEMA
+
+
+@pytest.mark.parametrize("value", [-1, 9_007_199_254_740_992])
+def test_task_023_queue_anomaly_budget_has_safe_integer_bounds(value: int) -> None:
+    document = json.loads((VALID_ROOT / "simulation.json").read_text(encoding="utf-8"))
+    document["execution"]["max_queue_anomalies"] = value
+
+    with pytest.raises(ConfigValidationError) as captured:
+        parse_config(json.dumps(document), "simulation")
+
+    assert captured.value.issues[0].code is ErrorCode.QUEUE_STATE
+    assert captured.value.issues[0].json_pointer == "/execution/max_queue_anomalies"
+
+
+def test_task_023_queue_anomaly_budget_is_materialised_in_simulation_config() -> None:
+    document = json.loads((VALID_ROOT / "simulation.json").read_text(encoding="utf-8"))
+    document["execution"]["max_queue_anomalies"] = 7
+
+    config = cast(SimulationConfig, parse_config(json.dumps(document), "simulation"))
+
+    assert config.execution.max_queue_anomalies == 7
