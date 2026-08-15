@@ -165,6 +165,13 @@ The IT-010 subset additionally covers equal-timestamp activation, C display-pric
 P/Q exclusion, fill-before-cancel, counterfactual invalidation, broken fills and the exact queue
 anomaly budget.
 
+TASK-024's UT-SIM-004 hand trace independently reconciles a rebated buy, a rebated partial sell,
+an intervening exact-midpoint revaluation and taker-cost terminal liquidation. Deterministic
+generated side/quantity cases assert cash-plus-inventory-mark and P&L-component identities. Boundary
+tests cover projected quote suppression, fill-limit defence, signed fee/rebate direction, cash/fee/
+mark overflow with atomic state, fill ordering, long/short liquidation, missing/locked/crossed
+terminal quotes, session-end expiry, per-symbol isolation and flat zero-fill metrics.
+
 ## Property-based testing
 
 Recommended frameworks: RapidCheck or a small deterministic generator for C++; Hypothesis for Python.

@@ -372,7 +372,8 @@ Uniqueness: (experiment_id, trading_date, symbol_id, message_index, model_name).
 
 ### SimulationRun
 
-Stored in simulation-manifest.json plus orders/fills/metrics Parquet files.
+Stored in simulation-manifest.json plus orders/fills/equity Parquet files and metrics/diagnostics
+JSON files.
 
 | Field | Type | Nullable | Default | Constraints |
 | --- | --- | --- | --- | --- |
@@ -433,7 +434,37 @@ output. Orders rejected as marketable before activation retain a null initial qu
 | cash_delta_microusd | int64 | No | — | Overflow checked |
 | inventory_after | int64 | No | — | Within configured limit |
 
-cash_delta_microusd excludes fees and equals −side × Price4 × quantity × 100. The factor 100 converts a four-decimal US-dollar price into millionths of a dollar. fee_microusd is a signed cost (positive fee, negative rebate), so the cash ledger adds cash_delta_microusd − fee_microusd.
+cash_delta_microusd excludes fees and equals −side × Price4 × quantity × 100. The factor 100 converts a four-decimal US-dollar price into millionths of a dollar. fee_microusd is a signed cost (positive fee, negative rebate), so the cash ledger adds cash_delta_microusd − fee_microusd. `inventory_after` is the filled order's per-symbol position, not a cross-symbol total.
+
+### TerminalLiquidation and accounting metrics
+
+A terminal liquidation is separate from Fill because no observed market event caused it.
+
+| Field | Type | Nullable | Constraints |
+| --- | --- | --- | --- |
+| liquidation_id | uint64 | No | Unique deterministic sequence within scenario |
+| timestamp_ns | uint64 | No | Configured session end |
+| symbol_id | uint16 | No | Position being closed |
+| side | int8 | No | −1 for a long-position sale, +1 for a short-position purchase |
+| price4 | uint32 | No | Last valid visible bid for a sale or ask for a purchase |
+| quantity | uint64 | No | Exact absolute pre-liquidation inventory |
+| fee_microusd | int64 | No | Signed configured taker cost times quantity |
+| cash_delta_microusd | int64 | No | Gross trade cash before fee |
+| inventory_before/after | int64 | No | After is exactly zero |
+| mark_mid2 | uint64 | No | Exact bid-plus-ask value of the terminal quote |
+| slippage_microusd | int64 | No | `side×(mark_mid2−2×price4)×quantity×50` |
+
+The accounting snapshot retains deterministic fill/liquidation counts and quantities, passive and
+liquidation gross cash, signed maker/taker fees, net cash, per-symbol inventory/mark/peak inventory,
+passive spread capture, inventory mark-to-market, terminal slippage and marked P&L. All monetary
+fields and their intermediate operations are checked signed int64 microusd. With signed fee as a
+cost, the exact reconciliation is:
+
+    marked_pnl = net_cash + sum(inventory × mid2 × 50)
+               = passive_spread_capture + inventory_mark_to_market
+                 + terminal_liquidation_slippage - signed_fees
+
+A completed terminal settlement has zero inventory, so final marked P&L equals final net cash.
 
 ## Transient entities
 

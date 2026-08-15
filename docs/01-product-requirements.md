@@ -173,10 +173,25 @@ Calibrate kappa using training days only. For resting-distance buckets delta_tic
 - The main baseline fixes gamma=0.1, risk_horizon_seconds=10, order_quantity=100 and inventory_limit=1000 before test evaluation. Optional gamma sensitivity does not replace the main result.
 - Select w by highest mean validation-day net P&L under the default 100 microsecond latency and −2000 microusd/share maker-rebate scenario; a tie within one microusd chooses the smaller w. The selected w is then frozen for every test scenario.
 - Setting w=0 must reproduce baseline decisions and results byte-for-byte except strategy name metadata.
-- Default order quantity is 100 shares. Buy quotes are suppressed at the upper inventory limit and sell quotes at the lower limit.
+- Default order quantity is 100 shares. Inventory is enforced independently per symbol. A proposed
+  quote is suppressed when a complete fill of its configured quantity would move that symbol's
+  inventory outside the inclusive `[-inventory_limit, +inventory_limit]` range. The accounting
+  boundary repeats this check before accepting a fill.
 - Fee/rebate is signed integer microusd per filled share. Trade cash before fees is −side×Price4×quantity×100 microusd.
+- The exact mark is `mid2=best_bid_price4+best_ask_price4` from the latest valid visible two-sided
+  quote at or before the accounting point. Marked inventory value is
+  `inventory_shares×mid2×50` microusd and marked P&L is net cash plus the sum of those per-symbol
+  values. Passive spread capture at a fill is
+  `side×(mid2−2×fill_price4)×quantity×50`; inventory mark-to-market is the held inventory times
+  each subsequent `mid2` change times 50. Every component and intermediate ledger sum is checked
+  signed 64-bit integer arithmetic.
 - Required test scenarios use equal submission/cancellation latency of 0, 100,000 and 1,000,000 ns crossed with maker cost/rebate of −2000 and +3000 microusd/share. The manifest also records a 3000 microusd/share taker cost for terminal liquidation.
-- Session-end open orders expire. Remaining inventory is liquidated against the last valid visible opposite best price, charged the configured taker cost, and reported separately.
+- Session-end open orders expire. Remaining long inventory is sold at the last valid visible bid;
+  remaining short inventory is bought at the last valid visible ask. Liquidation is marked against
+  that quote's exact `mid2`, charged the configured signed taker cost and reported separately.
+  Locked quotes are valid, crossed quotes are rejected, and a non-zero position without the
+  required opposite best fails rather than inventing liquidity. A flat/no-fill day requires no
+  terminal quote and produces zero-valued valid metrics.
 
 ## User roles and permissions
 

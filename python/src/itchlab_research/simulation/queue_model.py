@@ -66,7 +66,7 @@ class QueueSnapshot:
 
 @dataclass(frozen=True, slots=True)
 class QueueFill:
-    """One causal fill before TASK-024 adds accounting fields."""
+    """One causal queue fill consumed by the separate integer accounting ledger."""
 
     simulated_order_id: int
     market_message_index: int

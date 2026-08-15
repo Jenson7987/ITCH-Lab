@@ -21,7 +21,7 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | FR-013 | 02 UF-004; 04 ExperimentRun/predictive metrics; 05 train | TASK-020 | UT-MODEL-001, IT-009, metric hand cases, candidate tie/reuse/tamper/cancellation tests |
 | FR-014 | 02 UF-005/state diagram; 04 SimulatedOrder | TASK-022 | UT-SIM-001, UT-SIM-003, state properties |
 | FR-015 | ADR-004; 04 Fill/SimulatedOrder | TASK-023 | UT-SIM-002, queue properties, IT-010 |
-| FR-016 | 02 UF-005; 04 SimulationRun | TASK-022, TASK-024, TASK-027 | UT-SIM-001/004, scenario-grid assertions |
+| FR-016 | 02 UF-005; 04 SimulationRun/Fill/TerminalLiquidation | TASK-022, TASK-024, TASK-027 | UT-SIM-001/004, TASK-024 risk/liquidation/zero-fill properties, scenario-grid assertions |
 | FR-017 | ADR-004; 05 simulate | TASK-025 | UT-STRAT-001, calibration-boundary tests |
 | FR-018 | ADR-004; 05 simulate | TASK-026 | UT-STRAT-002, prediction-key tests |
 | FR-019 | 02 UF-004/UF-005; 06 UI-009 | TASK-021, TASK-027, TASK-031 | IT-011, E2E-001, report-content checks |
@@ -51,7 +51,7 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | Requirement ID | Design document | Implementation task | Test coverage |
 | --- | --- | --- | --- |
 | SEC-001 | 07 binary validation | TASK-004, TASK-005, TASK-009, TASK-028 | UT-DEC-002, SEC-FUZZ-001, ASan/UBSan |
-| SEC-002 | 07 checked arithmetic | TASK-002, TASK-004, TASK-010, TASK-024, TASK-028 | Integer/quantity/cash boundary tests |
+| SEC-002 | 07 checked arithmetic | TASK-002, TASK-004, TASK-010, TASK-024, TASK-028 | Integer/quantity/cash boundary tests, TASK-024 atomic cash/fee/mark overflow cases |
 | SEC-003 | 07 filesystem writes; 09 incidents | TASK-014, TASK-017, TASK-028 | TASK-017 traversal/source-output-overlap checks, SEC-PATH-001, symlink/alias/cancellation tests |
 | SEC-004 | 07 integrity/provenance | TASK-013–017, TASK-028 | TASK-013 embedded-hash golden and partial-only tests, TASK-014 child-hash verification/IT-004, IT-012, hash-tamper tests |
 | SEC-005 | 07 runtime network | TASK-030 | Network-disabled E2E-001 and dependency review |

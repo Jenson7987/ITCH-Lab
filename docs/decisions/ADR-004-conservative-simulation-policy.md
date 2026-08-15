@@ -37,7 +37,16 @@ Historical market data does not reveal every hidden order, activity on all venue
   unknown priority is never inferred from such an event.
 - Cancellation remains exposed until cancellation latency elapses.
 - Fills require eligible observed execution flow and cannot exceed remaining order/event quantity.
-- Apply explicit signed fees/rebates, inventory limits and terminal liquidation.
+- Apply explicit signed fees/rebates, per-symbol inventory limits and terminal liquidation. Quote
+  eligibility uses projected inventory after a complete fill, and fill accounting enforces the
+  same inclusive limit before mutation.
+- Keep cash, fee, inventory value and P&L components in checked signed 64-bit microusd. Mark open
+  inventory at the latest causal visible two-sided midpoint using exact `mid2` arithmetic; do not
+  use floating-point money.
+- At session end expire every open simulated order, sell long inventory at the last valid visible
+  bid and buy short inventory at the last valid visible ask. Charge the configured signed taker
+  fee, report liquidation slippage separately and fail a non-flat scenario when the required
+  visible quote is absent or crossed.
 - Compare at least three latency and two cost settings.
 - Use complete chronological day partitions. Fit preprocessing/models/calibration on training/validation only and evaluate the frozen choice on test.
 - Report negative results, anomaly counts and all limitations prominently.

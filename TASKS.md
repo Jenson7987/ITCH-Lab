@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-024: Implement accounting, costs, risk and liquidation
-  - Dependencies: TASK-023
-  - Acceptance criteria: Integer reconciliation and inventory enforcement
-  - Tests: UT-SIM-004 and edge cases
-  - Documentation to update: Simulation contract
-
 - [ ] TASK-025: Implement inventory-aware baseline
   - Dependencies: TASK-022, TASK-024
   - Acceptance criteria: Causal calibrated tick-rounded quotes and correct inventory skew
@@ -61,6 +55,21 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-024: Implement accounting, costs, risk and liquidation
+  - Completed: 2026-08-14
+  - Evidence: The Python simulation domain now consumes causal queue fills into a checked signed-
+    int64 microusd ledger with deterministic fill IDs, exact per-symbol inventory, signed maker
+    fees/rebates, causal doubled-midpoint marking and an exactly reconciling cash/P&L decomposition.
+    Projected full-fill risk decisions suppress risk-increasing quotes outside inclusive inventory
+    limits, and fill accounting independently enforces the same boundary atomically. Session-end
+    settlement preflights and expires open orders, liquidates longs at the last visible bid and
+    shorts at the last visible ask, rejects missing/crossed terminal quotes, applies signed taker
+    fees and returns zero-safe metrics. UT-SIM-004's hand-reconciled golden trace plus boundary,
+    overflow, atomicity, no-fill and generated-property tests cover both sides, fee signs, risk
+    limits, causal marking and long/short liquidation. All 522 Python tests, Ruff formatting/lint,
+    strict mypy and wheel/sdist build passed. The Release C++ build passed; all 128 runnable CTest
+    entries passed and the authorised official-sample entry skipped as designed.
 
 - [x] TASK-023: Implement queue tracking and partial fills
   - Completed: 2026-08-14

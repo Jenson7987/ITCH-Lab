@@ -15,7 +15,9 @@ version-1 causal feature catalogue, bounded event/snapshot feature service, froz
 publication, required predictive baselines and predictive experiment reporting are also
 implemented. The immutable simulated-order lifecycle and integer-nanosecond latency scheduler are
 implemented alongside exact-known visible queue tracking, conservative partial fills and bounded
-queue diagnostics; accounting, strategies and simulation reporting remain planned.
+queue diagnostics. Checked integer cash/inventory accounting, signed costs, projected inventory
+risk and visible-spread terminal liquidation are implemented; strategies and simulation reporting
+remain planned.
 
 Classification legend used throughout the documentation:
 
@@ -90,8 +92,8 @@ prior/logistic/histogram-gradient-boosting baselines with training-only preproce
 validation log loss, evaluates test rows once, and publishes predictions, metrics, calibration and
 safe diagnostics without serialising executable model objects. The Python package also exposes the
 validated simulated-order state machine, deterministic market-first latency scheduler and
-exact-known visible queue/fill model; accounting and the `simulate` command are implemented by
-later tasks. The Python `report` command
+exact-known visible queue/fill model plus checked accounting/risk/liquidation primitives; the
+`simulate` command is implemented by a later task. The Python `report` command
 authenticates a completed experiment and its full dataset/conversion/replay lineage before
 atomically publishing deterministic Markdown and/or HTML,
 static SVG calibration plots, text summaries and relative reproduction commands.

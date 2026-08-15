@@ -462,6 +462,24 @@ Simulation config v1:
 
 The `inventory_aware_avellaneda_stoikov` strategy uses the same shape with `prediction_manifest` set to null and `signal_weight_ticks` set to 0. The signal-adjusted strategy requires a non-null prediction manifest and a signal weight from the declared version-1 candidate set. `order_quantity` and `inventory_limit` are positive, inventory limit is at least one order quantity, gamma/risk horizon/volatility window are positive, latency is 0 through 10 seconds in nanoseconds, each fee/rebate has absolute value at most 1,000,000 microusd per share, and `max_queue_anomalies` is an explicit integer from 0 through 2^53−1. Version 1 requires passive-only execution, `known_orders_conservative` queue policy and `cross_visible_spread` terminal liquidation. Inconsistent visible-lifecycle events are diagnosed and skipped for simulated effects only while they remain within that budget; the first excess aborts with `ERR_SIMULATION_ANOMALY`.
 
+Accounting starts from zero cash and zero per-symbol inventory. Before accepting a quote, the risk
+gate projects a complete fill and suppresses it if the resulting symbol inventory would leave the
+inclusive configured range. Every actual fill repeats that invariant. Gross fill cash excludes fees
+and is `−side×price4×quantity×100`; signed fee is the configured per-share value times quantity;
+net cash adds gross cash minus signed fee.
+
+The current exact mark is the latest causal visible `mid2=best_bid_price4+best_ask_price4`.
+Inventory value is `inventory×mid2×50` microusd. Passive spread capture, inventory mark-to-market,
+terminal liquidation slippage and signed fees reconcile exactly to net marked P&L as specified in
+04-data-model.md. All values and intermediate totals are checked signed int64; overflow is
+`ERR_COST`, while a fill or proposal outside the inventory range is `ERR_INVENTORY_LIMIT`.
+
+At session end every non-terminal order expires before publication. Long inventory sells at the
+last valid visible bid and short inventory buys at the last valid visible ask; the configured taker
+fee applies. Locked quotes are accepted. A crossed quote is `ERR_BOOK_CROSSED`, while missing or
+invalid required terminal prices are `ERR_PRICE`. Flat days settle without a quote and emit valid
+zero fill, quantity, cash, fee, inventory and P&L metrics.
+
 Outputs:
 
 - simulation-manifest.json.
@@ -670,6 +688,17 @@ Contract:
         output_format: Literal["markdown", "html", "both"] = "markdown",
         base_directory: Path | None = None,
     ) -> ReportResult: ...
+    def accounting_metrics(
+        source: AccountingLedger | AccountingSnapshot,
+    ) -> AccountingMetrics: ...
+    def settle_session_end(
+        state_machine: OrderStateMachine,
+        ledger: AccountingLedger,
+        *,
+        session_end_timestamp_ns: int,
+        last_quotes: Iterable[TerminalQuote],
+        taker_fee_microusd_per_share: int,
+    ) -> TerminalSettlement: ...
     def simulate(inputs: SimulationInputs, config: SimulationConfig) -> SimulationResult: ...
 
 Contracts:
@@ -720,6 +749,10 @@ Contracts:
   raise `DatasetBuildError` with a stable `ErrorCode` and no raw payload or absolute path.
 - PartitionedDataset exposes test rows for final evaluation, not training selection.
 - Simulation performs a causal as-of selection of the latest same-symbol prediction at or before each decision and records that prediction's exact immutable row identity.
+- Accounting consumes queue fills in lifecycle order, validates their order/event identity, assigns
+  deterministic fill IDs and leaves its prior snapshot unchanged on any validation, limit or
+  arithmetic failure. Terminal settlement preflights every required quote and monetary operation
+  before expiring orders or committing the flattened ledger.
 
 ## Error codes
 
