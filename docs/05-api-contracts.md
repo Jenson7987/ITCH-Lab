@@ -699,6 +699,26 @@ Contract:
         last_quotes: Iterable[TerminalQuote],
         taker_fee_microusd_per_share: int,
     ) -> TerminalSettlement: ...
+    class CausalIntensityCalibrator:
+        def record_exposure(
+            self, trading_date: date, symbol: str, distance_ticks: int, exposure_ns: int
+        ) -> None: ...
+        def record_execution(
+            self, trading_date: date, symbol: str, distance_ticks: int, count: int = 1
+        ) -> None: ...
+        def finalise(self) -> IntensityCalibration: ...
+    class InventoryAwareAvellanedaStoikov:
+        def observe_quote(
+            self,
+            *,
+            message_index: int,
+            timestamp_ns: int,
+            best_bid_price4: int,
+            best_ask_price4: int,
+        ) -> VolatilityEstimate | None: ...
+        def decide(
+            self, *, decision_message_index: int, timestamp_ns: int, inventory_shares: int
+        ) -> BaselineDecision: ...
     def simulate(inputs: SimulationInputs, config: SimulationConfig) -> SimulationResult: ...
 
 Contracts:
@@ -753,6 +773,17 @@ Contracts:
   deterministic fill IDs and leaves its prior snapshot unchanged on any validation, limit or
   arithmetic failure. Terminal settlement preflights every required quote and monetary operation
   before expiring orders or committing the flattened ledger.
+- Intensity calibration accepts only its declared configured symbols and sorted unique training
+  dates, stores exact nanosecond exposure and execution counts in the fixed 0-through-10 distance
+  buckets, and rejects later partitions with `ERR_LEAKAGE_GUARD`. Finalisation requires a finite
+  positive pooled fit; an invalid symbol fit records and uses that pooled estimate. Invalid records
+  do not mutate prior aggregates.
+- One baseline strategy instance owns one trading-date/symbol causal volatility window. Quote
+  observations must remain source ordered, and a decision cannot precede the latest observed key.
+  The first observation yields no variance estimate; once positive time has elapsed, zero variance
+  is valid. Decisions expose the equation inputs/results, exact Price4 proposals and stable
+  side-specific suppression reasons. Price-grid/passivity failures suppress only the affected side,
+  while the existing inventory risk gate independently suppresses a projected limit breach.
 
 ## Error codes
 

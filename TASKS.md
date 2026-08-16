@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-025: Implement inventory-aware baseline
-  - Dependencies: TASK-022, TASK-024
-  - Acceptance criteria: Causal calibrated tick-rounded quotes and correct inventory skew
-  - Tests: UT-STRAT-001
-  - Documentation to update: Equations/calibration reference
-
 - [ ] TASK-026: Implement bounded signal adjustment
   - Dependencies: TASK-020, TASK-025
   - Acceptance criteria: Exact prediction join; zero weight equals baseline
@@ -55,6 +49,21 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-025: Implement inventory-aware baseline
+  - Completed: 2026-08-15
+  - Evidence: The Python strategy domain now fits finite positive execution-intensity decay from
+    fixed 0-through-10 outward same-side-best buckets using exact training-only nanosecond exposure,
+    smoothed E/C counts and exposure-weighted least squares. Invalid symbol fits use the recorded
+    pooled training estimate, while missing pooled calibration and non-training observations fail
+    explicitly. A bounded per-session/symbol estimator computes causal trailing midpoint variance
+    rates and the baseline applies the documented reservation-price and half-spread equations,
+    exact outward tick rounding, strict passive constraints and existing projected full-fill risk
+    limits. UT-STRAT-001's hand-calculated flat/long/short decision table plus calibration, future-
+    prefix, clock-window, parameter, locked/off-grid book, price-domain, risk-boundary and atomicity
+    cases all pass. All 556 Python tests, Ruff formatting/lint, strict mypy and wheel/sdist build
+    passed. The Release C++ build passed; all 128 runnable CTest entries passed and the authorised
+    official-sample entry skipped as designed.
 
 - [x] TASK-024: Implement accounting, costs, risk and liquidation
   - Completed: 2026-08-14

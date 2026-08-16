@@ -172,6 +172,15 @@ tests cover projected quote suppression, fill-limit defence, signed fee/rebate d
 mark overflow with atomic state, fill ordering, long/short liquidation, missing/locked/crossed
 terminal quotes, session-end expiry, per-symbol isolation and flat zero-fill metrics.
 
+TASK-025's UT-STRAT-001 decision table fixes flat, long and short inventory equation inputs,
+reservation prices, half-spreads and outward-rounded passive Price4 proposals. Calibration tests
+independently calculate the smoothed intensities and exposure-weighted regression, exercise valid
+symbol and pooled fallback estimates, reject non-training observations and fail when no valid
+pooled estimate exists. Clock-window tests cover first-observation suppression, zero variance,
+half-open expiry, equal-timestamp source order and future-prefix invariance. Parameter and price
+boundaries cover non-finite values, atomic invalid observations, crossed/locked/off-grid books,
+uint32 quote bounds and both projected inventory-limit suppressions.
+
 ## Property-based testing
 
 Recommended frameworks: RapidCheck or a small deterministic generator for C++; Hypothesis for Python.

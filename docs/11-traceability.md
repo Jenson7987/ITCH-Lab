@@ -22,7 +22,7 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | FR-014 | 02 UF-005/state diagram; 04 SimulatedOrder | TASK-022 | UT-SIM-001, UT-SIM-003, state properties |
 | FR-015 | ADR-004; 04 Fill/SimulatedOrder | TASK-023 | UT-SIM-002, queue properties, IT-010 |
 | FR-016 | 02 UF-005; 04 SimulationRun/Fill/TerminalLiquidation | TASK-022, TASK-024, TASK-027 | UT-SIM-001/004, TASK-024 risk/liquidation/zero-fill properties, scenario-grid assertions |
-| FR-017 | ADR-004; 05 simulate | TASK-025 | UT-STRAT-001, calibration-boundary tests |
+| FR-017 | ADR-004; 01 inventory-aware baseline; 05 strategy/calibration interfaces | TASK-025 | UT-STRAT-001 decision-table golden, causal-volatility, training-only calibration/fallback and parameter-boundary tests |
 | FR-018 | ADR-004; 05 simulate | TASK-026 | UT-STRAT-002, prediction-key tests |
 | FR-019 | 02 UF-004/UF-005; 06 UI-009 | TASK-021, TASK-027, TASK-031 | IT-011, E2E-001, report-content checks |
 | FR-020 | 03 performance; 05 benchmark | TASK-029 | PERF-001 through PERF-008 |

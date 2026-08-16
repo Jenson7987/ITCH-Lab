@@ -182,7 +182,7 @@ class ReportGenerationError(RuntimeError):
 
 
 class SimulationError(ValueError):
-    """One stable, payload-free simulated-order or scheduler failure."""
+    """One stable, payload-free strategy or simulation-domain failure."""
 
     def __init__(
         self,

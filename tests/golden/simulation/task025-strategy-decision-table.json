@@ -1,0 +1,47 @@
+[
+  {
+    "scenario": "flat",
+    "inventory_shares": 0,
+    "inventory_units": 0.0,
+    "sigma_squared": 1.0,
+    "tau_seconds": 10.0,
+    "kappa": 0.69314718056,
+    "kappa_source": "symbol",
+    "reservation_price_ticks": 101.0,
+    "half_spread_ticks": 1.847664457102,
+    "bid_price4": 9900,
+    "ask_price4": 10300,
+    "bid_suppression_reason": null,
+    "ask_suppression_reason": null
+  },
+  {
+    "scenario": "long",
+    "inventory_shares": 200,
+    "inventory_units": 2.0,
+    "sigma_squared": 1.0,
+    "tau_seconds": 10.0,
+    "kappa": 0.69314718056,
+    "kappa_source": "symbol",
+    "reservation_price_ticks": 99.0,
+    "half_spread_ticks": 1.847664457102,
+    "bid_price4": 9700,
+    "ask_price4": 10200,
+    "bid_suppression_reason": null,
+    "ask_suppression_reason": null
+  },
+  {
+    "scenario": "short",
+    "inventory_shares": -200,
+    "inventory_units": -2.0,
+    "sigma_squared": 1.0,
+    "tau_seconds": 10.0,
+    "kappa": 0.69314718056,
+    "kappa_source": "symbol",
+    "reservation_price_ticks": 103.0,
+    "half_spread_ticks": 1.847664457102,
+    "bid_price4": 10000,
+    "ask_price4": 10500,
+    "bid_suppression_reason": null,
+    "ask_suppression_reason": null
+  }
+]

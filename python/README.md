@@ -14,10 +14,12 @@ calibration plots, adjacent text
 summaries, canonical config snapshots and relative reproduction commands. The immutable
 simulated-order lifecycle, deterministic integer-nanosecond latency scheduler and exact-known
 visible queue/partial-fill model are implemented alongside checked signed-microusd accounting,
-per-symbol inventory enforcement and explicit visible-spread terminal liquidation; the simulation
-command remains assigned to a later task. Equal-time source messages precede effective actions,
-preserving conservative fill-before-cancel races. Hidden P and cross Q events never fill displayed
-simulated orders, and a broken E/C match used for a fill aborts rather than inventing reinstatement.
+per-symbol inventory enforcement and explicit visible-spread terminal liquidation. Training-only
+intensity calibration and the causal, tick-rounded inventory-aware baseline strategy are also
+available; signal adjustment and the simulation command remain assigned to later tasks. Equal-time
+source messages precede effective actions, preserving conservative fill-before-cancel races. Hidden
+P and cross Q events never fill displayed simulated orders, and a broken E/C match used for a fill
+aborts rather than inventing reinstatement.
 
 From the repository root, point `configs/conversion.example.json` at completed replay manifests,
 then run:

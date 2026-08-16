@@ -156,15 +156,42 @@ Use prices in ticks and inventory in order-size units:
 
 - s is current mid-price in ticks.
 - q = inventory_shares / configured_order_quantity.
-- sigma_squared is the causal trailing sum of squared mid-price changes in ticks divided by elapsed seconds over a default 60-second window.
+- sigma_squared is the causal trailing sum of squared mid-price changes in ticks whose ending
+  observations lie in `(decision_timestamp−volatility_window, decision_timestamp]`, divided by
+  the lesser of the configured window and the positive elapsed time since the first in-session
+  observation. The default window is 60 seconds. A first observation establishes the midpoint but
+  supplies no elapsed estimate, so quoting is skipped until positive elapsed time exists; a valid
+  elapsed interval with no midpoint change has zero variance.
 - tau = min(configured risk_horizon_seconds, seconds until session end), with a default risk horizon of 10 seconds.
 - gamma is positive risk aversion in inverse tick per inventory unit.
 - kappa is positive execution-intensity decay per tick.
 - Reservation price: r = s − q × gamma × sigma_squared × tau.
 - Optimal half-spread approximation: delta = gamma × sigma_squared × tau / 2 + log(1 + gamma/kappa) / gamma.
-- Desired bid is floor(r−delta) ticks and ask is ceil(r+delta) ticks, then constrained to remain passive at or behind the current best prices.
+- Desired bid is floor(r−delta) ticks and ask is ceil(r+delta) ticks. Convert those integer tick
+  indices to Price4, cap the bid at the highest tick no greater than the current best bid and floor
+  the ask at the lowest tick no less than the current best ask. Also require bid below the visible
+  best ask and ask above the visible best bid, widening by a tick when needed for a locked book.
+  A side whose integer tick price is outside the uint32 Price4 domain is suppressed.
 
-Calibrate kappa using training days only. For resting-distance buckets delta_ticks=0…10, measure visible-level exposure seconds and E/C execution counts. Use smoothed intensity lambda_delta=(count+1)/(exposure_seconds+1), then weighted least-squares fit log(lambda_delta)=intercept−kappa×delta_ticks with exposure as weight. A non-positive/invalid symbol estimate falls back to a declared training-only pooled estimate; absence of a valid pooled estimate prevents that strategy run.
+Calibrate kappa using training days only. A resting-distance bucket is the exact outward tick
+distance from the contemporaneous same-side best: the best displayed level is 0, the next
+tick-aligned price outward is 1 and so on through 10. Each distinct visible price level contributes
+its elapsed exposure independently of displayed quantity. E/C messages count as one execution in
+the bucket of their resting displayed price immediately before the event; P/Q and non-tick-aligned
+levels do not contribute. Visible-level interval measurement resets at every trading-date/symbol
+boundary while the fixed bucket aggregates accumulate across training partitions. A non-training
+date is rejected rather than silently filtered.
+
+Use smoothed intensity `lambda_delta=(count+1)/(exposure_seconds+1)`, then exposure-weighted least
+squares for `log(lambda_delta)=intercept−kappa×delta_ticks`. A fit requires at least two distinct
+positive-exposure buckets and a finite positive kappa. Pooling sums the training-only bucket counts
+and exposures across configured symbols before fitting. A non-positive or invalid symbol estimate
+uses that declared pooled estimate; absence of a valid pooled estimate prevents the strategy run.
+Calibration dates, all bucket aggregates, the fitted intercept/kappa and the per-symbol estimate
+source are retained for the later simulation manifest. The equations are the documented MVP
+approximation inspired by [Avellaneda and Stoikov, *High-frequency trading in a limit order
+book*](https://doi.org/10.1080/14697680701381228); the empirical calibration and conservative
+execution constraints are project-specific.
 
 ### Signal adjustment and accounting
 

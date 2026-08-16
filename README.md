@@ -16,8 +16,9 @@ publication, required predictive baselines and predictive experiment reporting a
 implemented. The immutable simulated-order lifecycle and integer-nanosecond latency scheduler are
 implemented alongside exact-known visible queue tracking, conservative partial fills and bounded
 queue diagnostics. Checked integer cash/inventory accounting, signed costs, projected inventory
-risk and visible-spread terminal liquidation are implemented; strategies and simulation reporting
-remain planned.
+risk and visible-spread terminal liquidation are implemented. The training-only intensity
+calibration, causal trailing volatility and tick-rounded inventory-aware baseline strategy are also
+implemented; signal adjustment and simulation reporting remain planned.
 
 Classification legend used throughout the documentation:
 
@@ -93,6 +94,7 @@ validation log loss, evaluates test rows once, and publishes predictions, metric
 safe diagnostics without serialising executable model objects. The Python package also exposes the
 validated simulated-order state machine, deterministic market-first latency scheduler and
 exact-known visible queue/fill model plus checked accounting/risk/liquidation primitives; the
+causal calibrated inventory-aware baseline is available as a strategy primitive, while the
 `simulate` command is implemented by a later task. The Python `report` command
 authenticates a completed experiment and its full dataset/conversion/replay lineage before
 atomically publishing deterministic Markdown and/or HTML,
