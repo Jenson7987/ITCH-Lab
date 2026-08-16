@@ -460,7 +460,14 @@ Simulation config v1:
       "seed": 7987
     }
 
-The `inventory_aware_avellaneda_stoikov` strategy uses the same shape with `prediction_manifest` set to null and `signal_weight_ticks` set to 0. The signal-adjusted strategy requires a non-null prediction manifest and a signal weight from the declared version-1 candidate set. `order_quantity` and `inventory_limit` are positive, inventory limit is at least one order quantity, gamma/risk horizon/volatility window are positive, latency is 0 through 10 seconds in nanoseconds, each fee/rebate has absolute value at most 1,000,000 microusd per share, and `max_queue_anomalies` is an explicit integer from 0 through 2^53−1. Version 1 requires passive-only execution, `known_orders_conservative` queue policy and `cross_visible_spread` terminal liquidation. Inconsistent visible-lifecycle events are diagnosed and skipped for simulated effects only while they remain within that budget; the first excess aborts with `ERR_SIMULATION_ANOMALY`.
+The `inventory_aware_avellaneda_stoikov` strategy uses the same shape with `prediction_manifest` set to null and `signal_weight_ticks` set to 0. The signal-adjusted strategy requires a non-null prediction manifest and a signal weight from the declared version-1 candidate set. It chooses the minimum validation-log-loss model family before simulation; values within 1e-6 tie in prior, logistic-regression, gradient-boosting order. `order_quantity` and `inventory_limit` are positive, inventory limit is at least one order quantity, gamma/risk horizon/volatility window are positive, latency is 0 through 10 seconds in nanoseconds, each fee/rebate has absolute value at most 1,000,000 microusd per share, and `max_queue_anomalies` is an explicit integer from 0 through 2^53−1. Version 1 requires passive-only execution, `known_orders_conservative` queue policy and `cross_visible_spread` terminal liquidation. Inconsistent visible-lifecycle events are diagnosed and skipped for simulated effects only while they remain within that budget; the first excess aborts with `ERR_SIMULATION_ANOMALY`.
+
+The bounded rule is
+`r_signal = r + clip(w×score, −max_signal_ticks, max_signal_ticks)`. A missing prediction or one
+whose age is strictly greater than
+`max_prediction_age_ns` uses zero effective score and emits DIAG_MISSING_PREDICTION or
+DIAG_STALE_PREDICTION. Equality at the age bound remains fresh. A zero signal weight bypasses the
+prediction stream and emits baseline-equivalent economic decisions and order requests.
 
 Accounting starts from zero cash and zero per-symbol inventory. Before accepting a quote, the risk
 gate projects a complete fill and suppresses it if the resulting symbol inventory would leave the
@@ -719,6 +726,28 @@ Contract:
         def decide(
             self, *, decision_message_index: int, timestamp_ns: int, inventory_shares: int
         ) -> BaselineDecision: ...
+    class CausalPredictionJoin:
+        def select(
+            self, *, decision_message_index: int, timestamp_ns: int
+        ) -> PredictionSelection: ...
+    class SignalAdjustedAvellanedaStoikov:
+        def observe_quote(
+            self,
+            *,
+            message_index: int,
+            timestamp_ns: int,
+            best_bid_price4: int,
+            best_ask_price4: int,
+        ) -> VolatilityEstimate | None: ...
+        def decide(
+            self, *, decision_message_index: int, timestamp_ns: int, inventory_shares: int
+        ) -> SignalAdjustedDecision: ...
+    def select_signal_model(
+        evaluations: Iterable[ModelValidationMetric],
+    ) -> SignalModelSelection: ...
+    def select_signal_weight(
+        evaluations: Iterable[ValidationSignalPnl],
+    ) -> SignalWeightSelection: ...
     def simulate(inputs: SimulationInputs, config: SimulationConfig) -> SimulationResult: ...
 
 Contracts:
@@ -784,6 +813,20 @@ Contracts:
   is valid. Decisions expose the equation inputs/results, exact Price4 proposals and stable
   side-specific suppression reasons. Price-grid/passivity failures suppress only the affected side,
   while the existing inventory risk gate independently suppresses a projected limit breach.
+- One causal prediction join owns one authenticated trading-date/symbol/model stream. It requires
+  strictly increasing prediction message indices and non-decreasing dataset timestamps, selects the
+  latest row at or before a non-decreasing decision key, retains its complete immutable key and
+  holds only one future-key lookahead in normal operation. Invalid input leaves its semantic cursor
+  unchanged. Missing/stale rows are diagnostics; malformed scores or scope mismatches are errors.
+- Signal model selection requires exactly one finite non-negative validation log loss for every
+  required model family. Signal-weight selection requires all four candidates over identical
+  validation-day sets under the fixed 100 microsecond latency and −2000 microusd/share maker-cost
+  scenario. It compares exact rational day means and treats a difference of at most one microusd as
+  a tie. Train/test-labelled, duplicate, incomplete or wrong-scenario evidence is rejected.
+- The signal-adjusted strategy delegates volatility, half-spread, outward tick rounding, passivity
+  and projected inventory checks to the inventory-aware baseline. It changes only the reservation
+  price through the clipped configured score rule; weight zero does not advance its prediction
+  stream.
 
 ## Error codes
 
@@ -800,7 +843,8 @@ Stable public codes include:
 
 New codes may be added within a major version. Existing meanings must not change silently.
 
-Non-fatal diagnostic codes start with DIAG\_; DIAG_STALE_PREDICTION records signal fallback without changing command success by itself.
+Non-fatal diagnostic codes start with DIAG\_; DIAG_MISSING_PREDICTION and
+DIAG_STALE_PREDICTION record zero-signal fallbacks without changing command success by themselves.
 
 ## File-level idempotency and concurrency
 

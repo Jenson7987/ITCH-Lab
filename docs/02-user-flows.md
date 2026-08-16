@@ -212,7 +212,9 @@ Changing features, horizons, hyperparameters or selection rules after viewing te
 ### Main path
 
 1. Replay the test-day market events in order.
-2. At each decision point, the strategy uses the latest same-symbol prediction at or before the current message, records its exact key, and emits desired bid/ask actions.
+2. Freeze the minimum-validation-log-loss model family using the documented simplicity tie-break;
+   at each decision point, the strategy uses its latest same-symbol prediction at or before the
+   current message, records its exact key, and emits desired bid/ask actions.
 3. Actions enter pending state until submission latency elapses.
 4. Active passive orders join behind the visible queue at their price; actions effective at the same timestamp as source events are applied after all those source events.
 5. Subsequent known lifecycle events update queue ahead.
@@ -264,7 +266,8 @@ is pending leaves the remainder in `pending_cancel`.
 ### Alternative and failure paths
 
 - A marketable desired quote is rejected by the passive-only MVP rather than assumed to fill.
-- Missing/corrupt prediction at a decision point falls back to zero signal and records a diagnostic.
+- A missing or stale prediction at a decision point falls back to zero signal and records a
+  diagnostic; malformed, non-finite or mis-keyed prediction content fails validation.
 - An inconsistent queue event skips the affected simulated action; exceeding the anomaly budget aborts the scenario.
 - If volatility/intensity calibration is unavailable, the strategy does not use a future window; it either uses a declared prior or skips quoting.
 

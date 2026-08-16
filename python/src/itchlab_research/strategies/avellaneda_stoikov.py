@@ -451,6 +451,50 @@ class InventoryAwareAvellanedaStoikov:
             None,
         )
 
+    def _quotes_for_reservation(
+        self,
+        *,
+        reservation_price_ticks: float,
+        half_spread_ticks: float,
+        best_bid_price4: int,
+        best_ask_price4: int,
+        inventory_shares: int,
+    ) -> tuple[
+        QuoteProposal | None,
+        QuoteProposal | None,
+        QuoteSuppressionReason | None,
+        QuoteSuppressionReason | None,
+    ]:
+        """Apply the shared outward rounding, passivity and inventory rules."""
+        if (
+            not all(math.isfinite(value) for value in (reservation_price_ticks, half_spread_ticks))
+            or half_spread_ticks <= 0.0
+        ):
+            raise _fail(ErrorCode.SIMULATION_ANOMALY, "Strategy quote equation is not finite.")
+        desired_bid_tick = math.floor(reservation_price_ticks - half_spread_ticks)
+        desired_ask_tick = math.ceil(reservation_price_ticks + half_spread_ticks)
+        passive_bid_tick = min(
+            desired_bid_tick,
+            best_bid_price4 // self._tick_size4,
+            (best_ask_price4 - 1) // self._tick_size4,
+        )
+        passive_ask_tick = max(
+            desired_ask_tick,
+            (best_ask_price4 + self._tick_size4 - 1) // self._tick_size4,
+            best_bid_price4 // self._tick_size4 + 1,
+        )
+        bid, bid_reason = self._proposal(
+            side=1,
+            tick_index=passive_bid_tick,
+            inventory_shares=inventory_shares,
+        )
+        ask, ask_reason = self._proposal(
+            side=-1,
+            tick_index=passive_ask_tick,
+            inventory_shares=inventory_shares,
+        )
+        return bid, ask, bid_reason, ask_reason
+
     def decide(
         self,
         *,
@@ -518,26 +562,11 @@ class InventoryAwareAvellanedaStoikov:
         ):
             raise _fail(ErrorCode.SIMULATION_ANOMALY, "Baseline quote equation is not finite.")
 
-        desired_bid_tick = math.floor(reservation - half_spread)
-        desired_ask_tick = math.ceil(reservation + half_spread)
-        passive_bid_tick = min(
-            desired_bid_tick,
-            state.best_bid_price4 // self._tick_size4,
-            (state.best_ask_price4 - 1) // self._tick_size4,
-        )
-        passive_ask_tick = max(
-            desired_ask_tick,
-            (state.best_ask_price4 + self._tick_size4 - 1) // self._tick_size4,
-            state.best_bid_price4 // self._tick_size4 + 1,
-        )
-        bid, bid_reason = self._proposal(
-            side=1,
-            tick_index=passive_bid_tick,
-            inventory_shares=inventory_shares,
-        )
-        ask, ask_reason = self._proposal(
-            side=-1,
-            tick_index=passive_ask_tick,
+        bid, ask, bid_reason, ask_reason = self._quotes_for_reservation(
+            reservation_price_ticks=reservation,
+            half_spread_ticks=half_spread,
+            best_bid_price4=state.best_bid_price4,
+            best_ask_price4=state.best_ask_price4,
             inventory_shares=inventory_shares,
         )
         return BaselineDecision(

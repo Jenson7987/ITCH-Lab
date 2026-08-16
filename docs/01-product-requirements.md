@@ -121,6 +121,9 @@ flag; TASK-019 counts and excludes rows without every required history window be
 - Select minimum validation multiclass log loss. Logistic ties within 1e-6 choose smaller C. Gradient-boosting ties choose smaller max_leaf_nodes, then larger l2_regularization, then lower learning_rate.
 - Freeze the selected candidate before the one final test evaluation.
 - The simulator signal score is P(up) − P(down), necessarily in [−1, 1].
+- The signal strategy selects one model family using validation multiclass log loss only. Differences
+  within 1e-6 are ties and choose the simpler fixed order: prior, multinomial logistic regression,
+  then histogram gradient boosting. The chosen family is frozen before any test simulation.
 
 ## Simulation definitions
 
@@ -128,7 +131,10 @@ flag; TASK-019 counts and excludes rows without every required history window be
 
 - Default decision interval is 100 ms. At the first market event after each elapsed grid boundary, the strategy observes the already-applied current state and uses the latest prediction for the same symbol whose message index is at or before the decision event. If several boundaries pass without an event, they coalesce into one decision.
 - A decision never uses a later prediction. The exact prediction row key used is written to the simulated-order record.
-- A prediction older than max_prediction_age_ns=500,000,000 is stale; the signal component becomes zero and a diagnostic is counted, while the inventory-only baseline may continue.
+- A prediction older than max_prediction_age_ns=500,000,000 is stale; equality remains fresh. A
+  stale or absent prediction makes the signal component zero and counts DIAG_STALE_PREDICTION or
+  DIAG_MISSING_PREDICTION respectively, while the inventory-only baseline may continue. Malformed,
+  mis-keyed or non-finite prediction content is a fatal validation error rather than a fallback.
 - Submission/cancellation effective at the same timestamp as one or more source events is applied after all source messages at that timestamp. This conservative tie-break allows those events to occur before the action.
 - Effective actions at the same timestamp are applied in request order. A cancellation requested
   while submission is pending still observes cancellation latency: it cancels before activation
@@ -196,10 +202,13 @@ execution constraints are project-specific.
 ### Signal adjustment and accounting
 
 - Signal-adjusted reservation price is r_signal = r + clip(w×score, −max_signal_ticks, max_signal_ticks).
-- Candidate w values are {0, 0.5, 1, 2} ticks and are selected on validation simulation only; ties choose the smaller absolute value. Default max_signal_ticks is 2.
+- Candidate w values are {0, 0.5, 1, 2} ticks and are selected on validation simulation only; ties
+  within one microusd of mean validation-day net P&L choose the smaller value. Default
+  max_signal_ticks is 2.
 - The main baseline fixes gamma=0.1, risk_horizon_seconds=10, order_quantity=100 and inventory_limit=1000 before test evaluation. Optional gamma sensitivity does not replace the main result.
 - Select w by highest mean validation-day net P&L under the default 100 microsecond latency and −2000 microusd/share maker-rebate scenario; a tie within one microusd chooses the smaller w. The selected w is then frozen for every test scenario.
-- Setting w=0 must reproduce baseline decisions and results byte-for-byte except strategy name metadata.
+- Setting w=0 bypasses prediction lookup and must reproduce baseline economic decisions, order
+  requests and simulation results byte-for-byte; only strategy/run-lineage metadata may differ.
 - Default order quantity is 100 shares. Inventory is enforced independently per symbol. A proposed
   quote is suppressed when a complete fill of its configured quantity would move that symbol's
   inventory outside the inclusive `[-inventory_limit, +inventory_limit]` range. The accounting

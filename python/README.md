@@ -15,8 +15,9 @@ summaries, canonical config snapshots and relative reproduction commands. The im
 simulated-order lifecycle, deterministic integer-nanosecond latency scheduler and exact-known
 visible queue/partial-fill model are implemented alongside checked signed-microusd accounting,
 per-symbol inventory enforcement and explicit visible-spread terminal liquidation. Training-only
-intensity calibration and the causal, tick-rounded inventory-aware baseline strategy are also
-available; signal adjustment and the simulation command remain assigned to later tasks. Equal-time
+intensity calibration, the causal tick-rounded inventory-aware baseline and its bounded
+validation-frozen signal adjustment are also available; the simulation command remains assigned to
+a later task. Equal-time
 source messages precede effective actions, preserving conservative fill-before-cancel races. Hidden
 P and cross Q events never fill displayed simulated orders, and a broken E/C match used for a fill
 aborts rather than inventing reinstatement.
@@ -38,3 +39,9 @@ lineage and never loads a pickle/joblib model object.
 Report bundles are written beneath `runs/report/<experiment-id>/<markdown|html|both>/`. Existing
 byte-identical bundles are reused, while inconsistent completed or partial bundles fail without
 overwrite. Reports are static, contain no scripts and do not download data.
+
+The signal strategy selects its model family from validation log loss only, joins exact
+day/symbol/model prediction keys causally, treats only missing/stale predictions as zero signal and
+clips the configured reservation-price adjustment before reusing the baseline tick, passivity and
+inventory constraints. Signal weight zero bypasses prediction consumption and reproduces the
+baseline economic decision.

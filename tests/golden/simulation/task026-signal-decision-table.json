@@ -1,0 +1,67 @@
+[
+  {
+    "scenario": "positive_clipped",
+    "raw_score": 0.75,
+    "effective_score": 0.75,
+    "prediction_message_index": 2,
+    "diagnostic": null,
+    "baseline_reservation_price_ticks": 101.0,
+    "unclipped_adjustment_ticks": 1.5,
+    "adjustment_ticks": 1.0,
+    "signal_reservation_price_ticks": 102.0,
+    "bid_price4": 10000,
+    "ask_price4": 10400
+  },
+  {
+    "scenario": "negative_clipped",
+    "raw_score": -0.75,
+    "effective_score": -0.75,
+    "prediction_message_index": 2,
+    "diagnostic": null,
+    "baseline_reservation_price_ticks": 101.0,
+    "unclipped_adjustment_ticks": -1.5,
+    "adjustment_ticks": -1.0,
+    "signal_reservation_price_ticks": 100.0,
+    "bid_price4": 9800,
+    "ask_price4": 10200
+  },
+  {
+    "scenario": "positive_half_tick",
+    "raw_score": 0.75,
+    "effective_score": 0.75,
+    "prediction_message_index": 2,
+    "diagnostic": null,
+    "baseline_reservation_price_ticks": 101.0,
+    "unclipped_adjustment_ticks": 0.75,
+    "adjustment_ticks": 0.5,
+    "signal_reservation_price_ticks": 101.5,
+    "bid_price4": 9900,
+    "ask_price4": 10400
+  },
+  {
+    "scenario": "missing",
+    "raw_score": null,
+    "effective_score": 0.0,
+    "prediction_message_index": null,
+    "diagnostic": "DIAG_MISSING_PREDICTION",
+    "baseline_reservation_price_ticks": 101.0,
+    "unclipped_adjustment_ticks": 0.0,
+    "adjustment_ticks": 0.0,
+    "signal_reservation_price_ticks": 101.0,
+    "bid_price4": 9900,
+    "ask_price4": 10300
+  },
+  {
+    "scenario": "stale",
+    "raw_score": 1.0,
+    "effective_score": 0.0,
+    "prediction_message_index": 1,
+    "diagnostic": "DIAG_STALE_PREDICTION",
+    "baseline_reservation_price_ticks": 101.0,
+    "unclipped_adjustment_ticks": 0.0,
+    "adjustment_ticks": 0.0,
+    "signal_reservation_price_ticks": 101.0,
+    "bid_price4": 9900,
+    "ask_price4": 10300
+  }
+]

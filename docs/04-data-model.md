@@ -370,6 +370,11 @@ Persisted as predictions.parquet.
 
 Uniqueness: (experiment_id, trading_date, symbol_id, message_index, model_name).
 
+The causal strategy adapter enriches the selected model's prediction with the timestamp from the
+exact frozen dataset row sharing trading date, symbol ID and message index. Its full in-memory key
+is experiment ID, trading date, symbol ID, message index and model name. The join is scoped to one
+day/symbol/model stream and retains only the latest eligible row plus one future-key lookahead.
+
 ### SimulationRun
 
 Stored in simulation-manifest.json plus orders/fills/equity Parquet files and metrics/diagnostics
@@ -393,7 +398,7 @@ JSON files.
 | --- | --- | --- | --- | --- |
 | simulated_order_id | uint64 | No | sequence | Unique within simulation scenario |
 | decision_message_index | uint64 | No | — | Strategy decision |
-| prediction_message_index | uint64 | Yes | null | Latest same-symbol prediction at or before decision; null for no-signal baseline |
+| prediction_message_index | uint64 | Yes | null | Latest same-symbol prediction at or before decision; null when no prediction is used |
 | requested_timestamp_ns | uint64 | No | — | Decision time |
 | effective_timestamp_ns | uint64 | No | — | Requested time plus submission latency |
 | symbol_id | uint16 | No | — | Instrument |
@@ -419,6 +424,11 @@ of every exact visible order at the same symbol, side and displayed price at act
 current reference-to-quantity queue is transient simulator state: it is deterministically
 reconstructable from the authenticated event stream and is not duplicated in the version-1 order
 output. Orders rejected as marketable before activation retain a null initial queue.
+
+For a signal order, the simulation's fixed experiment/model plus its trading-day partition,
+`symbol_id` and `prediction_message_index` reconstruct the exact prediction key. A zero-weight
+signal run deliberately leaves `prediction_message_index` null because it bypasses prediction
+lookup to preserve baseline-equivalent economic output.
 
 ### Fill
 
@@ -467,6 +477,15 @@ cost, the exact reconciliation is:
 A completed terminal settlement has zero inventory, so final marked P&L equals final net cash.
 
 ## Transient entities
+
+### SignalAdjustedDecision
+
+One decision retains the complete inventory-aware baseline decision, optional exact prediction key,
+prediction timestamp/age, raw and effective scores, any missing/stale diagnostic, configured weight,
+unclipped and clipped adjustments, adjusted reservation price and final passive quote proposals.
+Malformed prediction content fails; only an absent prediction or an age strictly greater than the
+configured maximum produces a zero-score fallback. The selected model family and signal weight are
+frozen from validation evidence before test decisions are evaluated.
 
 ### Order
 

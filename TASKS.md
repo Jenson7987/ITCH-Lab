@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-026: Implement bounded signal adjustment
-  - Dependencies: TASK-020, TASK-025
-  - Acceptance criteria: Exact prediction join; zero weight equals baseline
-  - Tests: UT-STRAT-002
-  - Documentation to update: Signal rule/config
-
 - [ ] TASK-027: Run scenarios and finish simulation report
   - Dependencies: TASK-023–026
   - Acceptance criteria: Required latency/cost grid, metrics and limitations
@@ -49,6 +43,21 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-026: Implement bounded signal adjustment
+  - Completed: 2026-08-16
+  - Evidence: The Python strategy domain now performs a bounded causal as-of join over one exact
+    trading-day/symbol/model prediction stream, retains the complete prediction key, distinguishes
+    missing and stale zero-score diagnostics, and rejects malformed, mis-keyed or future content
+    atomically. Model family and signal weight selection consume validation evidence only, apply
+    the documented tolerance and simplicity/smaller-weight tie-breaks against the true optimum,
+    and freeze the configured result before test decisions. The signal strategy applies the
+    clipped score adjustment while reusing baseline volatility, tick rounding, passivity and risk
+    constraints; weight zero does not consume predictions and produces identical baseline economic
+    decisions and order requests. UT-STRAT-002, causal join tests and the controlled-signal golden
+    fixture all pass. All 589 Python tests, Ruff formatting/lint, strict mypy and wheel/sdist build
+    passed. The Release C++ build passed; all 128 runnable CTest entries passed and the authorised
+    official-sample entry skipped as designed.
 
 - [x] TASK-025: Implement inventory-aware baseline
   - Completed: 2026-08-15

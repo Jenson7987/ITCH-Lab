@@ -181,6 +181,15 @@ half-open expiry, equal-timestamp source order and future-prefix invariance. Par
 boundaries cover non-finite values, atomic invalid observations, crossed/locked/off-grid books,
 uint32 quote bounds and both projected inventory-limit suppressions.
 
+TASK-026's UT-STRAT-002 compares the zero-weight signal path with the exact baseline economic
+decision and order-request projection while a fail-on-read prediction stream proves it is not
+consumed. The controlled signal golden covers positive/negative clipping, sub-tick adjustment,
+missing and stale fallbacks and exact prediction-key propagation. Join tests cover exact-index and
+as-of selection, inclusive age bounds, one-row future lookahead, future-score prefix invariance,
+duplicate/out-of-order/scope/score/timestamp rejection and atomic semantic state. Validation-only
+selection tests cover complete model and weight catalogues, the fixed selection scenario, exact
+day means, both tie rules and rejection of test-labelled evidence.
+
 ## Property-based testing
 
 Recommended frameworks: RapidCheck or a small deterministic generator for C++; Hypothesis for Python.
@@ -479,7 +488,7 @@ A task is done only when:
 | UT-SIM-003 | Cancellation race | Fill before cancellation-effective time is retained |
 | UT-SIM-004 | Accounting | Cash+inventory mark−fees reconciles to reported P&L |
 | UT-STRAT-001 | Inventory skew | Long inventory lowers reservation price |
-| UT-STRAT-002 | Zero signal | Signal-weight zero emits baseline decisions |
+| UT-STRAT-002 | Signal adjustment | Zero weight emits baseline decisions; controlled scores clip and retain exact causal keys |
 | CT-BIN-001 | Cross-language | Python reads C++ golden event/snapshot files exactly |
 | CT-JSON-001 | Manifest | Completed replay manifest validates; unknown key fails |
 | SEC-FUZZ-001 | Parser safety | Maintained fuzz corpus completes without sanitizer finding |
