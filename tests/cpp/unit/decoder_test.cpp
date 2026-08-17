@@ -412,11 +412,8 @@ TEST_CASE("TASK-009 validates six-byte timestamps for every MVP type",
     write_big_endian(payload, 5, 6, itchlab::kNanosecondsPerDay - 1);
     const auto maximum = decoder.decode(payload);
     REQUIRE(maximum.valid());
-    const auto& header = std::visit(
-        [](const auto& typed_message) -> const itchlab::MessageHeader& {
-          return typed_message.header;
-        },
-        *maximum.message);
+    const auto header = std::visit([](const auto& typed_message) { return typed_message.header; },
+                                   *maximum.message);
     REQUIRE(header.stock_locate == std::numeric_limits<std::uint16_t>::max());
     REQUIRE(header.tracking_number == std::numeric_limits<std::uint16_t>::max());
     REQUIRE(header.timestamp_ns == itchlab::kNanosecondsPerDay - 1);

@@ -123,7 +123,7 @@ TEST_CASE("TASK-004 framed reader distinguishes clean EOF from truncated input",
 
 TEST_CASE("TASK-004 framed reader rejects zero and oversized lengths before payload reads",
           "[TASK-004][framing][security]") {
-  for (const auto test_case : {
+  for (const auto& test_case : {
            std::pair{std::array{std::byte{0x00}, std::byte{0x00}}, itchlab::ErrorCode::framing},
            std::pair{std::array{std::byte{0x02}, std::byte{0x01}}, itchlab::ErrorCode::framing},
        }) {
