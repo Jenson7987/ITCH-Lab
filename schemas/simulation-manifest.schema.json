@@ -1,0 +1,683 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://itchlab.local/schemas/simulation-manifest.schema.json",
+  "title": "ITCH-Lab completed simulation manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "simulation_id",
+    "status",
+    "started_at",
+    "completed_at",
+    "config",
+    "config_sha256",
+    "identity_config_sha256",
+    "identity_sha256",
+    "tool",
+    "parents",
+    "calibration",
+    "selection",
+    "scenarios",
+    "schemas",
+    "artefacts",
+    "assumptions",
+    "limitations",
+    "warnings"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "simulation_id": {
+      "$ref": "#/$defs/runId"
+    },
+    "status": {
+      "const": "completed"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "config": {
+      "$ref": "https://itchlab.local/schemas/simulation-config.schema.json"
+    },
+    "config_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "identity_config_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "identity_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "tool": {
+      "$ref": "#/$defs/tool"
+    },
+    "parents": {
+      "$ref": "#/$defs/parents"
+    },
+    "calibration": {
+      "$ref": "#/$defs/calibration"
+    },
+    "selection": {
+      "$ref": "#/$defs/selection"
+    },
+    "scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/scenario"
+      }
+    },
+    "schemas": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/schema"
+      },
+      "required": [
+        "orders",
+        "fills",
+        "liquidations",
+        "equity"
+      ]
+    },
+    "artefacts": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/artefact"
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "$defs": {
+    "runId": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}\\.[0-9]{9}Z-[0-9a-f]{12}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "safePath": {
+      "type": "string",
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)(?:\\.\\.?)(?:/|$))(?!.*\\.partial$)[^\\\\]+$"
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "application_version",
+        "content_digest_kind",
+        "sha256",
+        "python_version",
+        "pyarrow_version"
+      ],
+      "properties": {
+        "application_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "content_digest_kind": {
+          "const": "python-package-content-v1"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "python_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pyarrow_version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "parent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "manifest_sha256",
+        "config_sha256",
+        "identity_sha256"
+      ],
+      "properties": {
+        "run_id": {
+          "$ref": "#/$defs/runId"
+        },
+        "manifest_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "config_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "identity_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "parents": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dataset",
+        "experiment"
+      ],
+      "properties": {
+        "dataset": {
+          "$ref": "#/$defs/parent"
+        },
+        "experiment": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/parent"
+            }
+          ]
+        }
+      }
+    },
+    "bucket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "distance_ticks",
+        "exposure_ns",
+        "execution_count"
+      ],
+      "properties": {
+        "distance_ticks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "exposure_ns": {
+          "$ref": "#/$defs/count"
+        },
+        "execution_count": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    },
+    "bucketSet": {
+      "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "items": {
+        "$ref": "#/$defs/bucket"
+      }
+    },
+    "intensityFit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kappa",
+        "intercept",
+        "buckets"
+      ],
+      "properties": {
+        "kappa": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "intercept": {
+          "type": "number"
+        },
+        "buckets": {
+          "$ref": "#/$defs/bucketSet"
+        }
+      }
+    },
+    "symbolIntensityFit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "symbol",
+        "kappa",
+        "intercept",
+        "source",
+        "buckets"
+      ],
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "pattern": "^[ -~]{1,8}$"
+        },
+        "kappa": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "intercept": {
+          "type": "number"
+        },
+        "source": {
+          "enum": [
+            "symbol",
+            "pooled"
+          ]
+        },
+        "buckets": {
+          "$ref": "#/$defs/bucketSet"
+        }
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "training_dates",
+        "pooled",
+        "symbols"
+      ],
+      "properties": {
+        "training_dates": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "pooled": {
+          "$ref": "#/$defs/intensityFit"
+        },
+        "symbols": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/symbolIntensityFit"
+          }
+        }
+      }
+    },
+    "modelEvaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "partition",
+        "model_name",
+        "multiclass_log_loss"
+      ],
+      "properties": {
+        "partition": {
+          "const": "validation"
+        },
+        "model_name": {
+          "enum": [
+            "prior",
+            "logistic_regression",
+            "hist_gradient_boosting"
+          ]
+        },
+        "multiclass_log_loss": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "modelSelection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_name",
+        "validation_log_loss",
+        "evaluations"
+      ],
+      "properties": {
+        "model_name": {
+          "enum": [
+            "prior",
+            "logistic_regression",
+            "hist_gradient_boosting"
+          ]
+        },
+        "validation_log_loss": {
+          "type": "number",
+          "minimum": 0
+        },
+        "evaluations": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/modelEvaluation"
+          }
+        }
+      }
+    },
+    "weightEvaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "signal_weight_ticks",
+        "validation_days",
+        "total_net_pnl_microusd",
+        "mean_net_pnl_microusd"
+      ],
+      "properties": {
+        "signal_weight_ticks": {
+          "enum": [
+            0,
+            0.5,
+            1,
+            2
+          ]
+        },
+        "validation_days": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "total_net_pnl_microusd": {
+          "type": "integer"
+        },
+        "mean_net_pnl_microusd": {
+          "type": "number"
+        }
+      }
+    },
+    "weightDailyEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "partition",
+        "trading_date",
+        "signal_weight_ticks",
+        "submission_latency_ns",
+        "cancellation_latency_ns",
+        "maker_fee_microusd_per_share",
+        "net_pnl_microusd"
+      ],
+      "properties": {
+        "partition": {
+          "const": "validation"
+        },
+        "trading_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "signal_weight_ticks": {
+          "enum": [
+            0,
+            0.5,
+            1,
+            2
+          ]
+        },
+        "submission_latency_ns": {
+          "const": 100000
+        },
+        "cancellation_latency_ns": {
+          "const": 100000
+        },
+        "maker_fee_microusd_per_share": {
+          "const": -2000
+        },
+        "net_pnl_microusd": {
+          "type": "integer"
+        }
+      }
+    },
+    "weightSelection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selected",
+        "fixed_submission_latency_ns",
+        "fixed_cancellation_latency_ns",
+        "fixed_maker_fee_microusd_per_share",
+        "fixed_taker_fee_microusd_per_share",
+        "evaluations",
+        "daily_evidence"
+      ],
+      "properties": {
+        "selected": {
+          "enum": [
+            0,
+            0.5,
+            1,
+            2
+          ]
+        },
+        "fixed_submission_latency_ns": {
+          "const": 100000
+        },
+        "fixed_cancellation_latency_ns": {
+          "const": 100000
+        },
+        "fixed_maker_fee_microusd_per_share": {
+          "const": -2000
+        },
+        "fixed_taker_fee_microusd_per_share": {
+          "const": 3000
+        },
+        "evaluations": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/weightEvaluation"
+          }
+        },
+        "daily_evidence": {
+          "type": "array",
+          "minItems": 4,
+          "items": {
+            "$ref": "#/$defs/weightDailyEvidence"
+          }
+        }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model",
+        "signal_weight",
+        "test_dates_accessed_after_selection"
+      ],
+      "properties": {
+        "model": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/modelSelection"
+            }
+          ]
+        },
+        "signal_weight": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/weightSelection"
+            }
+          ]
+        },
+        "test_dates_accessed_after_selection": {
+          "const": true
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "model": {
+              "type": "null"
+            },
+            "signal_weight": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "properties": {
+            "model": {
+              "$ref": "#/$defs/modelSelection"
+            },
+            "signal_weight": {
+              "$ref": "#/$defs/weightSelection"
+            }
+          }
+        }
+      ]
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scenario_id",
+        "submission_latency_ns",
+        "cancellation_latency_ns",
+        "maker_fee_microusd_per_share",
+        "taker_fee_microusd_per_share"
+      ],
+      "properties": {
+        "scenario_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "submission_latency_ns": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000000
+        },
+        "cancellation_latency_ns": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000000
+        },
+        "maker_fee_microusd_per_share": {
+          "type": "integer",
+          "minimum": -1000000,
+          "maximum": 1000000
+        },
+        "taker_fee_microusd_per_share": {
+          "type": "integer",
+          "minimum": -1000000,
+          "maximum": 1000000
+        }
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "dtype",
+        "nullable"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dtype": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nullable": {
+          "type": "boolean"
+        }
+      }
+    },
+    "schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fields",
+        "sha256"
+      ],
+      "properties": {
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/field"
+          }
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "artefact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "path",
+        "sha256",
+        "size_bytes",
+        "row_count"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "orders",
+            "fills",
+            "liquidations",
+            "equity",
+            "metrics",
+            "diagnostics"
+          ]
+        },
+        "path": {
+          "$ref": "#/$defs/safePath"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size_bytes": {
+          "$ref": "#/$defs/count"
+        },
+        "row_count": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    }
+  }
+}

@@ -36,6 +36,9 @@ Historical market data does not reveal every hidden order, activity on all venue
   max_queue_anomalies budget. Exceeding the budget aborts with ERR_SIMULATION_ANOMALY. Hidden or
   unknown priority is never inferred from such an event.
 - Cancellation remains exposed until cancellation latency elapses.
+- A changed or suppressed desired quote requests cancellation. The symbol/side slot is not reused
+  at the cancellation-effective instant; replacement submission waits for the first later strategy
+  decision after the slot is free. This avoids assuming an unobserved instantaneous refresh.
 - Fills require eligible observed execution flow and cannot exceed remaining order/event quantity.
 - Apply explicit signed fees/rebates, per-symbol inventory limits and terminal liquidation. Quote
   eligibility uses projected inventory after a complete fill, and fill accounting enforces the
@@ -47,8 +50,21 @@ Historical market data does not reveal every hidden order, activity on all venue
   bid and buy short inventory at the last valid visible ask. Charge the configured signed taker
   fee, report liquidation slippage separately and fail a non-flat scenario when the required
   visible quote is absent or crossed.
-- Compare at least three latency and two cost settings.
+- Compare the Cartesian grid of symmetric 0, 100,000 and 1,000,000 nanosecond
+  submission/cancellation latency with −2,000 and +3,000 microusd/share maker cost for both the
+  inventory-only and selected signal strategies; terminal liquidation uses 3,000 microusd/share
+  taker cost. Also run a configured execution scenario when it is economically distinct from that
+  grid.
 - Use complete chronological day partitions. Fit preprocessing/models/calibration on training/validation only and evaluate the frozen choice on test.
+- Select the model family by validation log loss, then select signal weight from 0, 0.5, 1 and 2
+  ticks using validation-day P&L under the fixed 100,000 nanosecond/−2,000 maker and +3,000
+  terminal-taker microusd/share scenario. A configured numeric weight is an assertion and must
+  equal that independently selected value; null requests automatic selection. Test events remain
+  unopened until both choices are frozen.
+- Define turnover as absolute gross notional across passive fills and terminal liquidations. Define
+  maximum drawdown over chronologically concatenated marked equity. Define the 100 ms
+  adverse-selection proxy as `side × (fill_mid2 − future_mid2) × quantity × 50`, using the first
+  valid midpoint at or after the horizon and reporting unavailable marks plus coverage explicitly.
 - Report negative results, anomaly counts and all limitations prominently.
 
 ## Alternatives considered

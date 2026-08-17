@@ -201,6 +201,10 @@ Subcommands: inspect, replay, validate and benchmark. Detailed contracts are in 
 - A dataset manifest binds converted inputs, feature config, label config and partitions.
 - An experiment manifest binds the dataset, preprocessing, model settings, seeds and metrics.
 - A simulation manifest binds event data, predictions, strategy and execution assumptions.
+- The Python simulation service authenticates conversion Parquet and lineage, calibrates only on
+  training days, selects only on validation days, runs frozen test scenarios through the existing
+  simulator/strategy domains and publishes the manifest last. No new network or per-event
+  cross-language boundary is introduced.
 - The final report links those identities rather than copying unverifiable numbers.
 
 Canonical JSON and stage identities follow the exact scheme in 04-data-model.md; paths and wall-clock metadata are deliberately excluded.

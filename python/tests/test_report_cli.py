@@ -16,12 +16,10 @@ def test_task_021_report_help_version_and_duplicate_options(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     assert main(["--help"]) == 0
-    assert (
-        "report       Generate an accessible predictive research report" in capsys.readouterr().out
-    )
+    assert "report       Generate an accessible predictive or simulation" in capsys.readouterr().out
 
     assert main(["report", "--help"]) == 0
-    assert "completed predictive experiment" in capsys.readouterr().out
+    assert "completed experiment or simulation" in capsys.readouterr().out
 
     assert main(["report", "--version"]) == 0
     assert "itchlab-research 0.1.0" in capsys.readouterr().out

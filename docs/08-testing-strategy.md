@@ -222,8 +222,8 @@ Each failing generated case is reduced and committed as a regression fixture whe
 | IT-007 | Conversion to Parquet | Golden dtypes, nulls, integer values, partition paths, sort order and validated manifest match |
 | IT-008 | Feature/label pipeline | Three complete synthetic days publish exact joined rows, disjoint drop/class/horizon counts, frozen splits and authenticated lineage; future mutation guards pass |
 | IT-009 | Training baselines | Authenticated frozen data selects on validation, loads/evaluates test once, publishes required schemas/metrics without model serialisation, reuses valid output and leaves cancellation partial |
-| IT-010 | Event/prediction stream through simulator | Golden orders, fills, cash and inventory |
-| IT-011 | Report generation | Required headings, tables, limitations and reproduction commands |
+| IT-010 | Event/prediction stream through simulator | Golden orders, fills, cash, inventory, exact 3×2 grid, validation-only selection and immutable hashes |
+| IT-011 | Report generation | Predictive and combined simulation headings, sensitivity/metric tables, limitations and reproduction commands |
 | IT-012 | Hash tampering | Downstream validation fails before data use |
 
 ## End-to-end testing
@@ -240,7 +240,8 @@ Steps:
 4. Convert.
 5. Build a three-day dataset by varying deterministic synthetic days.
 6. Train all baselines.
-7. Simulate baseline and signal-weight-zero variant.
+7. Select model/weight on validation, simulate both strategies over the required test grid and
+   separately verify signal-weight-zero equivalence.
 8. Generate report.
 
 Assertions:

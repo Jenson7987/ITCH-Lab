@@ -21,12 +21,12 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | FR-013 | 02 UF-004; 04 ExperimentRun/predictive metrics; 05 train | TASK-020 | UT-MODEL-001, IT-009, metric hand cases, candidate tie/reuse/tamper/cancellation tests |
 | FR-014 | 02 UF-005/state diagram; 04 SimulatedOrder | TASK-022 | UT-SIM-001, UT-SIM-003, state properties |
 | FR-015 | ADR-004; 04 Fill/SimulatedOrder | TASK-023 | UT-SIM-002, queue properties, IT-010 |
-| FR-016 | 02 UF-005; 04 SimulationRun/Fill/TerminalLiquidation | TASK-022, TASK-024, TASK-027 | UT-SIM-001/004, TASK-024 risk/liquidation/zero-fill properties, scenario-grid assertions |
+| FR-016 | 02 UF-005; 04 SimulationRun/Fill/TerminalLiquidation | TASK-022, TASK-024, TASK-027 | UT-SIM-001/004, IT-010 runner/publication, risk/liquidation/zero-fill and exact scenario-grid assertions |
 | FR-017 | ADR-004; 01 inventory-aware baseline; 05 strategy/calibration interfaces | TASK-025 | UT-STRAT-001 decision-table golden, causal-volatility, training-only calibration/fallback and parameter-boundary tests |
 | FR-018 | ADR-004; 01 signal adjustment; 05 simulate/strategy interfaces | TASK-026 | UT-STRAT-002, controlled-signal golden, causal prediction-key/fallback and validation-only selection tests |
-| FR-019 | 02 UF-004/UF-005; 06 UI-009 | TASK-021, TASK-027, TASK-031 | IT-011, E2E-001, report-content checks |
+| FR-019 | 02 UF-004/UF-005; 06 UI-009 | TASK-021, TASK-027, TASK-031 | IT-011 predictive/combined report, E2E-001 and report-content/accessibility checks |
 | FR-020 | 03 performance; 05 benchmark | TASK-029 | PERF-001 through PERF-008 |
-| FR-021 | 03 file contracts; 04 run entities | TASK-002 (canonical hashes), TASK-014, TASK-017, TASK-027 | Canonical-hash, verified-reuse, force-new-run and identity contract tests |
+| FR-021 | 03 file contracts; 04 run entities | TASK-002 (canonical hashes), TASK-014, TASK-017, TASK-027 | Simulation manifest/schema/tamper, canonical-hash, verified-reuse, force-new-run and identity contract tests |
 | FR-022 | 03 ArtefactValidator; 05 validate | TASK-015 | IT-012, CT-BIN-001, tamper/version tests |
 
 ## Non-functional requirements

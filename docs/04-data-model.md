@@ -377,8 +377,8 @@ day/symbol/model stream and retains only the latest eligible row plus one future
 
 ### SimulationRun
 
-Stored in simulation-manifest.json plus orders/fills/equity Parquet files and metrics/diagnostics
-JSON files.
+Stored in simulation-manifest.json plus orders/fills/liquidations/equity Parquet files and
+metrics/diagnostics JSON files.
 
 | Field | Type | Nullable | Default | Constraints |
 | --- | --- | --- | --- | --- |
@@ -392,10 +392,20 @@ JSON files.
 | metrics | object | No | — | Aggregate results and diagnostic counts |
 | artefacts | array | No | — | Orders, fills, time series, summary |
 
+The manifest authenticates the dataset and optional experiment parent, canonical simulation
+config, package-content digest, exact training calibration dates/buckets/fits/source, fixed
+selection evidence, scenario catalogue, all child hashes and all four Parquet schema descriptors.
+Publication is immutable and manifest-last. The required test grid is the Cartesian product of
+symmetric 0/100,000/1,000,000 ns latency and −2,000/+3,000 microusd/share maker cost; a distinct
+configured scenario is retained as an additional cell.
+
 ### SimulatedOrder
 
 | Field | Type | Nullable | Default | Constraints |
 | --- | --- | --- | --- | --- |
+| scenario_id | string | No | — | Declared execution scenario |
+| strategy_name | string | No | — | Inventory-only or signal-adjusted strategy |
+| trading_date | date | No | — | Frozen test day |
 | simulated_order_id | uint64 | No | sequence | Unique within simulation scenario |
 | decision_message_index | uint64 | No | — | Strategy decision |
 | prediction_message_index | uint64 | Yes | null | Latest same-symbol prediction at or before decision; null when no prediction is used |
@@ -434,6 +444,7 @@ lookup to preserve baseline-equivalent economic output.
 
 | Field | Type | Nullable | Default | Constraints |
 | --- | --- | --- | --- | --- |
+| scenario_id/strategy_name/trading_date | string/string/date | No | — | Composite simulation scope |
 | fill_id | uint64 | No | sequence | Unique within scenario |
 | simulated_order_id | uint64 | No | — | Existing simulated order |
 | market_message_index | uint64 | No | — | Observed event causing fill |
@@ -443,12 +454,16 @@ lookup to preserve baseline-equivalent economic output.
 | fee_microusd | int64 | No | 0 | Signed; rebate is negative cost |
 | cash_delta_microusd | int64 | No | — | Overflow checked |
 | inventory_after | int64 | No | — | Within configured limit |
+| fill_mid2 | uint64 | No | — | Causal mark used at fill accounting |
+| future_mid2 | uint64 | Yes | null | First valid same-symbol midpoint at/after 100 ms |
+| adverse_selection_100ms_microusd | int64 | Yes | null | `side×(fill_mid2−future_mid2)×quantity×50` |
 
 cash_delta_microusd excludes fees and equals −side × Price4 × quantity × 100. The factor 100 converts a four-decimal US-dollar price into millionths of a dollar. fee_microusd is a signed cost (positive fee, negative rebate), so the cash ledger adds cash_delta_microusd − fee_microusd. `inventory_after` is the filled order's per-symbol position, not a cross-symbol total.
 
 ### TerminalLiquidation and accounting metrics
 
-A terminal liquidation is separate from Fill because no observed market event caused it.
+A terminal liquidation is stored in `liquidations.parquet`, separate from Fill because no observed
+market event caused it. Every row also carries scenario, strategy and trading-date scope.
 
 | Field | Type | Nullable | Constraints |
 | --- | --- | --- | --- |
@@ -475,6 +490,11 @@ cost, the exact reconciliation is:
                  + terminal_liquidation_slippage - signed_fees
 
 A completed terminal settlement has zero inventory, so final marked P&L equals final net cash.
+Turnover is the sum of absolute gross notional (`price4×quantity×100`) for passive fills and
+terminal liquidations. Maximum drawdown is the largest running peak-minus-current value over
+chronologically concatenated marked equity, carrying each settled day into the next. The 100 ms
+adverse-selection aggregate is nullable when no future marks are available and always reports
+observed/eligible counts and coverage.
 
 ## Transient entities
 

@@ -316,6 +316,7 @@ def _validate_strategy_config(config: StrategyConfig) -> None:
         raise _fail(ErrorCode.CONFIG_SCHEMA, "Baseline strategy config has the wrong domain type.")
     if (
         config.name != "inventory_aware_avellaneda_stoikov"
+        or config.signal_weight_ticks is None
         or not _finite_number(config.signal_weight_ticks)
         or float(config.signal_weight_ticks) != 0.0
     ):

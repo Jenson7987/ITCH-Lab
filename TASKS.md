@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-027: Run scenarios and finish simulation report
-  - Dependencies: TASK-023–026
-  - Acceptance criteria: Required latency/cost grid, metrics and limitations
-  - Tests: IT-010 and E2E-001
-  - Documentation to update: Report reproduction commands
-
 - [ ] TASK-028: Complete security hardening
   - Dependencies: TASK-015, TASK-017, TASK-027
   - Acceptance criteria: All security acceptance criteria pass
@@ -43,6 +37,21 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-027: Run scenarios and finish simulation report
+  - Completed: 2026-08-17
+  - Evidence: The authenticated simulation service now freezes model family and signal weight on
+    validation evidence before materialising test rows, runs both strategies over the required 3×2
+    latency/maker-cost grid, and publishes manifest-last immutable orders, passive fills, terminal
+    liquidations, equity, reconciled metrics and diagnostics. Completed manifests retain exact
+    training calibration and selection evidence and revalidate parent lineage, schemas and child
+    hashes; verified reuse, force-new-run and tamper rejection pass. The combined accessible report
+    includes explicit scenario settings, fill/inventory/P&L/drawdown/turnover/100 ms markout
+    evidence, prominent assumptions/anomalies/limitations and relative reproduction commands.
+    Hand-reconciled IT-010 and full synthetic E2E-001 assertions pass. All 602 Python tests, Ruff
+    formatting/lint, strict mypy and wheel/sdist build passed. Development, Release and sanitizer
+    C++ builds passed; all 128 runnable CTest entries passed in each preset and the authorised
+    official-sample entry skipped as designed.
 
 - [x] TASK-026: Implement bounded signal adjustment
   - Completed: 2026-08-16

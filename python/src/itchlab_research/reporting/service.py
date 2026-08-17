@@ -30,8 +30,14 @@ from itchlab_research.reporting.models import (
     ReportEvidence,
     ReportFormat,
     ReportResult,
+    SimulationReportEvidence,
 )
-from itchlab_research.reporting.renderers import render_report_bundle, report_warnings
+from itchlab_research.reporting.renderers import (
+    render_report_bundle,
+    render_simulation_report_bundle,
+    report_warnings,
+    simulation_report_warnings,
+)
 
 _SCHEMA_VERSION: Final = 1
 _MAX_JSON_BYTES: Final = 16 << 20
@@ -377,6 +383,18 @@ def _load_lineage(
     return tuple(sorted(conversions, key=lambda item: item.run_id)), tuple(replays)
 
 
+def load_authenticated_lineage(
+    experiment: Any,
+    *,
+    base_directory: Path | None = None,
+    cancel_requested: CancelCheck | None = None,
+) -> tuple[tuple[AuthenticatedLineageManifest, ...], tuple[AuthenticatedLineageManifest, ...]]:
+    """Authenticate conversion and replay parents for another read-only stage."""
+    base = (Path.cwd() if base_directory is None else base_directory).resolve()
+    cancellation = cancel_requested or (lambda: False)
+    return _load_lineage(base, experiment, cancellation)
+
+
 def _safe_output_parent(base: Path, run_id: str) -> Path:
     report_root = base / _REPORT_ROOT
     parent = report_root / run_id
@@ -542,29 +560,88 @@ def generate_report(
     if output_format not in _REPORT_FORMATS:
         raise _fail(ErrorCode.CONFIG_SCHEMA, "The report output format is invalid.")
     _check_cancel(cancellation)
-    try:
-        experiment = load_completed_experiment(
-            run_id,
-            base_directory=base,
-            cancel_requested=cancellation,
-        )
-    except ModelTrainingError as error:
-        raise _fail(error.code, error.message, partial_exists=False) from error
-    conversions, replays = _load_lineage(base, experiment, cancellation)
     output_locator = (_REPORT_ROOT / run_id / output_format).as_posix()
-    evidence = ReportEvidence(
-        experiment=experiment,
-        conversions=conversions,
-        replays=replays,
-        output_format=output_format,
-        output_locator=output_locator,
-    )
-    try:
-        rendered = render_report_bundle(evidence)
-    except (KeyError, TypeError, ValueError) as error:
-        raise _fail(
-            ErrorCode.SCHEMA_VERSION, "Authenticated report evidence cannot be rendered."
-        ) from error
+    simulation_manifest = base / "runs" / "simulation" / run_id / "simulation-manifest.json"
+    if simulation_manifest.exists():
+        from itchlab_research.errors import SimulationError
+        from itchlab_research.simulation.service import load_completed_simulation
+
+        try:
+            simulation = load_completed_simulation(
+                run_id,
+                base_directory=base,
+                cancel_requested=cancellation,
+            )
+        except SimulationError as error:
+            raise _fail(error.code, error.message, partial_exists=False) from error
+        predictive: ReportEvidence | None = None
+        experiment_parent = cast(
+            dict[str, Any] | None, simulation.manifest["parents"]["experiment"]
+        )
+        if experiment_parent is not None:
+            try:
+                experiment = load_completed_experiment(
+                    cast(str, experiment_parent["run_id"]),
+                    base_directory=base,
+                    cancel_requested=cancellation,
+                )
+            except ModelTrainingError as error:
+                raise _fail(error.code, error.message, partial_exists=False) from error
+            if (
+                experiment.manifest_sha256 != experiment_parent["manifest_sha256"]
+                or experiment.manifest["config_sha256"] != experiment_parent["config_sha256"]
+                or experiment.manifest["identity_sha256"] != experiment_parent["identity_sha256"]
+            ):
+                raise _fail(
+                    ErrorCode.HASH_MISMATCH,
+                    "Simulation report experiment lineage is inconsistent.",
+                )
+            conversions, replays = _load_lineage(base, experiment, cancellation)
+            predictive = ReportEvidence(
+                experiment=experiment,
+                conversions=conversions,
+                replays=replays,
+                output_format=output_format,
+                output_locator=output_locator,
+            )
+        evidence_value = SimulationReportEvidence(
+            simulation=simulation,
+            predictive=predictive,
+            output_format=output_format,
+            output_locator=output_locator,
+        )
+        try:
+            rendered = render_simulation_report_bundle(evidence_value)
+        except (KeyError, TypeError, ValueError) as error:
+            raise _fail(
+                ErrorCode.SCHEMA_VERSION,
+                "Authenticated simulation report evidence cannot be rendered.",
+            ) from error
+        warnings = simulation_report_warnings(evidence_value)
+    else:
+        try:
+            experiment = load_completed_experiment(
+                run_id,
+                base_directory=base,
+                cancel_requested=cancellation,
+            )
+        except ModelTrainingError as error:
+            raise _fail(error.code, error.message, partial_exists=False) from error
+        conversions, replays = _load_lineage(base, experiment, cancellation)
+        evidence = ReportEvidence(
+            experiment=experiment,
+            conversions=conversions,
+            replays=replays,
+            output_format=output_format,
+            output_locator=output_locator,
+        )
+        try:
+            rendered = render_report_bundle(evidence)
+        except (KeyError, TypeError, ValueError) as error:
+            raise _fail(
+                ErrorCode.SCHEMA_VERSION, "Authenticated report evidence cannot be rendered."
+            ) from error
+        warnings = report_warnings(evidence)
     _validate_rendered_files(base, rendered)
     parent = _safe_output_parent(base, run_id)
     output_directory, reused = _publish_bundle(
@@ -579,9 +656,9 @@ def generate_report(
         output_directory=output_directory,
         output_format=output_format,
         artefacts=tuple(rendered),
-        warnings=report_warnings(evidence),
+        warnings=warnings,
         reused=reused,
     )
 
 
-__all__ = ["generate_report"]
+__all__ = ["generate_report", "load_authenticated_lineage"]

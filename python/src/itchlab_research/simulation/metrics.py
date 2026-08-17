@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from itchlab_research.errors import ErrorCode, SimulationError
@@ -38,6 +39,18 @@ class AccountingMetrics:
     settled: bool
 
 
+@dataclass(frozen=True, slots=True)
+class TemporalMetrics:
+    """Path-dependent execution metrics over one ordered scenario equity stream."""
+
+    max_drawdown_microusd: int
+    turnover_microusd: int
+    adverse_selection_100ms_microusd: int | None
+    adverse_selection_observation_count: int
+    adverse_selection_eligible_fill_count: int
+    adverse_selection_coverage: float
+
+
 def _checked_int64(value: int, message: str) -> int:
     if not isinstance(value, int) or isinstance(value, bool) or not MIN_INT64 <= value <= MAX_INT64:
         raise SimulationError(ErrorCode.COST, message)
@@ -46,6 +59,59 @@ def _checked_int64(value: int, message: str) -> int:
 
 def _checked_add(left: int, right: int, message: str) -> int:
     return _checked_int64(left + right, message)
+
+
+def temporal_metrics(
+    equity_microusd: Iterable[int],
+    trade_notionals_microusd: Iterable[int],
+    adverse_selection_microusd: Iterable[int | None],
+) -> TemporalMetrics:
+    """Compute exact drawdown/turnover and a fixed-horizon adverse-selection summary."""
+    try:
+        equity = tuple(equity_microusd)
+        notionals = tuple(trade_notionals_microusd)
+        adverse = tuple(adverse_selection_microusd)
+    except TypeError as error:
+        raise SimulationError(
+            ErrorCode.SIMULATION_ANOMALY, "Temporal metrics are not iterable."
+        ) from error
+    if any(not isinstance(value, int) or isinstance(value, bool) for value in equity):
+        raise SimulationError(ErrorCode.COST, "Equity curve contains an invalid value.")
+    peak = 0
+    maximum_drawdown = 0
+    for value in equity:
+        checked = _checked_int64(value, "Equity curve overflowed signed 64-bit microusd.")
+        peak = max(peak, checked)
+        maximum_drawdown = max(
+            maximum_drawdown,
+            _checked_int64(peak - checked, "Drawdown overflowed signed 64-bit microusd."),
+        )
+    turnover = 0
+    for value in notionals:
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise SimulationError(ErrorCode.COST, "Trade notional is invalid.")
+        turnover = _checked_add(turnover, value, "Turnover overflowed signed 64-bit microusd.")
+    observed = tuple(value for value in adverse if value is not None)
+    adverse_total: int | None = None
+    if observed:
+        adverse_total = 0
+        for value in observed:
+            if not isinstance(value, int) or isinstance(value, bool):
+                raise SimulationError(ErrorCode.COST, "Adverse-selection value is invalid.")
+            adverse_total = _checked_add(
+                adverse_total,
+                value,
+                "Adverse-selection total overflowed signed 64-bit microusd.",
+            )
+    eligible = len(adverse)
+    return TemporalMetrics(
+        max_drawdown_microusd=maximum_drawdown,
+        turnover_microusd=turnover,
+        adverse_selection_100ms_microusd=adverse_total,
+        adverse_selection_observation_count=len(observed),
+        adverse_selection_eligible_fill_count=eligible,
+        adverse_selection_coverage=0.0 if eligible == 0 else len(observed) / eligible,
+    )
 
 
 def accounting_metrics(
@@ -116,4 +182,4 @@ def accounting_metrics(
     )
 
 
-__all__ = ["AccountingMetrics", "accounting_metrics"]
+__all__ = ["AccountingMetrics", "TemporalMetrics", "accounting_metrics", "temporal_metrics"]

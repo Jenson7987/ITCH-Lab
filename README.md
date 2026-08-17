@@ -95,9 +95,10 @@ safe diagnostics without serialising executable model objects. The Python packag
 validated simulated-order state machine, deterministic market-first latency scheduler and
 exact-known visible queue/fill model plus checked accounting/risk/liquidation primitives; the
 causal calibrated inventory-aware baseline and validation-frozen bounded signal strategy are
-available as strategy primitives, while the `simulate` command is implemented by a later task. The
-Python `report` command
-authenticates a completed experiment and its full dataset/conversion/replay lineage before
+available as strategy primitives. The Python `simulate` command authenticates that complete
+lineage, selects only on validation, runs the fixed latency/cost grid for both strategies and
+publishes immutable orders, fills, liquidations, equity, metrics and diagnostics. The Python
+`report` command authenticates a completed experiment or simulation and its full lineage before
 atomically publishing deterministic Markdown and/or HTML,
 static SVG calibration plots, text summaries and relative reproduction commands.
 
@@ -216,17 +217,23 @@ and test predictions, metrics and safe diagnostics are complete. It never reads 
 objects; reproduction retrains from the recorded config, seed, parent hash and package-content
 digest. A matching completed run is revalidated and reused unless `--force-new-run` is supplied.
 
-Run `report` with the completed experiment ID printed by `train`. The command reauthenticates the
-experiment and its dataset, conversion and replay manifests, then writes an immutable bundle beneath
-`runs/report/<experiment-id>/<markdown|html|both>/`. The bundle includes the requested report form,
-canonical config snapshots, machine-readable calibration data and accessible static SVG plots. A
+Set both manifest locators in `configs/simulation.example.json`, leave `signal_weight_ticks` null
+for validation-only selection, then run `simulate`. It runs the fixed 3×2 test grid for the
+inventory-only control and selected signal strategy; a distinct configured execution cell is
+retained. Completed output is beneath `runs/simulation/<simulation-id>/` and is revalidated/reused
+unless `--force-new-run` is supplied.
+
+Run `report` with the completed experiment or simulation ID. The command reauthenticates the full
+lineage, then writes an immutable bundle beneath
+`runs/report/<run-id>/<markdown|html|both>/`. The bundle includes the requested report form and
+canonical config snapshots; reports with an experiment parent also include machine-readable
+predictive calibration data and accessible static SVG plots. A
 byte-identical completed bundle is reused; an inconsistent completed bundle or retained partial
 bundle is never overwritten. Report reproduction commands and links use relative paths, and no
 runtime download is attempted.
 
-Remaining planned research workflow (implemented by later tasks):
-
     python -m itchlab_research simulate --config configs/simulation.example.json
+    python -m itchlab_research report --run-id <simulation-id> --output-format both
 
 ## Testing and quality commands
 

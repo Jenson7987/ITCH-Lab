@@ -145,6 +145,7 @@ def config_document(config: Config) -> dict[str, Any]:
                 "maker_fee_microusd_per_share": (config.execution.maker_fee_microusd_per_share),
                 "taker_fee_microusd_per_share": (config.execution.taker_fee_microusd_per_share),
                 "queue_policy": config.execution.queue_policy,
+                "max_queue_anomalies": config.execution.max_queue_anomalies,
                 "terminal_liquidation": config.execution.terminal_liquidation,
             },
             "seed": config.seed,

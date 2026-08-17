@@ -11,7 +11,7 @@
     "gamma": 0.1,
     "volatility_window_ns": 60000000000,
     "risk_horizon_seconds": 10,
-    "signal_weight_ticks": 1.0,
+    "signal_weight_ticks": null,
     "max_signal_ticks": 2.0
   },
   "execution": {

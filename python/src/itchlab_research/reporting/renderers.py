@@ -10,7 +10,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import PurePosixPath
 from typing import Any, Final, cast
 
-from itchlab_research.reporting.models import ReportEvidence
+from itchlab_research.reporting.models import ReportEvidence, SimulationReportEvidence
 
 _MODEL_ORDER: Final = ("prior", "logistic_regression", "hist_gradient_boosting")
 _MODEL_LABELS: Final = {
@@ -1224,4 +1224,279 @@ def render_report_bundle(evidence: ReportEvidence) -> dict[str, bytes]:
     return dict(sorted(files_value.items()))
 
 
-__all__ = ["render_report_bundle", "report_warnings"]
+def _simulation_metric_rows(evidence: SimulationReportEvidence) -> list[list[object]]:
+    rows: list[list[object]] = []
+    for item in cast(list[dict[str, Any]], evidence.simulation.metrics["scenarios"]):
+        metrics = cast(dict[str, Any], item["metrics"])
+        rows.append(
+            [
+                item["scenario_id"],
+                item["strategy_name"],
+                item["signal_weight_ticks"],
+                item["submission_latency_ns"],
+                item["cancellation_latency_ns"],
+                item["maker_fee_microusd_per_share"],
+                item["taker_fee_microusd_per_share"],
+                metrics["passive_fill_count"],
+                metrics["max_abs_inventory_by_symbol"],
+                metrics["marked_pnl_microusd"],
+                metrics["passive_spread_capture_microusd"],
+                metrics["inventory_mark_to_market_microusd"],
+                metrics["terminal_liquidation_slippage_microusd"],
+                metrics["signed_fee_microusd"],
+                metrics["max_drawdown_microusd"],
+                metrics["turnover_microusd"],
+                metrics["adverse_selection_100ms_microusd"],
+                metrics["adverse_selection_coverage"],
+            ]
+        )
+    return rows
+
+
+_SIMULATION_HEADERS = (
+    "Scenario",
+    "Strategy",
+    "Signal weight (ticks)",
+    "Submission latency (ns)",
+    "Cancellation latency (ns)",
+    "Maker cost (microusd/share)",
+    "Taker cost (microusd/share)",
+    "Passive fills",
+    "Maximum absolute inventory",
+    "Marked P&L (microusd)",
+    "Spread capture (microusd)",
+    "Inventory mark-to-market (microusd)",
+    "Liquidation slippage (microusd)",
+    "Signed fees (microusd)",
+    "Maximum drawdown (microusd)",
+    "Turnover (microusd)",
+    "100 ms adverse selection (microusd)",
+    "Markout coverage",
+)
+
+
+def _simulation_markdown(evidence: SimulationReportEvidence) -> str:
+    manifest = evidence.simulation.manifest
+    selection = cast(dict[str, Any], manifest["selection"])
+    assumptions = cast(list[str], manifest["assumptions"])
+    limitations = cast(list[str], manifest["limitations"])
+    warnings = cast(list[str], manifest["warnings"])
+    model = cast(dict[str, Any] | None, selection.get("model"))
+    weight = cast(dict[str, Any] | None, selection.get("signal_weight"))
+    selected_weight = "unavailable" if weight is None else weight["selected"]
+    lines = [
+        "# Conservative simulation comparison",
+        "",
+        f"Simulation `{_markdown_text(evidence.simulation.simulation_id)}`. Historical research "
+        "only; this is not a live-trading system, trading advice or evidence of profitability.",
+        "",
+        "## Selection frozen before test",
+        "",
+        (
+            "Baseline-only run; no signal model or weight was selected."
+            if model is None
+            else (
+                f"Validation log loss selected `{_markdown_text(model['model_name'])}`. "
+                f"Validation-day P&L selected signal weight `{_markdown_text(selected_weight)}` "
+                "ticks under the fixed 100 microsecond, −2000 microusd/share scenario."
+            )
+        ),
+        "",
+        "## Test latency and cost sensitivity",
+        "",
+        _markdown_table(_SIMULATION_HEADERS, _simulation_metric_rows(evidence)),
+        "",
+        "Turnover is absolute gross passive-plus-liquidation notional. Maximum drawdown uses the "
+        "chronologically concatenated marked-equity path. Positive 100 ms adverse selection is "
+        "unfavourable to the passive fill; coverage reports fills with an available future mark.",
+        "",
+        "## Assumptions, anomalies and limitations",
+        "",
+        *[f"- Assumption: {_markdown_text(item)}" for item in assumptions],
+        *[f"- Limitation: {_markdown_text(item)}" for item in limitations],
+    ]
+    diagnostic_counts = cast(dict[str, int], evidence.simulation.diagnostics["counts"])
+    lines.append(
+        "- Queue/prediction diagnostics: "
+        + (
+            ", ".join(
+                f"{_markdown_text(name)}={_number(count)}"
+                for name, count in sorted(diagnostic_counts.items())
+            )
+            if diagnostic_counts
+            else "none"
+        )
+        + "."
+    )
+    lines.extend(f"- Warning: {_markdown_text(item)}" for item in warnings)
+    lines.extend(
+        [
+            "",
+            "## Reproduction",
+            "",
+            "Run from the repository root after reproducing the authenticated replay, conversion, "
+            "dataset and experiment parents shown in the predictive section/config snapshots.",
+            "",
+            "```console",
+            "python -m itchlab_research simulate --config "
+            + shlex.quote(f"{evidence.output_locator}/configs/simulation.json"),
+            "python -m itchlab_research report --run-id "
+            + shlex.quote(evidence.simulation.simulation_id),
+            "```",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _simulation_html(evidence: SimulationReportEvidence) -> str:
+    manifest = evidence.simulation.manifest
+    assumptions = cast(list[str], manifest["assumptions"])
+    limitations = cast(list[str], manifest["limitations"])
+    warnings = cast(list[str], manifest["warnings"])
+    selection = cast(dict[str, Any], manifest["selection"])
+    model = cast(dict[str, Any] | None, selection.get("model"))
+    weight = cast(dict[str, Any] | None, selection.get("signal_weight"))
+    selected_weight = "unavailable" if weight is None else weight["selected"]
+    selection_text = (
+        "Baseline-only run; no signal model or weight was selected."
+        if model is None
+        else (
+            f"Validation log loss selected {model['model_name']}; validation-day P&amp;L selected "
+            f"signal weight {selected_weight} ticks under the fixed 100 microsecond, "
+            "−2000 microusd/share scenario."
+        )
+    )
+    list_items = "".join(
+        f"<li><strong>Assumption:</strong> {html.escape(item)}</li>" for item in assumptions
+    ) + "".join(
+        f"<li><strong>Limitation:</strong> {html.escape(item)}</li>" for item in limitations
+    )
+    list_items += "".join(
+        f"<li><strong>Warning:</strong> {html.escape(item)}</li>" for item in warnings
+    )
+    diagnostic_counts = cast(dict[str, int], evidence.simulation.diagnostics["counts"])
+    diagnostic_text = (
+        ", ".join(
+            f"{html.escape(name)}={_number(count)}"
+            for name, count in sorted(diagnostic_counts.items())
+        )
+        if diagnostic_counts
+        else "none"
+    )
+    list_items += "<li><strong>Queue/prediction diagnostics:</strong> " + diagnostic_text + ".</li>"
+    command = (
+        "python -m itchlab_research simulate --config "
+        f"{evidence.output_locator}/configs/simulation.json\n"
+        "python -m itchlab_research report --run-id "
+        f"{evidence.simulation.simulation_id}"
+    )
+    return (
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        "<title>Conservative simulation comparison</title>"
+        "<style>body{font-family:system-ui,sans-serif;line-height:1.5;max-width:100rem;margin:auto;"
+        "padding:1.5rem}.table-scroll{overflow-x:auto}table{border-collapse:collapse}th,td{border:"
+        "1px solid #777;padding:.4rem;text-align:right}th:first-child,td:first-child{"
+        "text-align:left}"
+        "caption{text-align:left;font-weight:bold;margin:.5rem 0}code,pre{background:#f2f2f2}"
+        "pre{padding:1rem;overflow:auto}</style></head><body><main>"
+        "<h1>Conservative simulation comparison</h1>"
+        f"<p>Simulation <code>{html.escape(evidence.simulation.simulation_id)}</code>. Historical "
+        "research only; this is not a live-trading system, trading advice or evidence of "
+        "profitability.</p><h2>Selection frozen before test</h2>"
+        f"<p>{selection_text}</p><h2>Test latency and cost sensitivity</h2>"
+        + _html_table(
+            "Metrics by test scenario and strategy",
+            _SIMULATION_HEADERS,
+            _simulation_metric_rows(evidence),
+            first_column_row_header=True,
+        )
+        + "<p>Turnover is absolute gross passive-plus-liquidation notional. Maximum drawdown uses "
+        "the chronologically concatenated marked-equity path. Positive 100 ms adverse selection "
+        "is unfavourable to the passive fill; coverage reports available future marks.</p>"
+        "<h2>Assumptions, anomalies and limitations</h2><ul>"
+        + list_items
+        + "</ul><h2>Reproduction</h2><pre><code>"
+        + html.escape(command)
+        + "</code></pre></main></body></html>\n"
+    )
+
+
+def simulation_report_warnings(evidence: SimulationReportEvidence) -> tuple[str, ...]:
+    """Return prominent deterministic warnings for a simulation report."""
+    values = list(cast(list[str], evidence.simulation.manifest["warnings"]))
+    if evidence.predictive is not None:
+        values.extend(report_warnings(evidence.predictive))
+    return tuple(dict.fromkeys(values))
+
+
+def render_simulation_report_bundle(evidence: SimulationReportEvidence) -> dict[str, bytes]:
+    """Render a combined predictive and conservative-simulation report bundle."""
+    files_value: dict[str, bytes] = {}
+    if evidence.predictive is not None:
+        files_value.update(render_report_bundle(evidence.predictive))
+    simulation_config = cast(dict[str, Any], evidence.simulation.manifest["config"])
+    files_value["configs/simulation.json"] = (
+        json.dumps(simulation_config, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False)
+        + "\n"
+    ).encode("utf-8")
+    files_value["simulation-metrics.json"] = (
+        json.dumps(
+            evidence.simulation.metrics,
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+        + "\n"
+    ).encode("utf-8")
+    markdown = _simulation_markdown(evidence)
+    html_value = _simulation_html(evidence)
+    if evidence.predictive is not None:
+        if "report.md" in files_value:
+            predictive_markdown = files_value["report.md"].decode("utf-8")
+            predictive_markdown = predictive_markdown.replace(
+                "system, trading advice, an execution simulation or evidence of profitability.",
+                "system, trading advice or evidence of profitability; execution results follow "
+                "in a separate conservative section.",
+            )
+            predictive_markdown = predictive_markdown.replace(
+                "- No execution simulation, fill model, latency/cost sensitivity, inventory or "
+                "P&L is included in this predictive report.",
+                "- Predictive metrics remain descriptive and are not evidence of executable "
+                "profitability.",
+            )
+            markdown = predictive_markdown.rstrip() + "\n\n---\n\n" + markdown
+        if "report.html" in files_value:
+            predictive_html = files_value["report.html"].decode("utf-8")
+            predictive_html = predictive_html.replace(
+                "a live-trading system, trading advice, an execution simulation or evidence of "
+                "profitability.",
+                "a live-trading system, trading advice or evidence of profitability; execution "
+                "results follow in a separate conservative section.",
+            )
+            predictive_html = predictive_html.replace("</main></body></html>\n", "")
+            simulation_body = html_value.split("<main>", 1)[1]
+            simulation_body = simulation_body.replace(
+                "<h1>Conservative simulation comparison</h1>",
+                "<h2>Conservative simulation comparison</h2>",
+                1,
+            )
+            html_value = predictive_html + '<hr aria-hidden="true">' + simulation_body
+    if evidence.output_format in {"markdown", "both"}:
+        files_value["report.md"] = (markdown.rstrip() + "\n").encode("utf-8")
+    else:
+        files_value.pop("report.md", None)
+    if evidence.output_format in {"html", "both"}:
+        files_value["report.html"] = html_value.encode("utf-8")
+    else:
+        files_value.pop("report.html", None)
+    return dict(sorted(files_value.items()))
+
+
+__all__ = [
+    "render_report_bundle",
+    "render_simulation_report_bundle",
+    "report_warnings",
+    "simulation_report_warnings",
+]

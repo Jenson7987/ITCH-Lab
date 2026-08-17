@@ -15,7 +15,13 @@ from pathlib import Path
 from typing import Any, cast
 
 from itchlab_research import __version__
-from itchlab_research.config import ConversionConfig, DatasetConfig, ExperimentConfig, load_config
+from itchlab_research.config import (
+    ConversionConfig,
+    DatasetConfig,
+    ExperimentConfig,
+    SimulationConfig,
+    load_config,
+)
 from itchlab_research.conversion import ConversionProgress, convert_replays
 from itchlab_research.datasets import DatasetProgress, build_dataset
 from itchlab_research.errors import (
@@ -25,6 +31,7 @@ from itchlab_research.errors import (
     ErrorCode,
     ModelTrainingError,
     ReportGenerationError,
+    SimulationError,
 )
 from itchlab_research.models import (
     ExperimentProgress,
@@ -32,6 +39,7 @@ from itchlab_research.models import (
     train_baselines,
 )
 from itchlab_research.reporting import ReportFormat, generate_report
+from itchlab_research.simulation import simulate
 
 _PROGRAM_NAME = "itchlab-research"
 _MODEL_ORDER_FOR_DISPLAY = (
@@ -47,7 +55,8 @@ Commands:
   convert      Convert authenticated replay artefacts to partitioned Parquet.
   build-dataset Build causal labels and frozen chronological dataset partitions.
   train        Train, select and evaluate the required predictive baselines.
-  report       Generate an accessible predictive research report.
+  simulate     Run the conservative latency/cost strategy comparison.
+  report       Generate an accessible predictive or simulation research report.
 
 Global options:
   --help       Show this help text.
@@ -125,12 +134,34 @@ Exit categories: 0 success, 2 config, 3 input, 6 output, 7 validation, 8 model,
 70 internal, 130 cancellation.
 """
 
-_REPORT_HELP = f"""Generate an accessible report from a completed predictive experiment.
+_SIMULATE_HELP = f"""Run conservative historical market-making scenarios.
+
+Usage: {_PROGRAM_NAME} simulate --config <simulation-config.json> [options]
+
+Required:
+  --config <path>             Version-1 simulation configuration.
+
+Options:
+  --force-new-run             Create another immutable run for the same identity.
+  --format <human|json>       Result format (default human).
+  --quiet                     Suppress non-error progress.
+  --ascii                     Restrict presentation to ASCII.
+  --no-colour                 Disable colour presentation.
+  --help                      Show this help text.
+
+Example:
+  {_PROGRAM_NAME} simulate --config configs/simulation.example.json
+
+Exit categories: 0 success, 2 config, 3 input, 6 output, 7 validation, 9 simulation,
+70 internal, 130 cancellation.
+"""
+
+_REPORT_HELP = f"""Generate an accessible report from a completed experiment or simulation.
 
 Usage: {_PROGRAM_NAME} report --run-id <experiment-id> [options]
 
 Required:
-  --run-id <id>               Completed predictive experiment ID.
+  --run-id <id>               Completed predictive experiment or simulation ID.
 
 Options:
   --output-format <value>     markdown, html or both (default markdown).
@@ -186,6 +217,17 @@ def _train_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _simulate_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog=f"{_PROGRAM_NAME} simulate", add_help=False)
+    parser.add_argument("--config")
+    parser.add_argument("--force-new-run", action="store_true")
+    parser.add_argument("--format", choices=("human", "json"), default="human")
+    parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--ascii", action="store_true")
+    parser.add_argument("--no-colour", action="store_true")
+    return parser
+
+
 def _report_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog=f"{_PROGRAM_NAME} report", add_help=False)
     parser.add_argument("--run-id")
@@ -231,6 +273,21 @@ def _exit_code(code: ErrorCode) -> int:
     }:
         return 8
     return 7
+
+
+def _simulation_exit_code(code: ErrorCode) -> int:
+    if code in {
+        ErrorCode.LATENCY,
+        ErrorCode.COST,
+        ErrorCode.QUEUE_STATE,
+        ErrorCode.INVENTORY_LIMIT,
+        ErrorCode.SIMULATION_ANOMALY,
+        ErrorCode.BROKEN_SIM_FILL,
+        ErrorCode.BOOK_CROSSED,
+        ErrorCode.PRICE,
+    }:
+        return 9
+    return _exit_code(code)
 
 
 def _safe_display_path(path: Path) -> str:
@@ -931,6 +988,137 @@ def _run_report(arguments: Sequence[str]) -> int:
     return 0
 
 
+def _run_simulate(arguments: Sequence[str]) -> int:
+    if arguments in (["--help"], ["-h"]):
+        print(_SIMULATE_HELP, end="")
+        return 0
+    if arguments == ["--version"]:
+        print(f"{_PROGRAM_NAME} {__version__}")
+        return 0
+    if not arguments:
+        print(f"{_PROGRAM_NAME} simulate: --config is required.", file=sys.stderr)
+        return 2
+    duplicate = _duplicate_option(arguments)
+    if duplicate is not None:
+        print(f"{_PROGRAM_NAME} simulate: duplicate option {duplicate}.", file=sys.stderr)
+        return 2
+    parser = _simulate_parser()
+    try:
+        parsed = parser.parse_args(list(arguments))
+    except SystemExit:
+        return 2
+    if parsed.config is None:
+        print(f"{_PROGRAM_NAME} simulate: --config is required.", file=sys.stderr)
+        return 2
+
+    result_format = cast(str, parsed.format)
+    try:
+        loaded = load_config(Path(cast(str, parsed.config)), "simulation")
+        config = cast(SimulationConfig, loaded)
+    except ConfigValidationError as error:
+        message = "; ".join(
+            f"{issue.json_pointer or '/'} {issue.message}" for issue in error.issues
+        )
+        _write_error(
+            error.issues[0].code,
+            message,
+            command="simulate",
+            result_format=result_format,
+            partial_exists=False,
+        )
+        return _simulation_exit_code(error.issues[0].code)
+
+    cancelled = threading.Event()
+    signal_count = 0
+    previous_handler = signal.getsignal(signal.SIGINT)
+
+    def handle_interrupt(signum: int, frame: object) -> None:
+        del signum, frame
+        nonlocal signal_count
+        signal_count += 1
+        if signal_count == 1:
+            cancelled.set()
+            if not cast(bool, parsed.quiet):
+                print("Cancellation requested; closing partial simulation output.", file=sys.stderr)
+            return
+        raise KeyboardInterrupt
+
+    try:
+        signal.signal(signal.SIGINT, handle_interrupt)
+        result = simulate(
+            config,
+            force_new_run=cast(bool, parsed.force_new_run),
+            cancel_requested=cancelled.is_set,
+        )
+    except SimulationError as error:
+        _write_error(
+            error.code,
+            error.message,
+            command="simulate",
+            result_format=result_format,
+            partial_exists=error.partial_exists,
+        )
+        return _simulation_exit_code(error.code)
+    except KeyboardInterrupt:
+        _write_error(
+            ErrorCode.CANCELLED,
+            "Simulation was interrupted before completion.",
+            command="simulate",
+            result_format=result_format,
+            partial_exists=True,
+        )
+        return 130
+    except Exception:
+        _write_error(
+            ErrorCode.INTERNAL,
+            "Unexpected simulation failure.",
+            command="simulate",
+            result_format=result_format,
+            partial_exists=True,
+        )
+        return 70
+    finally:
+        signal.signal(signal.SIGINT, previous_handler)
+
+    manifest = _safe_display_path(result.manifest_path)
+    if result_format == "json":
+        print(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "command": "simulate",
+                    "status": result.status,
+                    "run_id": result.simulation_id,
+                    "summary": {
+                        "manifest_path": manifest,
+                        "experiment_id": result.experiment_id,
+                        "scenario_count": result.scenario_count,
+                        "strategy_count": result.strategy_count,
+                        "order_rows": result.order_rows,
+                        "fill_rows": result.fill_rows,
+                        "reused": result.reused,
+                        "next_command": (f"{_PROGRAM_NAME} report --run-id {result.simulation_id}"),
+                    },
+                    "warnings": list(result.warnings),
+                },
+                separators=(",", ":"),
+            )
+        )
+    else:
+        action = "Reused" if result.reused else "Completed"
+        print(f"{action} simulation {result.simulation_id} ({result.status}).")
+        print(f"Manifest: {manifest}")
+        print(
+            f"Grid: {result.scenario_count:,} scenarios across "
+            f"{result.strategy_count:,} strategies."
+        )
+        print(f"Rows: {result.order_rows:,} orders; {result.fill_rows:,} passive fills.")
+        for warning in result.warnings:
+            print(f"Warning: {warning}", file=sys.stderr)
+        print(f"Next: {_PROGRAM_NAME} report --run-id {result.simulation_id}")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the research CLI and return a process-compatible exit code."""
     arguments = list(sys.argv[1:] if argv is None else argv)
@@ -946,6 +1134,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_build_dataset(arguments[1:])
     if arguments[0] == "train":
         return _run_train(arguments[1:])
+    if arguments[0] == "simulate":
+        return _run_simulate(arguments[1:])
     if arguments[0] == "report":
         return _run_report(arguments[1:])
     print(f"{_PROGRAM_NAME}: unrecognised command or argument.", file=sys.stderr)

@@ -211,8 +211,11 @@ Changing features, horizons, hyperparameters or selection rules after viewing te
 
 ### Main path
 
-1. Replay the test-day market events in order.
-2. Freeze the minimum-validation-log-loss model family using the documented simplicity tie-break;
+1. Authenticate conversion/replay Parquet, calibrate intensity on training days and leave test
+   events unopened.
+2. Freeze the minimum-validation-log-loss model family using the documented simplicity tie-break,
+   run all four signal weights on validation days under the fixed selection scenario, and freeze
+   the validation-P&L winner;
    at each decision point, the strategy uses its latest same-symbol prediction at or before the
    current message, records its exact key, and emits desired bid/ask actions.
 3. Actions enter pending state until submission latency elapses.
@@ -223,7 +226,10 @@ Changing features, horizons, hyperparameters or selection rules after viewing te
 8. Cancellation requests remain exposed until cancellation latency elapses.
 9. Inventory limits suppress risk-increasing orders.
 10. At session end, open orders expire and inventory is liquidated by the documented rule.
-11. Results are aggregated by day and across latency/cost scenarios.
+11. Run both strategies over the fixed three-latency-by-two-cost test grid (plus a distinct
+    configured scenario), then aggregate by day and scenario.
+12. Publish orders, passive fills, terminal liquidations, equity, metrics and diagnostics beneath
+    a partial directory; validate every child and publish the completed manifest last.
 
 ```mermaid
 stateDiagram-v2

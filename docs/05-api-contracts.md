@@ -444,7 +444,7 @@ Simulation config v1:
         "gamma": 0.1,
         "volatility_window_ns": 60000000000,
         "risk_horizon_seconds": 10,
-        "signal_weight_ticks": 1.0,
+        "signal_weight_ticks": null,
         "max_signal_ticks": 2.0
       },
       "execution": {
@@ -460,7 +460,21 @@ Simulation config v1:
       "seed": 7987
     }
 
-The `inventory_aware_avellaneda_stoikov` strategy uses the same shape with `prediction_manifest` set to null and `signal_weight_ticks` set to 0. The signal-adjusted strategy requires a non-null prediction manifest and a signal weight from the declared version-1 candidate set. It chooses the minimum validation-log-loss model family before simulation; values within 1e-6 tie in prior, logistic-regression, gradient-boosting order. `order_quantity` and `inventory_limit` are positive, inventory limit is at least one order quantity, gamma/risk horizon/volatility window are positive, latency is 0 through 10 seconds in nanoseconds, each fee/rebate has absolute value at most 1,000,000 microusd per share, and `max_queue_anomalies` is an explicit integer from 0 through 2^53−1. Version 1 requires passive-only execution, `known_orders_conservative` queue policy and `cross_visible_spread` terminal liquidation. Inconsistent visible-lifecycle events are diagnosed and skipped for simulated effects only while they remain within that budget; the first excess aborts with `ERR_SIMULATION_ANOMALY`.
+The `inventory_aware_avellaneda_stoikov` strategy uses the same shape with `prediction_manifest`
+set to null and `signal_weight_ticks` set to 0. The signal-adjusted strategy requires a non-null
+experiment-manifest locator. A null signal weight requests validation-only selection from the
+declared version-1 candidates; a numeric value is accepted only when it equals the independently
+selected value and otherwise fails before test simulation. It chooses the minimum validation-log-
+loss model family before signal-weight selection; values within 1e-6 tie in prior, logistic-
+regression, gradient-boosting order. Both manifest locators must be safe relative paths without
+partial components. `order_quantity` and `inventory_limit` are positive, inventory limit is at
+least one order quantity, gamma/risk horizon/volatility window are positive, latency is 0 through
+10 seconds in nanoseconds, each fee/rebate has absolute value at most 1,000,000 microusd per share,
+and `max_queue_anomalies` is an explicit integer from 0 through 2^53−1 and participates in
+canonical configuration identity. Version 1 requires passive-only execution,
+`known_orders_conservative` queue policy and `cross_visible_spread` terminal liquidation.
+Inconsistent visible-lifecycle events are diagnosed and skipped for simulated effects only while
+they remain within that budget; the first excess aborts with `ERR_SIMULATION_ANOMALY`.
 
 The bounded rule is
 `r_signal = r + clip(w×score, −max_signal_ticks, max_signal_ticks)`. A missing prediction or one
@@ -468,6 +482,9 @@ whose age is strictly greater than
 `max_prediction_age_ns` uses zero effective score and emits DIAG_MISSING_PREDICTION or
 DIAG_STALE_PREDICTION. Equality at the age bound remains fresh. A zero signal weight bypasses the
 prediction stream and emits baseline-equivalent economic decisions and order requests.
+
+Signal-weight selection fixes symmetric latency at 100,000 ns, maker cost at −2,000
+microusd/share and terminal taker cost at +3,000 microusd/share for every validation candidate.
 
 Accounting starts from zero cash and zero per-symbol inventory. Before accepting a quote, the risk
 gate projects a complete fill and suppresses it if the resulting symbol inventory would leave the
@@ -487,11 +504,20 @@ fee applies. Locked quotes are accepted. A crossed quote is `ERR_BOOK_CROSSED`, 
 invalid required terminal prices are `ERR_PRICE`. Flat days settle without a quote and emit valid
 zero fill, quantity, cash, fee, inventory and P&L metrics.
 
+The command always runs 0/100,000/1,000,000 ns symmetric latency crossed with −2,000/+3,000
+microusd/share maker cost and 3,000 microusd/share taker cost on held-out test days. A distinct
+configured latency/maker/taker-cost cell is added.
+A signal run executes both the inventory-only control and selected signal strategy; a baseline-only
+config remains valid but carries a prominent comparison warning.
+
 Outputs:
 
 - simulation-manifest.json.
-- orders.parquet, fills.parquet and equity.parquet.
+- orders.parquet, fills.parquet, liquidations.parquet and equity.parquet.
 - metrics.json and diagnostics.json.
+
+The completed manifest retains the exact training dates, pooled and per-symbol calibration bucket
+aggregates, fitted intercept/kappa values and whether each symbol used its own or the pooled fit.
 
 Validation rejects marketable orders in passive-only mode, negative latency, invalid risk limits and prediction keys not present in the dataset.
 
@@ -502,11 +528,14 @@ Validation rejects marketable orders in passive-only mode, negative latency, inv
         [--output-format markdown|html|both] \
         [--format human|json]
 
-TASK-021 accepts a completed predictive experiment ID. TASK-027 extends the command to completed
-simulation IDs when simulation reporting exists. The default output format is `markdown`; `html`
+The command accepts either a completed predictive experiment ID or completed simulation ID. A
+simulation report combines upstream predictive evidence when present with strategy selection,
+the complete sensitivity table, P&L decomposition, inventory, drawdown, turnover, 100 ms adverse
+selection and prominent assumptions/anomalies/limitations. The default output format is
+`markdown`; `html`
 writes only HTML and `both` writes both human-readable forms. The command locates the input beneath
-`runs/experiment/<experiment-id>/` and publishes a separate immutable bundle beneath
-`runs/report/<experiment-id>/<output-format>/`, so it never modifies a completed experiment.
+the appropriate completed run root and publishes a separate immutable bundle beneath
+`runs/report/<run-id>/<output-format>/`, so it never modifies completed evidence.
 
 The command authenticates the completed experiment, dataset and manifest lineage before rendering.
 It writes the selected `report.md` and/or `report.html`, canonical reproduction-config snapshots,
@@ -684,6 +713,11 @@ Contract:
     ) -> Iterator[RecordBatch]: ...
     def build_dataset(config: DatasetConfig, *, force_new_run: bool = False) -> DatasetResult: ...
     def train_baselines(dataset: PartitionedDataset, config: ExperimentConfig) -> ExperimentResult: ...
+    def load_completed_dataset(
+        dataset_manifest: str,
+        *,
+        base_directory: Path | None = None,
+    ) -> PartitionedDataset: ...
     def load_completed_experiment(
         run_id: str,
         *,
@@ -748,7 +782,17 @@ Contract:
     def select_signal_weight(
         evaluations: Iterable[ValidationSignalPnl],
     ) -> SignalWeightSelection: ...
-    def simulate(inputs: SimulationInputs, config: SimulationConfig) -> SimulationResult: ...
+    def simulate(
+        config: SimulationConfig,
+        *,
+        base_directory: Path | None = None,
+        force_new_run: bool = False,
+    ) -> SimulationResult: ...
+    def load_completed_simulation(
+        simulation_id: str,
+        *,
+        base_directory: Path | None = None,
+    ) -> AuthenticatedSimulation: ...
 
 Contracts:
 
@@ -776,13 +820,14 @@ Contracts:
   zero-based record index; messages omit raw payloads and absolute paths.
 - Readers use explicit little-endian field decoding and bounded reads. They do not use native struct
   packing, mmap, pickle, joblib, eval or exec and perform no network or filesystem writes.
-- `load_completed_experiment` validates the strict experiment manifest, its dataset and every
+- `load_completed_dataset` authenticates a completed dataset directly for read-only downstream
+  consumers. `load_completed_experiment` validates the strict experiment manifest, its dataset and every
   declared experiment artefact before returning reporting evidence; content changes during
   validation fail with a stable hash error.
 - `generate_report` additionally authenticates conversion and replay manifest lineage, escapes all
   data-derived presentation fields, rejects private absolute paths and publishes through a
   format-scoped partial directory and atomic rename. It reuses only a byte-identical completed
-  report bundle and never modifies a completed experiment.
+  report bundle and never modifies completed experiment or simulation evidence.
 - Feature calculation operates on one `(trading_date, symbol)` partition at a time. Context supplies
   the authenticated replay session bounds, configured tick size and expected day-local symbol ID.
 - Event and snapshot batches must use the documented conversion schemas and strict message-index
@@ -797,6 +842,11 @@ Contracts:
   whole-day splits and reconciled row/class/label-availability counts. Expected dataset failures
   raise `DatasetBuildError` with a stable `ErrorCode` and no raw payload or absolute path.
 - PartitionedDataset exposes test rows for final evaluation, not training selection.
+- `simulate` authenticates dataset/experiment/conversion/replay lineage, materialises only
+  authorised validation predictions before selection, freezes model and signal weight, then opens
+  test events/predictions and publishes the required immutable scenario grid manifest-last.
+  `load_completed_simulation` revalidates config/parent identity, selection/calibration scope,
+  output schemas and every child size/hash/count before returning report evidence.
 - Simulation performs a causal as-of selection of the latest same-symbol prediction at or before each decision and records that prediction's exact immutable row identity.
 - Accounting consumes queue fills in lifecycle order, validates their order/event identity, assigns
   deterministic fill IDs and leaves its prior snapshot unchanged on any validation, limit or
@@ -821,8 +871,9 @@ Contracts:
 - Signal model selection requires exactly one finite non-negative validation log loss for every
   required model family. Signal-weight selection requires all four candidates over identical
   validation-day sets under the fixed 100 microsecond latency and −2000 microusd/share maker-cost
-  scenario. It compares exact rational day means and treats a difference of at most one microusd as
-  a tie. Train/test-labelled, duplicate, incomplete or wrong-scenario evidence is rejected.
+  plus +3000 microusd/share terminal-taker-cost scenario. It compares exact rational day means and
+  treats a difference of at most one microusd as a tie. Train/test-labelled, duplicate, incomplete
+  or wrong-scenario evidence is rejected.
 - The signal-adjusted strategy delegates volatility, half-spread, outward tick rounding, passivity
   and projected inventory checks to the inventory-aware baseline. It changes only the reservation
   price through the clipped configured score rule; weight zero does not advance its prediction

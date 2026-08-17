@@ -9,6 +9,7 @@ from itchlab_research.models.models import (
     PartitionedDataset,
 )
 from itchlab_research.models.service import (
+    load_completed_dataset,
     load_completed_experiment,
     load_partitioned_dataset,
     train_baselines,
@@ -22,6 +23,7 @@ __all__ = [
     "PartitionData",
     "PartitionedDataset",
     "load_completed_experiment",
+    "load_completed_dataset",
     "load_partitioned_dataset",
     "train_baselines",
 ]

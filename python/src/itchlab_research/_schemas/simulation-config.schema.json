@@ -43,7 +43,7 @@
         "gamma": {"type": "number", "exclusiveMinimum": 0},
         "volatility_window_ns": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
         "risk_horizon_seconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 86400},
-        "signal_weight_ticks": {"enum": [0.0, 0.5, 1.0, 2.0]},
+        "signal_weight_ticks": {"enum": [null, 0.0, 0.5, 1.0, 2.0]},
         "max_signal_ticks": {"type": "number", "minimum": 0}
       }
     },

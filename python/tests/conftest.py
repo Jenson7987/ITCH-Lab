@@ -394,6 +394,7 @@ def dataset_conversion_factory(tmp_path: Path) -> Callable[..., Path]:
         symbol: str = "AAPL",
         trading_dates: tuple[str, ...] = ("2019-01-30", "2019-01-31", "2019-02-01"),
         rows_per_day: int = 603,
+        execution_events: bool = False,
     ) -> Path:
         replay_locators: list[str] = []
         replay_descriptors: list[dict[str, Any]] = []
@@ -489,6 +490,25 @@ def dataset_conversion_factory(tmp_path: Path) -> Callable[..., Path]:
                     mid2 = 20_400
                 bid = mid2 // 2 - 100
                 ask = mid2 - bid
+                event_kind = "add"
+                source_type = "A"
+                primary_reference = day_index * 1_000_000 + ordinal + 1
+                secondary_reference = None
+                event_price = bid
+                remaining_quantity = 100
+                if execution_events and ordinal % 2 == 1:
+                    previous_mid2 = 20_200
+                    if ordinal - 1 == 600:
+                        previous_mid2 = 20_000
+                    elif ordinal - 1 == 602:
+                        previous_mid2 = 20_400
+                    previous_bid = previous_mid2 // 2 - 100
+                    event_kind = "execute"
+                    source_type = "E"
+                    primary_reference = day_index * 1_000_000 + ordinal
+                    secondary_reference = day_index * 10_000_000 + ordinal
+                    event_price = previous_bid
+                    remaining_quantity = 0
                 day_events.append(
                     {
                         "trading_date": date.fromisoformat(trading_date),
@@ -496,14 +516,14 @@ def dataset_conversion_factory(tmp_path: Path) -> Callable[..., Path]:
                         "message_index": message_index,
                         "timestamp_ns": timestamp_ns,
                         "symbol_id": 1,
-                        "event_kind": "add",
-                        "source_type": "A",
-                        "primary_reference": day_index * 1_000_000 + ordinal + 1,
-                        "secondary_reference": None,
+                        "event_kind": event_kind,
+                        "source_type": source_type,
+                        "primary_reference": primary_reference,
+                        "secondary_reference": secondary_reference,
                         "side": 1,
-                        "price4": bid,
+                        "price4": event_price,
                         "quantity": 100,
-                        "remaining_quantity": 100,
+                        "remaining_quantity": remaining_quantity,
                         "execution_price4": None,
                         "aux_code": None,
                         "event_subtype": None,
@@ -517,8 +537,8 @@ def dataset_conversion_factory(tmp_path: Path) -> Callable[..., Path]:
                     "message_index": message_index,
                     "timestamp_ns": timestamp_ns,
                     "symbol_id": 1,
-                    "event_kind": "add",
-                    "event_price4": bid,
+                    "event_kind": event_kind,
+                    "event_price4": event_price,
                     "event_quantity": 100,
                     "last_trade_price4": None,
                     "last_trade_quantity": None,

@@ -141,6 +141,9 @@ flag; TASK-019 counts and excludes rows without every required history window be
   only when its effective time is earlier; if submission becomes effective first, the order is
   exposed in cancel-pending state until cancellation becomes effective.
 - The MVP permits at most one live or pending order per symbol/side. A replacement waits until the prior cancellation becomes effective.
+- If a desired quote changes or becomes suppressed, cancellation is requested first. Even when
+  cancellation becomes effective at that timestamp, a replacement is submitted only on the first
+  later decision after the symbol/side slot is free.
 
 ### Queue and fills
 
@@ -206,7 +209,9 @@ execution constraints are project-specific.
   within one microusd of mean validation-day net P&L choose the smaller value. Default
   max_signal_ticks is 2.
 - The main baseline fixes gamma=0.1, risk_horizon_seconds=10, order_quantity=100 and inventory_limit=1000 before test evaluation. Optional gamma sensitivity does not replace the main result.
-- Select w by highest mean validation-day net P&L under the default 100 microsecond latency and −2000 microusd/share maker-rebate scenario; a tie within one microusd chooses the smaller w. The selected w is then frozen for every test scenario.
+- Select w by highest mean validation-day net P&L under the fixed 100 microsecond latency,
+  −2000 microusd/share maker rebate and 3000 microusd/share terminal taker-cost scenario; a tie
+  within one microusd chooses the smaller w. The selected w is then frozen for every test scenario.
 - Setting w=0 bypasses prediction lookup and must reproduce baseline economic decisions, order
   requests and simulation results byte-for-byte; only strategy/run-lineage metadata may differ.
 - Default order quantity is 100 shares. Inventory is enforced independently per symbol. A proposed
@@ -222,6 +227,11 @@ execution constraints are project-specific.
   each subsequent `mid2` change times 50. Every component and intermediate ledger sum is checked
   signed 64-bit integer arithmetic.
 - Required test scenarios use equal submission/cancellation latency of 0, 100,000 and 1,000,000 ns crossed with maker cost/rebate of −2000 and +3000 microusd/share. The manifest also records a 3000 microusd/share taker cost for terminal liquidation.
+- Turnover is absolute gross notional across passive fills and liquidations. Maximum drawdown uses
+  the chronologically concatenated marked-equity curve. The 100 ms adverse-selection proxy is
+  `side×(fill_mid2−future_mid2)×quantity×50`, positive when the future move is adverse; it uses the
+  first valid same-symbol midpoint at or after the horizon and reports unavailable marks and
+  coverage rather than imputing them.
 - Session-end open orders expire. Remaining long inventory is sold at the last valid visible bid;
   remaining short inventory is bought at the last valid visible ask. Liquidation is marked against
   that quote's exact `mid2`, charged the configured signed taker cost and reported separately.

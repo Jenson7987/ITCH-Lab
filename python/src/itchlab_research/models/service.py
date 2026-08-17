@@ -587,6 +587,55 @@ def load_partitioned_dataset(
     )
 
 
+def load_completed_dataset(
+    dataset_manifest: str,
+    *,
+    base_directory: Path | None = None,
+    cancel_requested: CancelCheck | None = None,
+) -> PartitionedDataset:
+    """Authenticate a completed dataset directly for non-training read-only consumers."""
+    placeholder = {
+        "schema_version": 1,
+        "dataset_manifest": dataset_manifest,
+        "models": {
+            "prior": {"enabled": True},
+            "logistic_regression": {
+                "c_values": [0.01, 0.1, 1.0, 10.0],
+                "penalty": "l2",
+                "solver": "lbfgs",
+                "max_iter": 2000,
+            },
+            "hist_gradient_boosting": {
+                "learning_rates": [0.05, 0.1],
+                "max_leaf_nodes": [15, 31],
+                "l2_regularization": [0.0, 1.0],
+                "max_iter": 100,
+            },
+        },
+        "preprocessing": {
+            "continuous_imputation": "median",
+            "standardise_logistic": True,
+            "standardise_hist_gradient_boosting": False,
+            "unknown_symbol": "all_zero",
+        },
+        "selection_metric": "multiclass_log_loss",
+        "seed": 0,
+    }
+    try:
+        parsed = parse_config(json.dumps(placeholder), "experiment")
+    except ConfigValidationError as error:  # pragma: no cover - static internal document
+        raise _fail(
+            ErrorCode.INTERNAL, "Internal dataset loader configuration is invalid."
+        ) from error
+    if not isinstance(parsed, ExperimentConfig):  # pragma: no cover - exhaustive builder guard
+        raise _fail(ErrorCode.INTERNAL, "Internal dataset loader type is invalid.")
+    return load_partitioned_dataset(
+        parsed,
+        base_directory=base_directory,
+        cancel_requested=cancel_requested,
+    )
+
+
 def _recheck_dataset(dataset: PartitionedDataset, *, partial_exists: bool = False) -> None:
     try:
         content, manifest_identity = _read_regular_file(dataset.manifest_path, _MAX_JSON_BYTES)
@@ -1911,4 +1960,9 @@ def train_baselines(
     )
 
 
-__all__ = ["load_completed_experiment", "load_partitioned_dataset", "train_baselines"]
+__all__ = [
+    "load_completed_dataset",
+    "load_completed_experiment",
+    "load_partitioned_dataset",
+    "train_baselines",
+]

@@ -179,7 +179,7 @@ class StrategyConfig:
     gamma: float
     volatility_window_ns: int
     risk_horizon_seconds: float
-    signal_weight_ticks: float
+    signal_weight_ticks: float | None
     max_signal_ticks: float
 
 
@@ -466,6 +466,31 @@ def _semantic_issues(document: dict[str, JSONValue], kind: ConfigKind) -> tuple[
                 )
             )
     elif kind == "simulation":
+        simulation_locators: tuple[tuple[str, str | None], ...] = (
+            ("/dataset_manifest", cast(str, document["dataset_manifest"])),
+            ("/prediction_manifest", cast(str | None, document["prediction_manifest"])),
+        )
+        for pointer, simulation_locator in simulation_locators:
+            if simulation_locator is None:
+                continue
+            normalised = simulation_locator.replace("\\", "/")
+            path = Path(normalised)
+            segments = normalised.split("/")
+            if (
+                normalised.startswith("/")
+                or (len(normalised) >= 2 and normalised[1] == ":")
+                or path.is_absolute()
+                or path.drive
+                or any(part in {"", ".", ".."} or part.endswith(".partial") for part in segments)
+            ):
+                issues.append(
+                    ConfigIssue(
+                        pointer,
+                        ErrorCode.INPUT_PATH,
+                        "Simulation manifest locators must be safe relative paths without "
+                        "partial components.",
+                    )
+                )
         strategy = cast(dict[str, JSONValue], document["strategy"])
         if cast(int, strategy["inventory_limit"]) < cast(int, strategy["order_quantity"]):
             issues.append(
@@ -641,7 +666,11 @@ def _build_simulation(document: dict[str, JSONValue]) -> SimulationConfig:
             gamma=float(cast(int | float, strategy["gamma"])),
             volatility_window_ns=cast(int, strategy["volatility_window_ns"]),
             risk_horizon_seconds=float(cast(int | float, strategy["risk_horizon_seconds"])),
-            signal_weight_ticks=float(cast(int | float, strategy["signal_weight_ticks"])),
+            signal_weight_ticks=(
+                None
+                if strategy["signal_weight_ticks"] is None
+                else float(cast(int | float, strategy["signal_weight_ticks"]))
+            ),
             max_signal_ticks=float(cast(int | float, strategy["max_signal_ticks"])),
         ),
         execution=ExecutionConfig(

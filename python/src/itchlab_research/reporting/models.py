@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from itchlab_research.models import AuthenticatedExperiment
+from itchlab_research.simulation.models import AuthenticatedSimulation
 
 ReportFormat = Literal["markdown", "html", "both"]
 ManifestKind = Literal["conversion", "replay"]
@@ -47,10 +48,21 @@ class ReportResult:
     reused: bool
 
 
+@dataclass(frozen=True, slots=True)
+class SimulationReportEvidence:
+    """Authenticated simulation evidence plus optional upstream predictive evidence."""
+
+    simulation: AuthenticatedSimulation
+    predictive: ReportEvidence | None
+    output_format: ReportFormat
+    output_locator: str
+
+
 __all__ = [
     "AuthenticatedLineageManifest",
     "ManifestKind",
     "ReportEvidence",
     "ReportFormat",
     "ReportResult",
+    "SimulationReportEvidence",
 ]

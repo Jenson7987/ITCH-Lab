@@ -191,11 +191,13 @@ class SimulationError(ValueError):
         *,
         simulated_order_id: int | None = None,
         message_index: int | None = None,
+        partial_exists: bool = False,
     ) -> None:
         self.code = code
         self.message = message
         self.simulated_order_id = simulated_order_id
         self.message_index = message_index
+        self.partial_exists = partial_exists
         super().__init__(f"{code.value}: {message}")
 
 

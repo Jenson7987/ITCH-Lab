@@ -238,9 +238,13 @@ No user-visible operation is reported optimistically.
 - Output separates assumptions from results.
 - Zero fills, inventory-limit suppression and anomaly counts are shown.
 - P&L components and units are explicit.
+- The scenario table identifies all required latency/cost cells and both strategy names.
+- Drawdown, absolute gross-notional turnover and the signed 100 ms adverse-selection proxy show
+  units; unavailable markouts and coverage are explicit.
 
 ### UI-009 report
 
 - A reader can identify data, code, config, split dates and assumptions without inspecting source code.
 - Every plot has labelled axes, units, caption and text summary.
 - Limitations and negative results are not hidden in an appendix.
+- A simulation report includes the exact relative `simulate` and `report` reproduction commands.
