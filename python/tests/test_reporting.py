@@ -251,11 +251,20 @@ def test_it_011_generates_reproducible_accessible_predictive_report(
     assert _hash_bundle(first.output_directory) == original_bundle
 
 
+@pytest.mark.parametrize(
+    ("symbol", "markdown_value", "html_value"),
+    [
+        ("<x>|[a]", "&lt;x&gt;\\|\\[a\\]", "&lt;x&gt;|[a]"),
+        ("<script>", "&lt;script&gt;", "&lt;script&gt;"),
+    ],
+)
 def test_task_021_escapes_markdown_and_html_injected_symbols(
     tmp_path: Path,
     dataset_conversion_factory: Any,
+    symbol: str,
+    markdown_value: str,
+    html_value: str,
 ) -> None:
-    symbol = "<x>|[a]"
     experiment_id = _completed_experiment(
         tmp_path,
         dataset_conversion_factory,
@@ -267,10 +276,9 @@ def test_task_021_escapes_markdown_and_html_injected_symbols(
     html_document = (result.output_directory / "report.html").read_text(encoding="utf-8")
 
     assert symbol not in markdown
-    assert "&lt;x&gt;\\|\\[a\\]" in markdown
+    assert markdown_value in markdown
     assert symbol not in html_document
-    assert "&lt;x&gt;|[a]" in html_document
-    assert "<x>" not in html_document
+    assert html_value in html_document
     assert "<script" not in html_document.casefold()
     _assert_accessible_html(result.output_directory / "report.html")
 

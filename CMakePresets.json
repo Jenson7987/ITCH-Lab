@@ -54,6 +54,19 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "ITCHLAB_ENABLE_COVERAGE": "ON"
       }
+    },
+    {
+      "name": "fuzz",
+      "displayName": "Security fuzzing",
+      "description": "Clang libFuzzer targets with ASan and UBSan",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "ITCHLAB_ENABLE_SANITIZERS": "ON",
+        "ITCHLAB_ENABLE_FUZZING": "ON",
+        "ITCHLAB_FUZZ_RUNS": "10000"
+      }
     }
   ],
   "buildPresets": [
@@ -72,6 +85,10 @@
     {
       "name": "coverage",
       "configurePreset": "coverage"
+    },
+    {
+      "name": "fuzz",
+      "configurePreset": "fuzz"
     }
   ],
   "testPresets": [
@@ -104,7 +121,11 @@
       "name": "coverage",
       "configurePreset": "coverage",
       "inherits": "base"
+    },
+    {
+      "name": "fuzz",
+      "configurePreset": "fuzz",
+      "inherits": "base"
     }
   ]
 }
-

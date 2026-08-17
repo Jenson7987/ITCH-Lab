@@ -205,6 +205,66 @@ Release is blocked unless:
 9. Example/public manifests contain no workspace-specific absolute paths.
 10. Report includes the prescribed simulation/research limitations.
 
+## TASK-028 threat review and completion evidence
+
+Review date: 2026-08-17. The implemented system still matches the local, single-user and offline
+threat model above. Source/config/manifest/interchange/Parquet/report fields remain the trust
+boundaries; no account, credential, database, listener, broker, telemetry or runtime-download
+surface exists. The review found no unaccepted high- or critical-severity issue and introduced no
+security exception. Hosted CI execution is observational evidence supplied by the next workflow
+run; the equivalent gates below passed locally before TASK-028 was closed.
+
+| Acceptance criterion | Completion evidence |
+| --- | --- |
+| 1. ASan/UBSan | The complete sanitizer preset executed all 128 locally runnable CTest cases without a finding; the opt-in authorised official-data case was the single documented skip. |
+| 2. Fuzz budget | `SEC-FUZZ-001` ran 10,000 mutations for each framing and decoder target over committed synthetic boundary seeds without a crash. Apple Clang lacks libFuzzer, so the preset uses the deterministic ASan/UBSan corpus driver; the same budget also passed locally with LLVM 22.1.8 real libFuzzer, which CI explicitly requires. |
+| 3. Path safety | `SEC-PATH-001`, TASK-012 cancellation and Python conversion tests cover aliases, symlink roots/staged files and traversal-like paths. Source and unrelated sentinel bytes remain unchanged after success, failure and cancellation. |
+| 4. Hash tampering | IT-004 and IT-012 authenticate completed parent/child lineage and reject modified manifests/interchange before deep record use. |
+| 5. Safe serialisation | The repository security-policy test rejects project imports of pickle/joblib/dill/marshal, `eval`/`exec` and NumPy loads without literal `allow_pickle=False`; reproduction retrains instead of loading executable models. |
+| 6. Network disabled | The synthetic C++ replay/validation and Python simulation smoke passed inside a macOS sandbox that denied socket creation. Linux CI uses a distinct network namespace and fails closed when isolation cannot be established. |
+| 7. Dependency/secrets | `pip-audit` found no known vulnerability in the hashed release lock. `detect-secrets` found zero real secrets; 17 reviewed entropy findings are fixed hashes and partition/path test literals recorded as false positives in the baseline. |
+| 8. Report injection | Markdown and HTML tests cover `<script>` and Markdown link/table metacharacters and require escaped output with no trusted raw data HTML. |
+| 9. Private paths | Policy tests scan public configs and minimal golden manifests for the repository and home paths; existing manifest/report recursive assertions also pass. |
+| 10. Honest limitations | Predictive and simulation report tests require historical/simulated status, fill/latency/venue assumptions and the absence of profitability guarantees. |
+
+Local evidence toolchain:
+
+- CMake 3.27.6; Apple Clang/ASan/UBSan 21.0.0; LLVM/libFuzzer and clang-tidy 22.1.8,
+  with `clang-analyzer-*` over all 28 project translation units and compiler warnings as errors.
+- Python 3.11.5; pytest 9.1.1 (613 tests); Ruff 0.16.1; mypy 2.3.0.
+- detect-secrets 1.5.0 and pip-audit 2.10.1. Scanners run without secret verification network
+  calls; the vulnerability audit reads the pinned release requirements.
+
+The committed dependency inventory reviewed for public distribution is:
+
+| Dependency | Locked/reviewed version | Licence |
+| --- | --- | --- |
+| zlib | 1.2.12 C++ SDK library on the review host | zlib |
+| nlohmann/json | 3.12.0 / commit `55f93686c01528224f448c19128836e7df245f72` | MIT |
+| Catch2 (test only) | 3.8.1 / commit `2b60af89e23d28eefc081bc930831ee9d45ea58b` | Boost-1.0 |
+| attrs | 26.1.0 | MIT |
+| joblib | 1.5.3 | BSD-3-Clause |
+| jsonschema | 4.26.0 | MIT |
+| jsonschema-specifications | 2025.9.1 | MIT |
+| narwhals | 2.24.0 | MIT |
+| NumPy | 2.4.6 | BSD-3-Clause plus bundled permissive notices |
+| packaging | 26.2 | Apache-2.0 or BSD-2-Clause |
+| PyArrow | 23.0.1 | Apache-2.0 |
+| referencing | 0.37.0 | MIT |
+| rfc8785 | 0.1.4 | Apache-2.0 |
+| rpds-py | 2026.6.3 | MIT |
+| scikit-learn | 1.9.0 | BSD-3-Clause |
+| SciPy | 1.17.1 | BSD-3-Clause plus bundled binary notices |
+| threadpoolctl | 3.6.0 | BSD-3-Clause |
+| typing-extensions | 4.16.0 | PSF-2.0 |
+| wheel | 0.47.0 | MIT |
+| setuptools | 83.0.0 | MIT |
+
+Python versions and hashes are authoritative in `python/requirements-release.lock`; the table is
+the human review record. No listed licence blocks the intended public source/binary distribution,
+provided bundled notices are retained. Google Benchmark remains deferred to TASK-029 and is not
+part of this inventory.
+
 ## Security testing requirements
 
 - Unit tests for all validation boundaries and checked arithmetic.

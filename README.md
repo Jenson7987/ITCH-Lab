@@ -18,7 +18,10 @@ implemented alongside exact-known visible queue tracking, conservative partial f
 queue diagnostics. Checked integer cash/inventory accounting, signed costs, projected inventory
 risk and visible-spread terminal liquidation are implemented. The training-only intensity
 calibration, causal trailing volatility, tick-rounded inventory-aware baseline and bounded causal
-signal adjustment are also implemented; the simulation runner and reporting remain planned.
+signal adjustment, immutable simulation runner and authenticated accessible reporting are also
+implemented. Security hardening now includes maintained framing/decoder fuzz corpora, full
+sanitizer and static-analysis gates, path/injection policy regressions, reviewed dependency and
+secret scans, and a network-isolated synthetic smoke.
 
 Classification legend used throughout the documentation:
 
@@ -109,6 +112,8 @@ static SVG calibration plots, text summaries and relative reproduction commands.
 - macOS 13+ on Apple Silicon or a current x86-64 Linux distribution.
 - CMake 3.25 or later.
 - A C++20 compiler: Apple Clang 15+, Clang 16+, or GCC 13+.
+- clang-tidy for the consolidated security gate; set `ITCHLAB_CLANG_TIDY` to its exact path when it
+  is not on `PATH`.
 - zlib development headers and library.
 - Python 3.11 or later.
 - Git.
@@ -250,11 +255,23 @@ output and confirms that a corrupt gzip source cannot publish a completed replay
     cmake --preset coverage
     cmake --build --preset coverage
     ctest --preset coverage
+    cmake --preset fuzz
+    cmake --build --preset fuzz
+    ctest --preset fuzz -R SEC-FUZZ-001
     python -m pytest python/tests
     python -m ruff check python
     python -m ruff format --check python
     python -m mypy python/src
     python -m build --no-isolation python
+
+The consolidated TASK-028 gate additionally runs clang static analysis, the reviewed secret
+baseline, the hashed dependency audit and a fail-closed network-isolated synthetic smoke:
+
+    ./scripts/security/task028-security.sh
+
+Apple Clang distributions without libFuzzer use the deterministic ASan/UBSan corpus driver for
+local fuzz checks. The dedicated security CI job requires real libFuzzer and fails configuration
+if its runtime is missing.
 
 The release benchmark command is added by `TASK-029`:
 

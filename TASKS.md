@@ -2,15 +2,9 @@
 
 Authoritative task details and evidence requirements are in docs/10-implementation-plan.md. Work on one item at a time.
 
-## Current milestone — M4 Conservative strategy comparison
+## Current milestone — M5 Publishable project
 
 ## Queued
-
-- [ ] TASK-028: Complete security hardening
-  - Dependencies: TASK-015, TASK-017, TASK-027
-  - Acceptance criteria: All security acceptance criteria pass
-  - Tests: SEC-FUZZ-001, SEC-PATH-001 and security suite
-  - Documentation to update: 07-security-and-privacy.md threat review
 
 - [ ] TASK-029: Benchmark/profile/optimise one bottleneck
   - Dependencies: TASK-015, TASK-028
@@ -37,6 +31,23 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-028: Complete security hardening
+  - Completed: 2026-08-17
+  - Evidence: Maintained framing/decoder fuzz targets now exercise committed deterministic boundary
+    corpora with a 10,000-mutation budget per target under ASan/UBSan; CI requires real libFuzzer
+    while Apple Clang uses the documented sanitizer-backed deterministic driver. SEC-PATH-001 and
+    conversion/cancellation regressions preserve source and unrelated sentinels across aliases,
+    symlinks, success, failure and cancellation. Repository policy tests cover executable
+    serialisation/code execution, network APIs, credential schema fields, tracked data, private
+    paths and packaged schema parity; report injection covers script and Markdown metacharacters.
+    The reviewed secret baseline contains 17 false-positive test hashes/literals and zero secrets;
+    pip-audit found no known vulnerability in the hashed release lock, and the exact dependency
+    licence inventory has no unaccepted high/critical issue. The network-disabled synthetic smoke,
+    clang-analyzer checks over all 28 project translation units, two SEC-FUZZ-001 tests, all 128
+    runnable sanitizer CTests and all 613 Python tests passed; the one authorised official-data
+    CTest skipped as designed. Ruff, mypy, C++ formatting, dev/release tests and wheel/sdist build
+    also passed. The dated threat review maps evidence to all ten security acceptance criteria.
 
 - [x] TASK-027: Run scenarios and finish simulation report
   - Completed: 2026-08-17

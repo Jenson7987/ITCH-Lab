@@ -230,8 +230,11 @@ flowchart LR
 ## External dependencies
 
 - Nasdaq ITCH 5.0 format specification and user-obtained sample data.
-- C++ standard library, zlib, nlohmann/json, Catch2 and Google Benchmark.
-- Python, NumPy, Polars, PyArrow, scikit-learn, Matplotlib and development tools.
+- C++ standard library, zlib and nlohmann/json; Catch2 is test-only. Google Benchmark remains
+  planned for TASK-029 and is not yet fetched.
+- Python, JSON Schema, RFC 8785, NumPy, PyArrow and scikit-learn plus their locked transitive
+  dependencies. Reports use project-owned static SVG rendering; Polars and Matplotlib are not
+  installed dependencies.
 - Git and GitHub Actions for versioning/CI.
 
 Dependencies must be pinned or constrained, licence-reviewed and scanned in CI. The application performs no runtime dependency download.

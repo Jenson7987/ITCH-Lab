@@ -10,9 +10,52 @@ project(
 option(ITCHLAB_WARNINGS_AS_ERRORS "Treat project compiler warnings as errors" ON)
 option(ITCHLAB_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviourSanitizer" OFF)
 option(ITCHLAB_ENABLE_COVERAGE "Enable source coverage instrumentation" OFF)
+option(ITCHLAB_ENABLE_FUZZING "Build the maintained libFuzzer security targets" OFF)
+set(ITCHLAB_FUZZ_RUNS "10000" CACHE STRING "Runs per maintained fuzz-corpus target")
+set(ITCHLAB_FUZZ_ENGINE "auto" CACHE STRING "Fuzz driver: auto, libfuzzer or standalone")
+set_property(CACHE ITCHLAB_FUZZ_ENGINE PROPERTY STRINGS auto libfuzzer standalone)
 
 if(ITCHLAB_ENABLE_SANITIZERS AND ITCHLAB_ENABLE_COVERAGE)
   message(FATAL_ERROR "Sanitizer and coverage instrumentation cannot be enabled together")
+endif()
+if(ITCHLAB_ENABLE_FUZZING AND NOT ITCHLAB_ENABLE_SANITIZERS)
+  message(FATAL_ERROR "Fuzzing requires AddressSanitizer and UndefinedBehaviourSanitizer")
+endif()
+if(ITCHLAB_ENABLE_FUZZING AND NOT CMAKE_CXX_COMPILER_ID MATCHES "AppleClang|Clang")
+  message(FATAL_ERROR "The fuzz preset requires Clang or AppleClang libFuzzer support")
+endif()
+if(NOT ITCHLAB_FUZZ_RUNS MATCHES "^[1-9][0-9]*$")
+  message(FATAL_ERROR "ITCHLAB_FUZZ_RUNS must be a positive integer")
+endif()
+if(NOT ITCHLAB_FUZZ_ENGINE MATCHES "^(auto|libfuzzer|standalone)$")
+  message(FATAL_ERROR "ITCHLAB_FUZZ_ENGINE must be auto, libfuzzer or standalone")
+endif()
+
+if(ITCHLAB_ENABLE_FUZZING)
+  include(CheckCXXSourceCompiles)
+  include(CMakePushCheckState)
+  cmake_push_check_state(RESET)
+  set(CMAKE_REQUIRED_FLAGS "-fsanitize=fuzzer")
+  set(CMAKE_REQUIRED_LINK_OPTIONS "-fsanitize=fuzzer")
+  check_cxx_source_compiles(
+    [=[
+      #include <cstddef>
+      extern "C" int LLVMFuzzerTestOneInput(const unsigned char*, std::size_t) { return 0; }
+    ]=]
+    ITCHLAB_HAS_LIBFUZZER
+  )
+  cmake_pop_check_state()
+  if(ITCHLAB_FUZZ_ENGINE STREQUAL "libfuzzer" AND NOT ITCHLAB_HAS_LIBFUZZER)
+    message(FATAL_ERROR "ITCHLAB_FUZZ_ENGINE=libfuzzer but the compiler runtime is unavailable")
+  endif()
+  if(ITCHLAB_FUZZ_ENGINE STREQUAL "auto" AND ITCHLAB_HAS_LIBFUZZER)
+    set(ITCHLAB_EFFECTIVE_FUZZ_ENGINE "libfuzzer")
+  elseif(ITCHLAB_FUZZ_ENGINE STREQUAL "libfuzzer")
+    set(ITCHLAB_EFFECTIVE_FUZZ_ENGINE "libfuzzer")
+  else()
+    set(ITCHLAB_EFFECTIVE_FUZZ_ENGINE "standalone")
+    message(STATUS "libFuzzer runtime unavailable; using the deterministic sanitizer corpus driver")
+  endif()
 endif()
 
 include(FetchContent)
@@ -238,4 +281,60 @@ if(BUILD_TESTING)
     TASK_015_cpp_cli_validate_help
     PROPERTIES PASS_REGULAR_EXPRESSION "Validate a completed replay"
   )
+
+  if(ITCHLAB_ENABLE_FUZZING)
+    add_executable(itchlab_fuzz_framing tests/cpp/fuzz/framed_reader_fuzz.cpp)
+    target_link_libraries(itchlab_fuzz_framing PRIVATE itchlab_core)
+    itchlab_configure_target(itchlab_fuzz_framing)
+
+    add_executable(itchlab_fuzz_decoder tests/cpp/fuzz/decoder_fuzz.cpp)
+    target_link_libraries(itchlab_fuzz_decoder PRIVATE itchlab_core)
+    itchlab_configure_target(itchlab_fuzz_decoder)
+    if(ITCHLAB_EFFECTIVE_FUZZ_ENGINE STREQUAL "libfuzzer")
+      target_compile_options(itchlab_fuzz_framing PRIVATE -fsanitize=fuzzer)
+      target_link_options(itchlab_fuzz_framing PRIVATE -fsanitize=fuzzer)
+      target_compile_options(itchlab_fuzz_decoder PRIVATE -fsanitize=fuzzer)
+      target_link_options(itchlab_fuzz_decoder PRIVATE -fsanitize=fuzzer)
+    else()
+      target_sources(itchlab_fuzz_framing PRIVATE tests/cpp/fuzz/standalone_fuzz_main.cpp)
+      target_sources(itchlab_fuzz_decoder PRIVATE tests/cpp/fuzz/standalone_fuzz_main.cpp)
+    endif()
+
+    set(ITCHLAB_FUZZ_CORPUS_ROOT "${CMAKE_CURRENT_BINARY_DIR}/fuzz-corpus")
+    set(ITCHLAB_FUZZ_ARTEFACT_ROOT "${CMAKE_CURRENT_BINARY_DIR}/fuzz-artefacts")
+    file(MAKE_DIRECTORY
+      "${ITCHLAB_FUZZ_CORPUS_ROOT}/framing"
+      "${ITCHLAB_FUZZ_CORPUS_ROOT}/decoder"
+      "${ITCHLAB_FUZZ_ARTEFACT_ROOT}/framing"
+      "${ITCHLAB_FUZZ_ARTEFACT_ROOT}/decoder"
+    )
+    file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/tests/fuzz/corpus/framing/"
+         DESTINATION "${ITCHLAB_FUZZ_CORPUS_ROOT}/framing")
+    file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/tests/fuzz/corpus/decoder/"
+         DESTINATION "${ITCHLAB_FUZZ_CORPUS_ROOT}/decoder")
+
+    add_test(
+      NAME "SEC-FUZZ-001 framing corpus is sanitizer-clean"
+      COMMAND itchlab_fuzz_framing
+              -runs=${ITCHLAB_FUZZ_RUNS}
+              -seed=28001
+              -max_len=4096
+              -artifact_prefix=${ITCHLAB_FUZZ_ARTEFACT_ROOT}/framing/
+              ${ITCHLAB_FUZZ_CORPUS_ROOT}/framing
+    )
+    add_test(
+      NAME "SEC-FUZZ-001 decoder corpus is sanitizer-clean"
+      COMMAND itchlab_fuzz_decoder
+              -runs=${ITCHLAB_FUZZ_RUNS}
+              -seed=28002
+              -max_len=512
+              -artifact_prefix=${ITCHLAB_FUZZ_ARTEFACT_ROOT}/decoder/
+              ${ITCHLAB_FUZZ_CORPUS_ROOT}/decoder
+    )
+    set_tests_properties(
+      "SEC-FUZZ-001 framing corpus is sanitizer-clean"
+      "SEC-FUZZ-001 decoder corpus is sanitizer-clean"
+      PROPERTIES LABELS "security;fuzz" TIMEOUT 120
+    )
+  endif()
 endif()

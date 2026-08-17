@@ -1,8 +1,10 @@
 -r requirements-release.in
 
 build>=1.5,<2
+detect-secrets>=1.5,<2
 mypy>=2.3,<3
 pip>=25,<26  # pip-tools 7.6 is not compatible with pip 26's resolver API.
+pip-audit>=2.10,<3
 pip-tools>=7.6,<8
 pytest>=9.1,<10
 pyarrow-stubs>=20,<21

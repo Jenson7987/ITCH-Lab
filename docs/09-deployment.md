@@ -90,6 +90,7 @@ Any future market-data credential or signing key requires:
 | release | Benchmarks/releases | Optimisation, NDEBUG, reproducible flags where supported |
 | sanitizers | Safety checks | ASan and UBSan, debug symbols |
 | coverage | Coverage report | Instrumentation, no misleading optimisation |
+| fuzz | Maintained parser security corpus | Clang, ASan/UBSan and libFuzzer where available; CI requires libFuzzer |
 
 Build steps:
 
@@ -99,6 +100,13 @@ Build steps:
 4. Compile with warnings as errors for project code.
 5. Run unit/integration/contract tests.
 6. Record compiler/version/flags in release metadata.
+
+The dedicated security workflow runs on pull requests, pushes to `main`, manual dispatch and a
+weekly schedule. `scripts/security/task028-security.sh` is the shared local/CI entry point. CI must
+configure the fuzz preset with `ITCHLAB_FUZZ_ENGINE=libfuzzer`; local Apple Clang may use the
+deterministic sanitizer corpus fallback because that toolchain does not ship a libFuzzer runtime.
+The network-disabled smoke fails rather than silently running without macOS sandbox or Linux
+network-namespace isolation.
 
 ### Python build
 

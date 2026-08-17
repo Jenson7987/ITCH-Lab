@@ -163,8 +163,9 @@ std::optional<std::filesystem::path> find_file_named(const std::filesystem::path
 
 } // namespace
 
-TEST_CASE("E2E-004 TASK-012 SIGINT closes partial outputs, exits 130 and permits a clean rerun",
-          "[TASK-012][E2E-004][cancellation][process][security]") {
+TEST_CASE("SEC-PATH-001 E2E-004 TASK-012 SIGINT closes partial outputs, exits 130 and permits a "
+          "clean rerun",
+          "[TASK-012][E2E-004][SEC-PATH-001][cancellation][process][security]") {
 #if !defined(__APPLE__) && !defined(__linux__)
   SKIP("TASK-012 process-signal E2E is supported on the declared macOS/Linux targets");
 #else
@@ -178,7 +179,9 @@ TEST_CASE("E2E-004 TASK-012 SIGINT closes partial outputs, exits 130 and permits
     long_source.append(trade_frame);
   }
   const auto source_path = temporary.path() / "long.itch";
+  const auto sentinel_path = temporary.path() / "unrelated-sentinel";
   write_file(source_path, long_source);
+  write_file(sentinel_path, "unchanged");
   const auto config = write_config(temporary.path() / "cancel.json", source_path);
   const auto output_root = temporary.path() / "cancel-output";
   const auto stdout_path = temporary.path() / "cancel.stdout";
@@ -217,6 +220,7 @@ TEST_CASE("E2E-004 TASK-012 SIGINT closes partial outputs, exits 130 and permits
   REQUIRE(wait_for_child(child) == 130);
 
   REQUIRE(read_file(source_path) == long_source);
+  REQUIRE(read_file(sentinel_path) == "unchanged");
   REQUIRE_FALSE(find_file_named(output_root, "events.ilb").has_value());
   REQUIRE_FALSE(find_file_named(output_root, "snapshots.ilb").has_value());
   REQUIRE_FALSE(find_file_named(output_root, "replay-manifest.json").has_value());

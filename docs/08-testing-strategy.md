@@ -326,6 +326,26 @@ Defined in 07-security-and-privacy.md and implemented through:
 - Secret and dependency scans.
 - Tests that arbitrary pickle/joblib input is rejected.
 
+TASK-028 maintains separate framing and typed-decoder corpora under `tests/fuzz/corpus/`. The
+generator derives valid type seeds from the independent mixed fixture and fixes empty, truncated,
+maximum, oversized, unknown-type, wrong-length and invalid-timestamp boundaries. Verify the corpus
+and run the configured 10,000-mutation budget with:
+
+    python tests/fuzz/generate_corpus.py --check
+    cmake --preset fuzz
+    cmake --build --preset fuzz
+    ctest --preset fuzz --output-on-failure -R SEC-FUZZ-001
+
+The `auto` engine uses libFuzzer where the compiler provides its runtime. On Apple toolchains that
+omit libFuzzer it uses the deterministic standalone corpus mutator with ASan/UBSan; the security CI
+sets `ITCHLAB_FUZZ_ENGINE=libfuzzer`, so missing real libFuzzer support fails configuration.
+
+The complete local gate is `scripts/security/task028-security.sh`. It checks corpus reproducibility,
+warnings-as-errors, the full `clang-analyzer-*` family, sanitizer and fuzz tests, the Python suite,
+the reviewed secret baseline, the hashed runtime dependency lock and a fail-closed network-isolated
+synthetic smoke. `ITCHLAB_CLANG_TIDY` may identify a non-PATH executable without changing the
+project toolchain.
+
 ## Performance testing
 
 ### Benchmarks
@@ -437,6 +457,10 @@ Generated code and third-party dependencies are excluded. Any exclusion in proje
 8. Synthetic E2E.
 9. Secret scan and dependency audit.
 10. Performance smoke threshold on a deterministic synthetic fixture.
+
+`.github/workflows/security.yml` supplies the TASK-028 PR, main-branch and weekly scheduled
+security job. Its third-party actions are pinned to full commits, Python installation uses the
+hashed development lock, and real libFuzzer is required before the consolidated gate runs.
 
 ### Main/scheduled jobs
 

@@ -133,11 +133,15 @@ itchlab::ContentHash sequential_hash() {
 
 } // namespace
 
-TEST_CASE("IT-004 TASK-014 replay publishes a verified private-path-free immutable directory",
-          "[TASK-014][IT-004][manifest][publication][idempotency]") {
+TEST_CASE("SEC-PATH-001 IT-004 TASK-014 replay publishes a verified private-path-free immutable "
+          "directory",
+          "[TASK-014][IT-004][SEC-PATH-001][manifest][publication][idempotency][security]") {
   TemporaryDirectory temporary;
   const auto source = repository_path("tests/fixtures/synthetic_minimal.itch");
-  const auto source_hash = itchlab::content_hash_to_hex(itchlab::sha256(read_file(source)));
+  const auto source_content = read_file(source);
+  const auto sentinel = temporary.path() / "unrelated-sentinel";
+  write_file(sentinel, "unchanged");
+  const auto source_hash = itchlab::content_hash_to_hex(itchlab::sha256(source_content));
   const auto config = write_replay_config(temporary.path() / "replay.json", source, source_hash);
   const auto output_root = temporary.path() / "output";
 
@@ -218,13 +222,18 @@ TEST_CASE("IT-004 TASK-014 replay publishes a verified private-path-free immutab
   REQUIRE_FALSE(forced_summary.at("reused").get<bool>());
   REQUIRE(forced_summary.at("replay_id").get<std::string>() != replay_id);
   REQUIRE(directory_count(output_root / "replay") == 2);
+  REQUIRE(read_file(source) == source_content);
+  REQUIRE(read_file(sentinel) == "unchanged");
 }
 
 TEST_CASE("SEC-PATH-001 TASK-014 rejects broad aliases and symlink output roots",
           "[TASK-014][SEC-PATH-001][path][security]") {
   TemporaryDirectory temporary;
   const auto source = temporary.path() / "source.itch";
-  write_file(source, read_file(repository_path("tests/fixtures/synthetic_minimal.itch")));
+  const auto source_content = read_file(repository_path("tests/fixtures/synthetic_minimal.itch"));
+  const auto sentinel = temporary.path() / "unrelated-sentinel";
+  write_file(source, source_content);
+  write_file(sentinel, "unchanged");
   const auto identity = sequential_hash();
   constexpr std::string_view replay_id{"20260807T120000.000000000Z-010203040506"};
 
@@ -243,6 +252,8 @@ TEST_CASE("SEC-PATH-001 TASK-014 rejects broad aliases and symlink output roots"
         itchlab::prepare_replay_run(linked_root, source, identity, std::string{replay_id}, false);
     REQUIRE(linked.error->code == itchlab::ErrorCode::output_path);
   }
+  REQUIRE(read_file(source) == source_content);
+  REQUIRE(read_file(sentinel) == "unchanged");
 }
 
 TEST_CASE("TASK-014 publication exposes no completed name until every staged child exists",

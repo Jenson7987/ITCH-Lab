@@ -268,6 +268,21 @@ def test_task_017_service_rejects_unsafe_or_overlapping_output_paths(
     assert unsafe_output.value.code is ErrorCode.OUTPUT_PATH
     assert not (parent.parent / "conversion").exists()
 
+    outside = tmp_path / "outside-output"
+    outside.mkdir()
+    sentinel = outside / "sentinel"
+    sentinel.write_text("unchanged", encoding="utf-8")
+    linked = tmp_path / "linked-output"
+    try:
+        linked.symlink_to(outside, target_is_directory=True)
+    except OSError as error:
+        pytest.skip(f"symlink creation is unavailable: {error}")
+    with pytest.raises(ConversionError) as symlinked_output:
+        convert_replays(replace(config, output_root="linked-output"), base_directory=tmp_path)
+    assert symlinked_output.value.code is ErrorCode.OUTPUT_PATH
+    assert sentinel.read_text(encoding="utf-8") == "unchanged"
+    assert parent.is_file()
+
 
 def test_task_017_partition_symbol_is_uri_encoded_without_changing_value(
     tmp_path: Path,
