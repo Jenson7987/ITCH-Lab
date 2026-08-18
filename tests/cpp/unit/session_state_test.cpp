@@ -50,7 +50,7 @@ TEST_CASE("TASK-011 session state applies the official global and per-stock stat
   REQUIRE_FALSE(session.is_tradable(2));
   REQUIRE(session.apply(2, system_event('Q', 34'200'000'000'000)).valid());
 
-  for (const auto [code, expected] : {
+  for (const auto& [code, expected] : {
            std::pair{'H', itchlab::TradingState::halted},
            std::pair{'P', itchlab::TradingState::paused},
            std::pair{'Q', itchlab::TradingState::quotation_only},
