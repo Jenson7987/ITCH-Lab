@@ -192,7 +192,9 @@ TEST_CASE("SEC-PATH-001 E2E-004 TASK-012 SIGINT closes partial outputs, exits 13
   bool output_started{};
   bool child_exited{};
   int early_status{};
-  for (std::size_t attempt = 0; attempt < 5'000; ++attempt) {
+  const auto output_start_deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds{60};
+  while (std::chrono::steady_clock::now() < output_start_deadline) {
     std::error_code error;
     event_partial = find_file_named(output_root, "events.ilb.partial");
     if (event_partial) {
