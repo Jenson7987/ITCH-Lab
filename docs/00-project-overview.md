@@ -144,7 +144,7 @@ The MVP succeeds when:
 | --- | --- | --- |
 | OQ-001 | Which exact sample dates and symbols will be used in the published report? | Freeze at the start of TASK-031 after storage/data-quality preflight and before inspecting test results |
 | OQ-002 | Does the official source's current licence permit publishing small transformed excerpts? | Publish synthetic fixtures only until confirmed |
-| OQ-003 | What measured throughput target is realistic on the development machine? | Establish baseline in TASK-029; recommended release target is at least 1 million uncompressed messages/second |
+| OQ-003 | What measured throughput target is realistic on the development machine? | Resolved by TASK-029: 9.71 million uncompressed parser-plus-book messages/second on the pinned synthetic fixture; retain the 1 million messages/second release floor |
 
 ## Primary references
 

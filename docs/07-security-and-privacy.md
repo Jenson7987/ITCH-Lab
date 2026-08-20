@@ -242,6 +242,7 @@ The committed dependency inventory reviewed for public distribution is:
 | zlib | 1.2.12 C++ SDK library on the review host | zlib |
 | nlohmann/json | 3.12.0 / commit `55f93686c01528224f448c19128836e7df245f72` | MIT |
 | Catch2 (test only) | 3.8.1 / commit `2b60af89e23d28eefc081bc930831ee9d45ea58b` | Boost-1.0 |
+| Google Benchmark (benchmark only) | 1.9.4 / commit `eddb0241389718a23a42db6af5f0164b6e0139af` | Apache-2.0 |
 | attrs | 26.1.0 | MIT |
 | joblib | 1.5.3 | BSD-3-Clause |
 | jsonschema | 4.26.0 | MIT |
@@ -262,8 +263,7 @@ The committed dependency inventory reviewed for public distribution is:
 
 Python versions and hashes are authoritative in `python/requirements-release.lock`; the table is
 the human review record. No listed licence blocks the intended public source/binary distribution,
-provided bundled notices are retained. Google Benchmark remains deferred to TASK-029 and is not
-part of this inventory.
+provided bundled notices are retained.
 
 ## Security testing requirements
 

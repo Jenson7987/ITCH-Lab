@@ -11,6 +11,7 @@
 #include "itchlab/output/event_writer.hpp"
 #include "itchlab/output/manifest.hpp"
 #include "itchlab/output/snapshot_writer.hpp"
+#include "itchlab/performance/benchmark.hpp"
 #include "itchlab/replay/replay_coordinator.hpp"
 #include "itchlab/validation/validator.hpp"
 
@@ -39,12 +40,14 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <sys/utsname.h>
 #include <system_error>
 #include <utility>
 #include <vector>
 
 #if defined(__APPLE__)
 #include <mach-o/dyld.h>
+#include <sys/sysctl.h>
 #elif defined(__linux__)
 #include <unistd.h>
 #endif
@@ -99,6 +102,12 @@ struct ValidateArguments {
   std::optional<std::filesystem::path> verify_source;
   OutputFormat format{OutputFormat::human};
   bool deep{};
+};
+
+struct BenchmarkArguments {
+  BenchmarkOptions options;
+  std::optional<std::filesystem::path> output;
+  OutputFormat format{OutputFormat::human};
 };
 
 template <typename T> struct ParsedArguments {
@@ -208,7 +217,8 @@ void print_global_help(std::ostream& output) {
          << "Commands:\n"
          << "  inspect    Inspect bounded source framing and message composition.\n"
          << "  replay     Replay selected symbols to immutable binary artefacts.\n"
-         << "  validate   Validate a replay directory or standalone interchange file.\n\n"
+         << "  validate   Validate a replay directory or standalone interchange file.\n"
+         << "  benchmark  Measure parser, filter and level-3 book throughput.\n\n"
          << "Global options:\n"
          << "  --help       Show this help text.\n"
          << "  --version    Show the application version.\n\n"
@@ -276,6 +286,27 @@ void print_validate_help(std::ostream& output) {
          << "  itchlab validate --run runs/replay/<replay-id> --deep\n"
          << "  itchlab validate --file tests/golden/interchange/synthetic_events_v1.ilb --deep\n\n"
          << "Exit categories: 0 success, 2 usage, 3 input path, 7 artefact validation/schema.\n";
+}
+
+void print_benchmark_help(std::ostream& output) {
+  output << "Benchmark framing, decoding, filtering and level-3 book stages.\n\n"
+         << "Usage: itchlab benchmark --fixture <path> [options]\n\n"
+         << "Required:\n"
+         << "  --fixture <path>            Pinned synthetic ITCH fixture.\n"
+         << "  --stage <parser|filter|book|all>  Timed stage set.\n"
+         << "\nOptions:\n"
+         << "  --symbols <AAPL,MSFT>       Selected symbols (default AAPL).\n"
+         << "  --repetitions <3-100>       Measured repetitions after warm-up (default 10).\n"
+         << "  --output <benchmark.json>   Atomically write the JSON evidence.\n"
+         << "  --format <human|json>       Result format (default human).\n"
+         << "  --ascii                     Restrict presentation to ASCII.\n"
+         << "  --no-colour                 Disable colour presentation.\n"
+         << "  --help                      Show this help text.\n\n"
+         << "Examples:\n"
+         << "  itchlab benchmark --fixture data/fixtures/performance.itch --stage all\n"
+         << "  itchlab benchmark --fixture data/fixtures/performance.itch.gz --format json\n\n"
+         << "Exit categories: 0 success, 2 usage, 3 input/framing, 4 decode, 5 book, "
+            "6 output.\n";
 }
 
 [[nodiscard]] std::optional<std::string_view>
@@ -615,6 +646,118 @@ parse_validate_arguments(const std::span<const std::string_view> arguments) {
 
   if (saw_run == saw_file) {
     return {std::nullopt, usage_error("validate requires exactly one of --run or --file.")};
+  }
+  return {std::move(parsed), std::nullopt};
+}
+
+[[nodiscard]] ParsedArguments<BenchmarkArguments>
+parse_benchmark_arguments(const std::span<const std::string_view> arguments) {
+  BenchmarkArguments parsed;
+  bool saw_fixture{};
+  bool saw_stage{};
+  bool saw_symbols{};
+  bool saw_repetitions{};
+  bool saw_output{};
+  bool saw_format{};
+  for (std::size_t index = 0; index < arguments.size(); ++index) {
+    const auto argument = arguments[index];
+    CommandError error;
+    if (argument == "--fixture") {
+      if (saw_fixture) {
+        return {std::nullopt, usage_error("--fixture may be supplied only once.")};
+      }
+      const auto value = required_value(arguments, index, argument, error);
+      if (!value) {
+        return {std::nullopt, std::move(error)};
+      }
+      parsed.options.fixture = std::filesystem::path{*value};
+      saw_fixture = true;
+    } else if (argument == "--stage") {
+      if (saw_stage) {
+        return {std::nullopt, usage_error("--stage may be supplied only once.")};
+      }
+      const auto value = required_value(arguments, index, argument, error);
+      if (!value) {
+        return {std::nullopt, std::move(error)};
+      }
+      if (*value == "parser") {
+        parsed.options.stage = BenchmarkStage::parser;
+      } else if (*value == "filter") {
+        parsed.options.stage = BenchmarkStage::filter;
+      } else if (*value == "book") {
+        parsed.options.stage = BenchmarkStage::book;
+      } else if (*value == "all") {
+        parsed.options.stage = BenchmarkStage::all;
+      } else {
+        return {std::nullopt, usage_error("--stage must be parser, filter, book or all.")};
+      }
+      saw_stage = true;
+    } else if (argument == "--symbols") {
+      if (saw_symbols) {
+        return {std::nullopt, usage_error("--symbols may be supplied only once.")};
+      }
+      const auto value = required_value(arguments, index, argument, error);
+      if (!value) {
+        return {std::nullopt, std::move(error)};
+      }
+      const auto symbols = parse_symbols(*value);
+      if (!symbols) {
+        return {std::nullopt,
+                usage_error("--symbols must contain unique comma-separated ASCII symbols.")};
+      }
+      parsed.options.symbols = *symbols;
+      saw_symbols = true;
+    } else if (argument == "--repetitions") {
+      if (saw_repetitions) {
+        return {std::nullopt, usage_error("--repetitions may be supplied only once.")};
+      }
+      const auto value = required_value(arguments, index, argument, error);
+      if (!value) {
+        return {std::nullopt, std::move(error)};
+      }
+      const auto repetitions = parse_positive_integer(*value);
+      if (!repetitions || *repetitions < 3 || *repetitions > 100) {
+        return {std::nullopt, usage_error("--repetitions must be between 3 and 100.")};
+      }
+      parsed.options.repetitions = static_cast<std::uint16_t>(*repetitions);
+      saw_repetitions = true;
+    } else if (argument == "--output") {
+      if (saw_output) {
+        return {std::nullopt, usage_error("--output may be supplied only once.")};
+      }
+      const auto value = required_value(arguments, index, argument, error);
+      if (!value) {
+        return {std::nullopt, std::move(error)};
+      }
+      parsed.output = std::filesystem::path{*value};
+      saw_output = true;
+    } else if (argument == "--format") {
+      if (saw_format) {
+        return {std::nullopt, usage_error("--format may be supplied only once.")};
+      }
+      const auto value = required_value(arguments, index, argument, error);
+      if (!value) {
+        return {std::nullopt, std::move(error)};
+      }
+      if (*value == "human") {
+        parsed.format = OutputFormat::human;
+      } else if (*value == "json") {
+        parsed.format = OutputFormat::json;
+      } else {
+        return {std::nullopt, usage_error("--format must be human or json.")};
+      }
+      saw_format = true;
+    } else if (argument == "--ascii" || argument == "--no-colour") {
+      // Current presentation is already ASCII and uncoloured.
+    } else {
+      return {std::nullopt, usage_error("Unrecognised benchmark option: " + std::string{argument})};
+    }
+  }
+  if (!saw_fixture) {
+    return {std::nullopt, usage_error("benchmark requires --fixture <path>.")};
+  }
+  if (!saw_stage) {
+    return {std::nullopt, usage_error("benchmark requires --stage parser, filter, book or all.")};
   }
   return {std::move(parsed), std::nullopt};
 }
@@ -1123,6 +1266,207 @@ resolve_executable_path(const std::filesystem::path& supplied_path) {
                        ITCHLAB_BUILD_TYPE};
 }
 
+[[nodiscard]] std::string operating_system_description() {
+  utsname information{};
+  if (uname(&information) != 0) {
+    return "unknown";
+  }
+  return std::string{information.sysname} + ' ' + information.release + " (" + information.machine +
+         ')';
+}
+
+[[nodiscard]] std::string hardware_description() {
+#if defined(__APPLE__)
+  std::size_t size{};
+  if (sysctlbyname("machdep.cpu.brand_string", nullptr, &size, nullptr, 0) == 0 && size > 1) {
+    std::string value(size, '\0');
+    if (sysctlbyname("machdep.cpu.brand_string", value.data(), &size, nullptr, 0) == 0) {
+      value.resize(std::char_traits<char>::length(value.c_str()));
+      return value;
+    }
+  }
+#elif defined(__linux__)
+  std::ifstream cpu_information{"/proc/cpuinfo"};
+  std::string line;
+  constexpr std::string_view key{"model name"};
+  while (std::getline(cpu_information, line)) {
+    if (line.starts_with(key)) {
+      const auto separator = line.find(':');
+      if (separator != std::string::npos && separator + 2 <= line.size()) {
+        return line.substr(separator + 2);
+      }
+    }
+  }
+#endif
+  return ITCHLAB_TARGET;
+}
+
+[[nodiscard]] Json benchmark_report_json(const BenchmarkReport& report) {
+  Json measurements = Json::array();
+  for (const auto& measurement : report.measurements) {
+    Json samples = Json::array();
+    for (const auto& sample : measurement.samples) {
+      samples.push_back({{"elapsed_ns", sample.elapsed_ns},
+                         {"messages", sample.messages},
+                         {"messages_per_second", sample.messages_per_second},
+                         {"operations", sample.operations},
+                         {"operations_per_second", sample.operations_per_second},
+                         {"output_bytes", sample.output_bytes},
+                         {"selected_messages", sample.selected_messages},
+                         {"source_bytes", sample.source_bytes},
+                         {"source_bytes_per_second", sample.source_bytes_per_second},
+                         {"uncompressed_bytes", sample.uncompressed_bytes},
+                         {"uncompressed_bytes_per_second", sample.uncompressed_bytes_per_second}});
+    }
+    measurements.push_back(
+        {{"final_book_digests", measurement.final_book_digests},
+         {"id", measurement.id},
+         {"input_mode", input_compression_name(measurement.input_mode)},
+         {"mad_messages_per_second", measurement.mad_messages_per_second},
+         {"median_messages_per_second", measurement.median_messages_per_second},
+         {"median_operations_per_second", measurement.median_operations_per_second},
+         {"median_output_bytes_per_operation", measurement.median_output_bytes_per_operation},
+         {"median_source_bytes_per_second", measurement.median_source_bytes_per_second},
+         {"median_uncompressed_bytes_per_second", measurement.median_uncompressed_bytes_per_second},
+         {"name", measurement.name},
+         {"samples", std::move(samples)}});
+  }
+  const auto publishable =
+      std::string_view{ITCHLAB_BUILD_TYPE} == "Release" && ITCHLAB_GIT_DIRTY == 0;
+  return Json{{"environment",
+               {{"build_flags", ITCHLAB_BUILD_FLAGS},
+                {"build_type", ITCHLAB_BUILD_TYPE},
+                {"compiler", ITCHLAB_COMPILER_ID},
+                {"compiler_version", ITCHLAB_COMPILER_VERSION},
+                {"git_revision", ITCHLAB_GIT_REVISION},
+                {"hardware", hardware_description()},
+                {"operating_system", operating_system_description()},
+                {"publishable", publishable},
+                {"target", ITCHLAB_TARGET},
+                {"working_tree_dirty", ITCHLAB_GIT_DIRTY != 0}}},
+              {"fixture",
+               {{"input_mode", input_compression_name(report.input_mode)},
+                {"name", report.fixture_name.generic_string()},
+                {"sha256", content_hash_to_hex(report.fixture_sha256)},
+                {"size_bytes", report.fixture_size_bytes}}},
+              {"measurements", std::move(measurements)},
+              {"peak_rss_bytes", report.peak_rss_bytes},
+              {"repetitions", report.repetitions}};
+}
+
+void render_benchmark_human(std::ostream& output, const BenchmarkReport& report) {
+  const auto publishable =
+      std::string_view{ITCHLAB_BUILD_TYPE} == "Release" && ITCHLAB_GIT_DIRTY == 0;
+  output << "Benchmark completed.\n"
+         << "Publishable: " << (publishable ? "yes" : "no") << '\n'
+         << "Hardware: " << hardware_description() << '\n'
+         << "Operating system: " << operating_system_description() << '\n'
+         << "Build: " << ITCHLAB_BUILD_TYPE << ", " << ITCHLAB_COMPILER_ID << ' '
+         << ITCHLAB_COMPILER_VERSION << '\n'
+         << "Fixture: " << report.fixture_name.generic_string() << " ("
+         << content_hash_to_hex(report.fixture_sha256) << ")\n"
+         << "Input mode: " << input_compression_name(report.input_mode) << '\n'
+         << "Repetitions: " << report.repetitions << '\n'
+         << "Peak RSS bytes: " << report.peak_rss_bytes << '\n';
+  output << std::fixed << std::setprecision(2);
+  for (const auto& measurement : report.measurements) {
+    output << measurement.id << ' ' << measurement.name << ": median "
+           << measurement.median_messages_per_second << " messages/s; MAD "
+           << measurement.mad_messages_per_second;
+    if (measurement.median_operations_per_second > 0.0) {
+      output << "; " << measurement.median_operations_per_second << " operations/s";
+    }
+    if (measurement.median_output_bytes_per_operation > 0.0) {
+      output << "; " << measurement.median_output_bytes_per_operation << " output bytes/operation";
+    }
+    output << '\n';
+    for (const auto& [symbol, digest] : measurement.final_book_digests) {
+      output << "  Final " << symbol << " book digest: " << digest << '\n';
+    }
+  }
+}
+
+[[nodiscard]] std::optional<CommandError>
+write_benchmark_evidence(const std::filesystem::path& output_path, const Json& envelope,
+                         const std::filesystem::path& fixture) {
+  if (output_path.empty() || output_path.filename().empty() ||
+      output_path.extension() == ".partial") {
+    return CommandError{ErrorCode::output_path, "Benchmark output must name a non-partial file.",
+                        default_action(ErrorCode::output_path)};
+  }
+  std::error_code filesystem_error;
+  const auto output_status = std::filesystem::symlink_status(output_path, filesystem_error);
+  if (filesystem_error == std::errc::no_such_file_or_directory) {
+    filesystem_error.clear();
+  }
+  if (filesystem_error) {
+    return CommandError{ErrorCode::output_path, "Benchmark output could not be safely inspected.",
+                        default_action(ErrorCode::output_path)};
+  }
+  if (output_status.type() != std::filesystem::file_type::not_found) {
+    return CommandError{ErrorCode::run_exists,
+                        "Benchmark output already exists or could not be inspected.",
+                        "Choose a fresh output path; existing evidence is never replaced."};
+  }
+  auto partial_path = output_path;
+  partial_path += ".partial";
+  const auto partial_status = std::filesystem::symlink_status(partial_path, filesystem_error);
+  if (filesystem_error == std::errc::no_such_file_or_directory) {
+    filesystem_error.clear();
+  }
+  if (filesystem_error) {
+    return CommandError{ErrorCode::output_path,
+                        "Benchmark partial output could not be safely inspected.",
+                        default_action(ErrorCode::output_path)};
+  }
+  if (partial_status.type() != std::filesystem::file_type::not_found) {
+    return CommandError{ErrorCode::partial_artefact,
+                        "Benchmark partial output already exists or could not be inspected.",
+                        "Inspect or remove the stale partial file, then rerun."};
+  }
+  const auto parent =
+      output_path.has_parent_path() ? output_path.parent_path() : std::filesystem::current_path();
+  if (!std::filesystem::is_directory(parent, filesystem_error) || filesystem_error) {
+    return CommandError{ErrorCode::output_path, "Benchmark output parent must already exist.",
+                        default_action(ErrorCode::output_path)};
+  }
+  const auto resolved_parent = std::filesystem::weakly_canonical(parent, filesystem_error);
+  if (filesystem_error) {
+    return CommandError{ErrorCode::output_path, "Benchmark output path could not be resolved.",
+                        default_action(ErrorCode::output_path)};
+  }
+  const auto resolved_output = resolved_parent / output_path.filename();
+  const auto resolved_fixture = std::filesystem::canonical(fixture, filesystem_error);
+  if (filesystem_error || resolved_output == resolved_fixture) {
+    return CommandError{ErrorCode::output_path,
+                        "Benchmark source and output paths must be distinct.",
+                        default_action(ErrorCode::output_path)};
+  }
+  std::ofstream stream{partial_path, std::ios::binary | std::ios::out};
+  if (!stream) {
+    return CommandError{ErrorCode::disk_write, "Benchmark partial output could not be opened.",
+                        default_action(ErrorCode::disk_write)};
+  }
+  stream << envelope.dump(2, ' ', false, Json::error_handler_t::strict) << '\n';
+  stream.flush();
+  stream.close();
+  if (!stream) {
+    std::error_code ignored;
+    static_cast<void>(std::filesystem::remove(partial_path, ignored));
+    return CommandError{ErrorCode::disk_write, "Benchmark evidence could not be fully written.",
+                        default_action(ErrorCode::disk_write)};
+  }
+  std::filesystem::rename(partial_path, output_path, filesystem_error);
+  if (filesystem_error) {
+    std::error_code ignored;
+    static_cast<void>(std::filesystem::remove(partial_path, ignored));
+    return CommandError{ErrorCode::disk_write,
+                        "Benchmark evidence could not be atomically published.",
+                        default_action(ErrorCode::disk_write)};
+  }
+  return std::nullopt;
+}
+
 [[nodiscard]] TradingDate trading_date_number(const std::string_view value) {
   std::array<char, 8> digits{};
   std::size_t destination{};
@@ -1262,6 +1606,62 @@ int run_validate(const std::span<const std::string_view> arguments, std::ostream
     render_success_json(output, "validate", "completed", validation_report_json(result.report), {});
   } else {
     render_validation_human(output, result.report, true);
+  }
+  return 0;
+}
+
+int run_benchmark(const std::span<const std::string_view> arguments, std::ostream& output,
+                  std::ostream& error) {
+  if (std::find(arguments.begin(), arguments.end(), "--help") != arguments.end()) {
+    print_benchmark_help(output);
+    return 0;
+  }
+  if (arguments.size() == 1 && arguments.front() == "--version") {
+    output << kProgramName << ' ' << ITCHLAB_VERSION << '\n';
+    return 0;
+  }
+  const auto parsed = parse_benchmark_arguments(arguments);
+  const auto requested_format = wants_json(arguments) ? OutputFormat::json : OutputFormat::human;
+  if (parsed.error) {
+    return render_error(output, error, "benchmark", requested_format, LogFormat::human,
+                        *parsed.error);
+  }
+  const auto& options = *parsed.value;
+  const auto result = run_benchmarks(options.options);
+  if (!result.valid()) {
+    const CommandError failure{result.error->code, result.error->message,
+                               default_action(result.error->code)};
+    return render_error(output, error, "benchmark", options.format, LogFormat::human, failure);
+  }
+
+  auto summary = benchmark_report_json(*result.report);
+  std::vector<std::string> warnings;
+  if (!summary.at("environment").at("publishable").get<bool>()) {
+    warnings.emplace_back(
+        "Only clean Release builds are publishable; this result is marked publishable=false.");
+  }
+  const Json envelope{{"command", "benchmark"},
+                      {"schema_version", 1},
+                      {"status", "completed"},
+                      {"summary", summary},
+                      {"warnings", warnings}};
+  if (options.output) {
+    if (const auto write_error =
+            write_benchmark_evidence(*options.output, envelope, options.options.fixture)) {
+      return render_error(output, error, "benchmark", options.format, LogFormat::human,
+                          *write_error);
+    }
+  }
+  if (options.format == OutputFormat::json) {
+    output << envelope.dump(-1, ' ', false, Json::error_handler_t::strict) << '\n';
+  } else {
+    render_benchmark_human(output, *result.report);
+    if (options.output) {
+      output << "Evidence: " << display_path(*options.output) << '\n';
+    }
+    for (const auto& warning : warnings) {
+      render_warning(error, "benchmark", LogFormat::human, "NON_PUBLISHABLE_BUILD", warning);
+    }
   }
   return 0;
 }
@@ -1594,6 +1994,9 @@ int run(const std::span<const std::string_view> arguments, std::ostream& output,
     }
     if (arguments.front() == "validate") {
       return run_validate(arguments.subspan(1), output, error);
+    }
+    if (arguments.front() == "benchmark") {
+      return run_benchmark(arguments.subspan(1), output, error);
     }
 
     const auto format = wants_json(arguments) ? OutputFormat::json : OutputFormat::human;

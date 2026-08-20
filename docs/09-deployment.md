@@ -245,7 +245,7 @@ A release is healthy when:
 - [ ] Dependency, licence and secret scans pass.
 - [ ] Binary/manifest schema versions documented.
 - [ ] Migration compatibility tested.
-- [ ] Release benchmarks captured with environment metadata.
+- [x] Release benchmarks captured with environment metadata (TASK-029 performance note).
 - [ ] Raw/bulk data absent from Git and archives.
 - [ ] Public manifests contain no absolute user paths.
 - [ ] Limitations and historical/simulated labels are present.

@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <memory>
 #include <span>
 #include <string_view>
 #include <unordered_set>
@@ -63,7 +64,20 @@ BookApplyResult BookApplyResult::failure(BookError book_error) {
   return BookApplyResult{std::nullopt, std::move(book_error)};
 }
 
-OrderBook::OrderBook(const StockLocate stock_locate) noexcept : stock_locate_{stock_locate} {}
+OrderBook::OrderBook(const StockLocate stock_locate)
+    : stock_locate_{stock_locate},
+      pool_{std::make_unique<std::pmr::unsynchronized_pool_resource>()}, bids_{pool_.get()},
+      asks_{pool_.get()}, orders_{pool_.get()} {}
+
+OrderBook::OrderBook(OrderBook&&) noexcept = default;
+
+OrderBook& OrderBook::operator=(OrderBook&& other) noexcept {
+  if (this != &other) {
+    std::destroy_at(this);
+    std::construct_at(this, std::move(other));
+  }
+  return *this;
+}
 
 BookApplyResult OrderBook::apply(const BookMessage& message) {
   return std::visit(
@@ -116,7 +130,7 @@ BookApplyResult OrderBook::apply_add(const BookAdd& add) {
 
       level->second.fifo.push_back(add.order_reference);
     } else {
-      StoredPriceLevel staged_level;
+      StoredPriceLevel staged_level{pool_.get()};
       staged_level.total_quantity = updated_total;
       staged_level.fifo.push_back(add.order_reference);
       auto insertion = levels.emplace(add.price4, std::move(staged_level));
@@ -432,7 +446,7 @@ BookApplyResult OrderBook::apply_replace(const BookReplace& replace) {
 
     bool inserted_target_level = false;
     if (target_level == levels.end()) {
-      auto insertion = levels.emplace(replace.price4, StoredPriceLevel{});
+      auto insertion = levels.emplace(replace.price4, StoredPriceLevel{pool_.get()});
       if (!insertion.second) {
         return fail(ErrorCode::invariant, replace.new_order_reference,
                     "Target price level could not be created for Order Replace.");

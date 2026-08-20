@@ -273,9 +273,18 @@ Apple Clang distributions without libFuzzer use the deterministic ASan/UBSan cor
 local fuzz checks. The dedicated security CI job requires real libFuzzer and fails configuration
 if its runtime is missing.
 
-The release benchmark command is added by `TASK-029`:
+Generate the deterministic, untracked performance fixture and run the release benchmark:
 
-    ./build/release/itchlab benchmark --fixture data/fixtures/performance.itch
+    python -m tests.fixtures.generate_performance
+    cmake --preset release
+    cmake --build --preset release
+    ./build/release/itchlab benchmark \
+        --fixture data/fixtures/performance.itch \
+        --stage all \
+        --output benchmark.json
+
+The fixture bytes remain outside Git; the recipe, expected hash and measured PERF-001–008 results
+are documented in [the TASK-029 performance note](docs/performance/TASK-029-performance.md).
 
 ## Documentation
 

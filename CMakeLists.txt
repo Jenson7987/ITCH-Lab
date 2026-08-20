@@ -11,6 +11,7 @@ option(ITCHLAB_WARNINGS_AS_ERRORS "Treat project compiler warnings as errors" ON
 option(ITCHLAB_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviourSanitizer" OFF)
 option(ITCHLAB_ENABLE_COVERAGE "Enable source coverage instrumentation" OFF)
 option(ITCHLAB_ENABLE_FUZZING "Build the maintained libFuzzer security targets" OFF)
+option(ITCHLAB_BUILD_BENCHMARKS "Build the Google Benchmark performance harness" OFF)
 set(ITCHLAB_FUZZ_RUNS "10000" CACHE STRING "Runs per maintained fuzz-corpus target")
 set(ITCHLAB_FUZZ_ENGINE "auto" CACHE STRING "Fuzz driver: auto, libfuzzer or standalone")
 set_property(CACHE ITCHLAB_FUZZ_ENGINE PROPERTY STRINGS auto libfuzzer standalone)
@@ -137,6 +138,7 @@ add_library(
   cpp/src/output/event_writer.cpp
   cpp/src/output/manifest.cpp
   cpp/src/output/snapshot_writer.cpp
+  cpp/src/performance/benchmark.cpp
   cpp/src/replay/instrument_directory.cpp
   cpp/src/replay/error_policy.cpp
   cpp/src/replay/progress_reporter.cpp
@@ -148,9 +150,31 @@ target_include_directories(itchlab_core PUBLIC cpp/include)
 target_link_libraries(itchlab_core PRIVATE nlohmann_json::nlohmann_json ZLIB::ZLIB)
 itchlab_configure_target(itchlab_core)
 
+if(ITCHLAB_BUILD_BENCHMARKS)
+  set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+  set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+  set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(
+    google_benchmark
+    GIT_REPOSITORY https://github.com/google/benchmark.git
+    GIT_TAG eddb0241389718a23a42db6af5f0164b6e0139af
+    GIT_SHALLOW FALSE
+  )
+  FetchContent_MakeAvailable(google_benchmark)
+
+  add_executable(itchlab_benchmarks benchmarks/cpp/task029_benchmarks.cpp)
+  target_compile_definitions(
+    itchlab_benchmarks PRIVATE ITCHLAB_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+  )
+  target_link_libraries(itchlab_benchmarks PRIVATE itchlab_core benchmark::benchmark_main)
+  itchlab_configure_target(itchlab_benchmarks)
+endif()
+
 set(ITCHLAB_BUILD_METADATA_HEADER
     "${CMAKE_CURRENT_BINARY_DIR}/generated/itchlab/build_metadata.hpp"
 )
+string(TOUPPER "${CMAKE_BUILD_TYPE}" ITCHLAB_BUILD_TYPE_UPPER)
+set(ITCHLAB_BUILD_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${ITCHLAB_BUILD_TYPE_UPPER}}")
 add_custom_target(
   itchlab_build_metadata
   COMMAND
@@ -163,6 +187,7 @@ add_custom_target(
     "-DITCHLAB_METADATA_COMPILER_VERSION=${CMAKE_CXX_COMPILER_VERSION}"
     "-DITCHLAB_METADATA_TARGET=${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
     "-DITCHLAB_METADATA_BUILD_TYPE=$<CONFIG>"
+    "-DITCHLAB_METADATA_BUILD_FLAGS=${ITCHLAB_BUILD_FLAGS}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateBuildMetadata.cmake"
   BYPRODUCTS "${ITCHLAB_BUILD_METADATA_HEADER}"
   COMMENT "Refreshing exact build lineage metadata"
@@ -209,6 +234,7 @@ if(BUILD_TESTING)
     tests/cpp/integration/task013_event_writer_integration_test.cpp
     tests/cpp/integration/task014_publication_integration_test.cpp
     tests/cpp/integration/task015_validation_integration_test.cpp
+    tests/cpp/integration/task029_benchmark_integration_test.cpp
     tests/cpp/property/order_book_property_test.cpp
     tests/cpp/property/framed_reader_property_test.cpp
     tests/cpp/unit/byte_decode_test.cpp
@@ -280,6 +306,12 @@ if(BUILD_TESTING)
   set_tests_properties(
     TASK_015_cpp_cli_validate_help
     PROPERTIES PASS_REGULAR_EXPRESSION "Validate a completed replay"
+  )
+
+  add_test(NAME TASK_029_cpp_cli_benchmark_help COMMAND itchlab benchmark --help)
+  set_tests_properties(
+    TASK_029_cpp_cli_benchmark_help
+    PROPERTIES PASS_REGULAR_EXPRESSION "Benchmark framing, decoding, filtering"
   )
 
   if(ITCHLAB_ENABLE_FUZZING)

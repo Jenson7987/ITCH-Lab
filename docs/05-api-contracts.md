@@ -204,13 +204,23 @@ Idempotency: read-only.
 
 Purpose: benchmark parser, filtering and book stages using a pinned fixture.
 
-    itchlab benchmark +      --fixture <path> +      --stage parser|filter|book|all +      [--symbols <comma-separated>] +      [--repetitions <integer>] +      [--output <benchmark.json>]
+    itchlab benchmark \
+        --fixture <path> \
+        --stage parser|filter|book|all \
+        [--symbols <comma-separated>] \
+        [--repetitions <integer>] \
+        [--output <benchmark.json>] \
+        [--format human|json]
 
 Validation:
 
-- Release build is required for publishable results.
+- The fixture must be a regular, valid uncompressed or gzip `itch-length-v1` stream.
+- Release build is required for publishable results; non-Release results are labelled.
 - repetitions defaults to 10 and must be 3–100.
-- Benchmark output includes final state digest for semantic equivalence.
+- Existing final or `.partial` evidence paths are never replaced.
+- Benchmark output includes the fixture hash, environment, samples, median, MAD, peak RSS and final
+  state digest for semantic equivalence. A gzip input selects the PERF-005 full-pipeline measure;
+  uncompressed `all` also includes the PERF-006 snapshot-writer measure.
 
 ## Python CLI
 

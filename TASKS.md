@@ -6,12 +6,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-029: Benchmark/profile/optimise one bottleneck
-  - Dependencies: TASK-015, TASK-028
-  - Acceptance criteria: Full benchmark evidence and semantic equivalence
-  - Tests: PERF-001–008
-  - Documentation to update: Performance note/ADR
-
 - [ ] TASK-030: Finish CI, doctor and release packaging
   - Dependencies: TASK-028–029
   - Acceptance criteria: Clean offline installed E2E and safe release archive
@@ -31,6 +25,22 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-029: Benchmark/profile/optimise one bottleneck
+  - Completed: 2026-08-18
+  - Evidence: The deterministic untracked 1,000,003-message plain/gzip fixture, release CLI and
+    pinned Google Benchmark harness cover PERF-001–006 with fixture/build/hardware metadata,
+    warm-up, ten-sample medians/MAD, peak RSS, immutable JSON evidence and final book digests.
+    Instruments attributed 324 of 849 resolved samples to `OrderBook::apply` and 110 to allocation;
+    a per-book standard-library PMR pool reduced measured allocations from 0.902929 to 0.003599 per
+    message and increased the comparable PERF-004 median from 6.29M to 9.66M messages/s (+53.7%)
+    without changing the canonical digest. The full final median was 9.71M messages/s, exceeding
+    NFR-003's 1M floor. PERF-007/008 record 120,000-row Python conversion throughput, peak RSS and
+    bounded RSS growth. All 133 runnable development, Release and sanitizer CTests passed in the
+    full gates (the authorised official-data case skipped as designed); the final path change also
+    passed targeted sanitizer tests. All 614 Python tests, Ruff, mypy, Markdown lint, deterministic
+    fixture verification, wheel/sdist build and the release benchmark harness passed. The
+    performance note records profile evidence, before/after medians, trade-offs and Rosetta limits.
 
 - [x] TASK-028: Complete security hardening
   - Completed: 2026-08-17

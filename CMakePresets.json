@@ -32,7 +32,8 @@
       "description": "Optimised release build",
       "inherits": "base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "ITCHLAB_BUILD_BENCHMARKS": "ON"
       }
     },
     {

@@ -369,6 +369,9 @@ Rules:
 - Benchmark data structure alternatives using identical state digests.
 - CI has a generous catastrophic-regression threshold; hardware-specific claims are produced on the named machine.
 
+TASK-029's fixture recipe, commands, profile evidence, allocation counter and measured PERF-001–008
+results are recorded in [the TASK-029 performance note](performance/TASK-029-performance.md).
+
 ## Test-data strategy
 
 ### Committed data

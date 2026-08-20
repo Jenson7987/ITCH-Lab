@@ -39,6 +39,7 @@ escape_cpp_string("${ITCHLAB_METADATA_COMPILER}" compiler)
 escape_cpp_string("${ITCHLAB_METADATA_COMPILER_VERSION}" compiler_version)
 escape_cpp_string("${ITCHLAB_METADATA_TARGET}" target)
 escape_cpp_string("${ITCHLAB_METADATA_BUILD_TYPE}" build_type)
+escape_cpp_string("${ITCHLAB_METADATA_BUILD_FLAGS}" build_flags)
 
 get_filename_component(output_directory "${ITCHLAB_METADATA_OUTPUT}" DIRECTORY)
 file(MAKE_DIRECTORY "${output_directory}")
@@ -53,6 +54,7 @@ file(WRITE "${temporary}"
 #define ITCHLAB_COMPILER_VERSION \"${compiler_version}\"
 #define ITCHLAB_TARGET \"${target}\"
 #define ITCHLAB_BUILD_TYPE \"${build_type}\"
+#define ITCHLAB_BUILD_FLAGS \"${build_flags}\"
 ")
 execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
                 "${temporary}" "${ITCHLAB_METADATA_OUTPUT}")

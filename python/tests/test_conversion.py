@@ -6,6 +6,7 @@ import hashlib
 import json
 import resource
 import sys
+import time
 import tracemalloc
 from dataclasses import replace
 from datetime import date
@@ -355,7 +356,7 @@ def test_task_017_hash_tampering_fails_before_output_creation(
     assert not (tmp_path / "output").exists()
 
 
-def test_task_017_large_stream_memory_is_bounded_by_batches_not_record_count(
+def test_task_017_perf_007_perf_008_large_stream_conversion_throughput_and_memory(
     tmp_path: Path,
     replay_factory: Any,
 ) -> None:
@@ -372,15 +373,29 @@ def test_task_017_large_stream_memory_is_bounded_by_batches_not_record_count(
 
     rss_before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     tracemalloc.start()
+    started = time.perf_counter_ns()
     result = convert_replays(config, base_directory=tmp_path)
+    elapsed_ns = max(time.perf_counter_ns() - started, 1)
     _, peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
     rss_after = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     rss_scale = 1 if sys.platform == "darwin" else 1024
+    records_per_second = record_count * 1_000_000_000 / elapsed_ns
+    print(
+        json.dumps(
+            {
+                "PERF-007-records-per-second": records_per_second,
+                "PERF-007-peak-rss-bytes": rss_after * rss_scale,
+                "PERF-008-rss-growth-bytes": (rss_after - rss_before) * rss_scale,
+            },
+            sort_keys=True,
+        )
+    )
 
     assert result.event_rows == record_count
     assert result.snapshot_rows == 0
     assert peak < 128 * 1024 * 1024
+    assert records_per_second > 0
     assert (rss_after - rss_before) * rss_scale < 256 * 1024 * 1024
     for path in result.manifest_path.parent.rglob("*.parquet"):
         assert all(

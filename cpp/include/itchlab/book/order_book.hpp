@@ -10,6 +10,8 @@
 #include <functional>
 #include <list>
 #include <map>
+#include <memory>
+#include <memory_resource>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -78,12 +80,12 @@ struct InvariantReport {
 
 class OrderBook {
 public:
-  explicit OrderBook(StockLocate stock_locate) noexcept;
+  explicit OrderBook(StockLocate stock_locate);
 
   OrderBook(const OrderBook&) = delete;
   OrderBook& operator=(const OrderBook&) = delete;
-  OrderBook(OrderBook&&) noexcept = default;
-  OrderBook& operator=(OrderBook&&) noexcept = default;
+  OrderBook(OrderBook&&) noexcept;
+  OrderBook& operator=(OrderBook&&) noexcept;
   ~OrderBook() = default;
 
   // Expected domain errors are returned without changing the book.
@@ -101,9 +103,11 @@ public:
   [[nodiscard]] std::size_t order_count() const noexcept { return orders_.size(); }
 
 private:
-  using OrderQueue = std::list<OrderReference>;
+  using OrderQueue = std::pmr::list<OrderReference>;
 
   struct StoredPriceLevel {
+    explicit StoredPriceLevel(std::pmr::memory_resource* resource) : fifo{resource} {}
+
     Shares total_quantity{};
     OrderQueue fifo;
   };
@@ -118,8 +122,9 @@ private:
     OrderQueue::iterator level_iterator;
   };
 
-  using BidLevels = std::map<Price4, StoredPriceLevel, std::greater<Price4>>;
-  using AskLevels = std::map<Price4, StoredPriceLevel>;
+  using BidLevels = std::pmr::map<Price4, StoredPriceLevel, std::greater<Price4>>;
+  using AskLevels = std::pmr::map<Price4, StoredPriceLevel>;
+  using Orders = std::pmr::unordered_map<OrderReference, StoredOrder>;
 
   [[nodiscard]] BookApplyResult apply_add(const BookAdd& add);
   [[nodiscard]] BookApplyResult apply_execute(const BookExecute& execute);
@@ -132,9 +137,10 @@ private:
                                                 BookMutationKind kind);
 
   StockLocate stock_locate_{};
+  std::unique_ptr<std::pmr::unsynchronized_pool_resource> pool_;
   BidLevels bids_;
   AskLevels asks_;
-  std::unordered_map<OrderReference, StoredOrder> orders_;
+  Orders orders_;
 };
 
 } // namespace itchlab

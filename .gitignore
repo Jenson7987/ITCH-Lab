@@ -36,6 +36,8 @@ dist/
 !/data/raw/.gitkeep
 /data/derived/*
 !/data/derived/.gitkeep
+/data/fixtures/performance.itch
+/data/fixtures/performance.itch.gz
+/data/fixtures/performance-metadata.json
 /runs/*
 !/runs/.gitkeep
-

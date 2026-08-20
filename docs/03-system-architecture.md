@@ -52,7 +52,7 @@ flowchart TD
 | Reporting | Markdown plus optional static HTML and PNG/SVG plots | Reviewable in Git and usable offline |
 
 CMake uses find_package(ZLIB REQUIRED) for the platform zlib and FetchContent with immutable pinned
-revisions for nlohmann/json, Catch2 and, when TASK-029 adds benchmarks, Google Benchmark. Python
+revisions for nlohmann/json, Catch2 and the release-only Google Benchmark harness. Python
 direct dependencies live in pyproject.toml and fully resolved hashed development/release
 requirements files are generated with pip-tools. Application runtime performs no dependency
 download.
@@ -230,8 +230,7 @@ flowchart LR
 ## External dependencies
 
 - Nasdaq ITCH 5.0 format specification and user-obtained sample data.
-- C++ standard library, zlib and nlohmann/json; Catch2 is test-only. Google Benchmark remains
-  planned for TASK-029 and is not yet fetched.
+- C++ standard library, zlib and nlohmann/json; Catch2 and Google Benchmark are build/test-only.
 - Python, JSON Schema, RFC 8785, NumPy, PyArrow and scikit-learn plus their locked transitive
   dependencies. Reports use project-owned static SVG rendering; Polars and Matplotlib are not
   installed dependencies.
