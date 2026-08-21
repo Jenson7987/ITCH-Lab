@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "dataset_manifest": "runs/dataset/20260821T180641.067291000Z-bcdb1ae22a29/dataset-manifest.json",
-  "prediction_manifest": "runs/experiment/20260821T172333.963459000Z-19900473bc6f/experiment-manifest.json",
+  "prediction_manifest": "runs/experiment/20260821T181625.772904000Z-01c0e689bac1/experiment-manifest.json",
   "strategy": {
     "name": "signal_adjusted_avellaneda_stoikov",
     "decision_interval_ns": 100000000,
