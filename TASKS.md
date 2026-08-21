@@ -51,7 +51,7 @@ Authoritative task details and evidence requirements are in docs/10-implementati
     symlinks, success, failure and cancellation. Repository policy tests cover executable
     serialisation/code execution, network APIs, credential schema fields, tracked data, private
     paths and packaged schema parity; report injection covers script and Markdown metacharacters.
-    The reviewed secret baseline contains 17 false-positive test hashes/literals and zero secrets;
+    The reviewed secret baseline contains 18 false-positive test hashes/literals and zero secrets;
     pip-audit found no known vulnerability in the hashed release lock, and the exact dependency
     licence inventory has no unaccepted high/critical issue. The network-disabled synthetic smoke,
     clang-analyzer checks over all 28 project translation units, two SEC-FUZZ-001 tests, all 128
