@@ -1,7 +1,9 @@
 -r requirements-release.in
 
 build>=1.5,<2
+coverage>=7.13,<8
 detect-secrets>=1.5,<2
+gcovr>=8.6,<9
 mypy>=2.3,<3
 pip>=25,<26  # pip-tools 7.6 is not compatible with pip 26's resolver API.
 pip-audit>=2.10,<3

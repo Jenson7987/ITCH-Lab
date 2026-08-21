@@ -12,18 +12,9 @@ import time
 from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from itchlab_research import __version__
-from itchlab_research.config import (
-    ConversionConfig,
-    DatasetConfig,
-    ExperimentConfig,
-    SimulationConfig,
-    load_config,
-)
-from itchlab_research.conversion import ConversionProgress, convert_replays
-from itchlab_research.datasets import DatasetProgress, build_dataset
 from itchlab_research.errors import (
     ConfigValidationError,
     ConversionError,
@@ -33,13 +24,19 @@ from itchlab_research.errors import (
     ReportGenerationError,
     SimulationError,
 )
-from itchlab_research.models import (
-    ExperimentProgress,
-    load_partitioned_dataset,
-    train_baselines,
-)
-from itchlab_research.reporting import ReportFormat, generate_report
-from itchlab_research.simulation import simulate
+
+if TYPE_CHECKING:
+    from itchlab_research.conversion import ConversionProgress
+    from itchlab_research.datasets import DatasetProgress
+    from itchlab_research.models import ExperimentProgress
+
+
+def simulate(*args: Any, **kwargs: Any) -> Any:
+    """Lazily dispatch simulation while retaining the CLI test injection boundary."""
+    from itchlab_research.simulation import simulate as implementation
+
+    return implementation(*args, **kwargs)
+
 
 _PROGRAM_NAME = "itchlab-research"
 _MODEL_ORDER_FOR_DISPLAY = (
@@ -57,6 +54,7 @@ Commands:
   train        Train, select and evaluate the required predictive baselines.
   simulate     Run the conservative latency/cost strategy comparison.
   report       Generate an accessible predictive or simulation research report.
+  doctor       Check the installed offline runtime and C++ binary.
 
 Global options:
   --help       Show this help text.
@@ -179,6 +177,27 @@ Exit categories: 0 success, 2 config, 3 input, 6 output, 7 validation, 8 model,
 70 internal, 130 cancellation.
 """
 
+_DOCTOR_HELP = f"""Check the installed offline runtime and C++ binary.
+
+Usage: {_PROGRAM_NAME} doctor [options]
+
+Options:
+  --binary <path>             Installed itchlab executable (default PATH lookup).
+  --format <human|json>       Result format (default human).
+  --ascii                     Restrict presentation to ASCII.
+  --no-colour                 Disable colour presentation.
+  --help                      Show this help text.
+
+Environment:
+  ITCHLAB_RUNS_DIR            Existing writable run root (default runs).
+  ITCHLAB_DATA_DIR            Data root with writable derived/ (default data).
+
+Example:
+  {_PROGRAM_NAME} doctor --binary /opt/itchlab/bin/itchlab
+
+Exit categories: 0 healthy, 2 usage, 7 unhealthy environment, 70 internal.
+"""
+
 
 def _convert_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog=f"{_PROGRAM_NAME} convert", add_help=False)
@@ -234,6 +253,15 @@ def _report_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-format", choices=("markdown", "html", "both"), default="markdown")
     parser.add_argument("--format", choices=("human", "json"), default="human")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--ascii", action="store_true")
+    parser.add_argument("--no-colour", action="store_true")
+    return parser
+
+
+def _doctor_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog=f"{_PROGRAM_NAME} doctor", add_help=False)
+    parser.add_argument("--binary")
+    parser.add_argument("--format", choices=("human", "json"), default="human")
     parser.add_argument("--ascii", action="store_true")
     parser.add_argument("--no-colour", action="store_true")
     return parser
@@ -466,6 +494,9 @@ def _run_convert(arguments: Sequence[str]) -> int:
     if arguments == ["--version"]:
         print(f"{_PROGRAM_NAME} {__version__}")
         return 0
+    from itchlab_research.config import ConversionConfig, load_config
+    from itchlab_research.conversion import convert_replays
+
     if not arguments:
         print(f"{_PROGRAM_NAME} convert: --config is required.", file=sys.stderr)
         return 2
@@ -602,6 +633,9 @@ def _run_build_dataset(arguments: Sequence[str]) -> int:
     if arguments == ["--version"]:
         print(f"{_PROGRAM_NAME} {__version__}")
         return 0
+    from itchlab_research.config import DatasetConfig, load_config
+    from itchlab_research.datasets import build_dataset
+
     if not arguments:
         print(f"{_PROGRAM_NAME} build-dataset: --config is required.", file=sys.stderr)
         return 2
@@ -749,6 +783,9 @@ def _run_train(arguments: Sequence[str]) -> int:
     if arguments == ["--version"]:
         print(f"{_PROGRAM_NAME} {__version__}")
         return 0
+    from itchlab_research.config import ExperimentConfig, load_config
+    from itchlab_research.models import load_partitioned_dataset, train_baselines
+
     if not arguments:
         print(f"{_PROGRAM_NAME} train: --config is required.", file=sys.stderr)
         return 2
@@ -888,6 +925,8 @@ def _run_report(arguments: Sequence[str]) -> int:
     if arguments == ["--version"]:
         print(f"{_PROGRAM_NAME} {__version__}")
         return 0
+    from itchlab_research.reporting import ReportFormat, generate_report
+
     if not arguments:
         print(f"{_PROGRAM_NAME} report: --run-id is required.", file=sys.stderr)
         return 2
@@ -995,6 +1034,8 @@ def _run_simulate(arguments: Sequence[str]) -> int:
     if arguments == ["--version"]:
         print(f"{_PROGRAM_NAME} {__version__}")
         return 0
+    from itchlab_research.config import SimulationConfig, load_config
+
     if not arguments:
         print(f"{_PROGRAM_NAME} simulate: --config is required.", file=sys.stderr)
         return 2
@@ -1119,6 +1160,75 @@ def _run_simulate(arguments: Sequence[str]) -> int:
     return 0
 
 
+def _run_doctor(arguments: Sequence[str]) -> int:
+    if arguments in (["--help"], ["-h"]):
+        print(_DOCTOR_HELP, end="")
+        return 0
+    if arguments == ["--version"]:
+        print(f"{_PROGRAM_NAME} {__version__}")
+        return 0
+    duplicate = _duplicate_option(arguments)
+    if duplicate is not None:
+        print(f"{_PROGRAM_NAME} doctor: duplicate option {duplicate}.", file=sys.stderr)
+        return 2
+    parser = _doctor_parser()
+    try:
+        parsed = parser.parse_args(list(arguments))
+    except SystemExit:
+        return 2
+
+    result_format = cast(str, parsed.format)
+    try:
+        from itchlab_research.doctor import run_doctor
+
+        binary = Path(cast(str, parsed.binary)) if parsed.binary is not None else None
+        report = run_doctor(binary=binary)
+    except Exception:
+        _write_error(
+            ErrorCode.INTERNAL,
+            "Unexpected installed-environment check failure.",
+            command="doctor",
+            result_format=result_format,
+            partial_exists=False,
+        )
+        return 70
+
+    if result_format == "json":
+        print(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "command": "doctor",
+                    "status": "completed" if report.healthy else "failed",
+                    "summary": {
+                        "application_version": report.application_version,
+                        "operating_system": report.operating_system,
+                        "architecture": report.architecture,
+                        "network": "not_required_or_tested",
+                        "checks": [
+                            {
+                                "name": check.name,
+                                "status": check.status,
+                                "summary": check.summary,
+                            }
+                            for check in report.checks
+                        ],
+                    },
+                    "warnings": [],
+                },
+                separators=(",", ":"),
+            )
+        )
+    else:
+        print(f"Doctor completed: {'healthy' if report.healthy else 'unhealthy'}.")
+        print(f"ITCH-Lab: {report.application_version}.")
+        print(f"Platform: {report.operating_system} {report.architecture}.")
+        for check in report.checks:
+            print(f"[{check.status.upper()}] {check.name}: {check.summary}")
+        print("Network: not required or tested.")
+    return 0 if report.healthy else 7
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the research CLI and return a process-compatible exit code."""
     arguments = list(sys.argv[1:] if argv is None else argv)
@@ -1138,6 +1248,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_simulate(arguments[1:])
     if arguments[0] == "report":
         return _run_report(arguments[1:])
+    if arguments[0] == "doctor":
+        return _run_doctor(arguments[1:])
     print(f"{_PROGRAM_NAME}: unrecognised command or argument.", file=sys.stderr)
     print(f"Try '{_PROGRAM_NAME} --help' for usage.", file=sys.stderr)
     return 2

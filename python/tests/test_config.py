@@ -64,6 +64,31 @@ def test_ut_cfg_001_unknown_nested_key_fails() -> None:
     assert captured.value.issues[0].json_pointer == "/output"
 
 
+@pytest.mark.parametrize(
+    ("pointer", "value", "expected_code"),
+    [
+        ("/input/exchange_timezone", 42, ErrorCode.TIMEZONE),
+        ("/input/trading_date", "2024/01/02", ErrorCode.TRADING_DATE),
+        ("/selection/session_start_ns", -1, ErrorCode.SESSION_WINDOW),
+        ("/output/depth", 0, ErrorCode.DEPTH),
+    ],
+)
+def test_task_030_schema_boundaries_keep_stable_error_codes(
+    pointer: str,
+    value: object,
+    expected_code: ErrorCode,
+) -> None:
+    document = json.loads((VALID_ROOT / "replay.json").read_text(encoding="utf-8"))
+    parent_name, field_name = pointer.strip("/").split("/")
+    document[parent_name][field_name] = value
+
+    with pytest.raises(ConfigValidationError) as captured:
+        parse_config(json.dumps(document), "replay")
+
+    assert captured.value.issues[0].code is expected_code
+    assert captured.value.issues[0].json_pointer == pointer
+
+
 @pytest.mark.parametrize("kind", ["replay", "conversion", "dataset", "experiment", "simulation"])
 def test_ut_cfg_001_every_config_rejects_unknown_root_keys(kind: ConfigKind) -> None:
     document = json.loads((VALID_ROOT / f"{kind}.json").read_text(encoding="utf-8"))

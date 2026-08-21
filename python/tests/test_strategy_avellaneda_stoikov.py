@@ -379,9 +379,15 @@ def test_task_025_proposals_satisfy_existing_order_request_contract() -> None:
         _config(gamma=0.0),
         _config(gamma=math.inf),
         _config(risk_horizon_seconds=math.nan),
+        _config(risk_horizon_seconds=86_401.0),
         _config(order_quantity=True),
+        _config(order_quantity=0),
         _config(inventory_limit=99),
+        _config(decision_interval_ns=0),
+        _config(max_prediction_age_ns=-1),
+        _config(volatility_window_ns=0),
         _config(signal_weight_ticks=False),
+        _config(max_signal_ticks=math.nan),
         replace(_config(), name="signal_adjusted_avellaneda_stoikov"),
         replace(_config(), signal_weight_ticks=0.5),
     ],
@@ -393,4 +399,99 @@ def test_task_025_parameter_boundaries_fail_before_state_creation(config: Strate
     assert captured.value.code in {
         ErrorCode.CONFIG_SCHEMA,
         ErrorCode.INVENTORY_LIMIT,
+        ErrorCode.QUANTITY,
     }
+
+
+@pytest.mark.parametrize(
+    ("window_ns", "tick_size4", "code"),
+    [
+        (0, 100, ErrorCode.CONFIG_SCHEMA),
+        (SECOND, 0, ErrorCode.PRICE),
+    ],
+)
+def test_task_030_high_coverage_volatility_constructor_boundaries(
+    window_ns: int, tick_size4: int, code: ErrorCode
+) -> None:
+    with pytest.raises(SimulationError) as captured:
+        CausalVolatilityEstimator(window_ns=window_ns, tick_size4=tick_size4)
+    assert captured.value.code is code
+
+
+@pytest.mark.parametrize(
+    ("values", "code"),
+    [
+        ({"message_index": -1}, ErrorCode.SIMULATION_ANOMALY),
+        ({"timestamp_ns": -1}, ErrorCode.TIMESTAMP),
+        ({"best_bid_price4": -1}, ErrorCode.PRICE),
+        ({"best_bid_price4": 10_200}, ErrorCode.BOOK_CROSSED),
+        ({"best_bid_price4": 0, "best_ask_price4": 0}, ErrorCode.PRICE),
+    ],
+)
+def test_task_030_high_coverage_volatility_observation_boundaries(
+    values: dict[str, int], code: ErrorCode
+) -> None:
+    arguments = {
+        "message_index": 1,
+        "timestamp_ns": SECOND,
+        "best_bid_price4": 10_000,
+        "best_ask_price4": 10_100,
+    }
+    arguments.update(values)
+    estimator = CausalVolatilityEstimator(window_ns=SECOND, tick_size4=100)
+    with pytest.raises(SimulationError) as captured:
+        estimator.observe_quote(**arguments)
+    assert captured.value.code is code
+
+
+def test_task_030_high_coverage_volatility_decision_boundaries() -> None:
+    empty = CausalVolatilityEstimator(window_ns=SECOND, tick_size4=100)
+    with pytest.raises(SimulationError) as captured:
+        empty.estimate(decision_message_index=1, timestamp_ns=SECOND)
+    assert captured.value.code is ErrorCode.EMPTY_DATASET
+
+    estimator = CausalVolatilityEstimator(window_ns=SECOND, tick_size4=100)
+    estimator.observe_quote(
+        message_index=2,
+        timestamp_ns=SECOND,
+        best_bid_price4=10_000,
+        best_ask_price4=10_100,
+    )
+    for arguments, code in (
+        ({"decision_message_index": -1, "timestamp_ns": SECOND}, ErrorCode.SIMULATION_ANOMALY),
+        (
+            {"decision_message_index": 2, "timestamp_ns": 86_400_000_000_000},
+            ErrorCode.TIMESTAMP,
+        ),
+        ({"decision_message_index": 1, "timestamp_ns": SECOND}, ErrorCode.LEAKAGE_GUARD),
+        ({"decision_message_index": 3, "timestamp_ns": SECOND - 1}, ErrorCode.LEAKAGE_GUARD),
+    ):
+        with pytest.raises(SimulationError) as captured:
+            estimator.estimate(**arguments)
+        assert captured.value.code is code
+
+
+@pytest.mark.parametrize(
+    ("overrides", "code"),
+    [
+        ({"symbol_id": 0}, ErrorCode.UNKNOWN_SYMBOL),
+        ({"tick_size4": 0}, ErrorCode.PRICE),
+        ({"session_end_ns": 0}, ErrorCode.SESSION_WINDOW),
+        ({"calibration": object()}, ErrorCode.MODEL_TRAINING),
+    ],
+)
+def test_task_030_high_coverage_strategy_constructor_boundaries(
+    overrides: dict[str, object], code: ErrorCode
+) -> None:
+    arguments: dict[str, object] = {
+        "symbol": "AAPL",
+        "symbol_id": 1,
+        "tick_size4": 100,
+        "session_start_ns": 0,
+        "session_end_ns": 100 * SECOND,
+        "calibration": _calibration(),
+    }
+    arguments.update(overrides)
+    with pytest.raises(SimulationError) as captured:
+        InventoryAwareAvellanedaStoikov(_config(), **arguments)  # type: ignore[arg-type]
+    assert captured.value.code is code

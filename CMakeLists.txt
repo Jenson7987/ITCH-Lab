@@ -7,6 +7,8 @@ project(
   LANGUAGES CXX
 )
 
+include(GNUInstallDirs)
+
 option(ITCHLAB_WARNINGS_AS_ERRORS "Treat project compiler warnings as errors" ON)
 option(ITCHLAB_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviourSanitizer" OFF)
 option(ITCHLAB_ENABLE_COVERAGE "Enable source coverage instrumentation" OFF)
@@ -207,6 +209,7 @@ itchlab_configure_target(itchlab_cli)
 add_executable(itchlab cpp/apps/itchlab/main.cpp)
 target_link_libraries(itchlab PRIVATE itchlab_cli)
 itchlab_configure_target(itchlab)
+install(TARGETS itchlab RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime)
 
 include(CTest)
 if(BUILD_TESTING)

@@ -22,6 +22,8 @@ signal adjustment, immutable simulation runner and authenticated accessible repo
 implemented. Security hardening now includes maintained framing/decoder fuzz corpora, full
 sanitizer and static-analysis gates, path/injection policy regressions, reviewed dependency and
 secret scans, and a network-isolated synthetic smoke.
+The installed-environment doctor, deterministic local release archives/checksums and pinned
+Ubuntu x86-64/macOS ARM64 CI and installed-release matrices are implemented for TASK-030.
 
 Classification legend used throughout the documentation:
 
@@ -154,6 +156,7 @@ Command-line arguments override environment variables; environment variables ove
     cmake --build --preset release
     ./build/dev/itchlab --help
     python -m itchlab_research --help
+    python -m itchlab_research doctor --binary ./build/dev/itchlab
 
 The implemented synthetic vertical slice can be exercised without licensed market data:
 
@@ -263,6 +266,12 @@ output and confirms that a corrupt gzip source cannot publish a completed replay
     python -m ruff format --check python
     python -m mypy python/src
     python -m build --no-isolation python
+    python scripts/ci/check_docs.py
+    python -m coverage erase
+    python -m coverage run --branch --source=itchlab_research -m pytest python/tests
+    python -m coverage json -o build/python-coverage.json
+    python scripts/ci/check_coverage.py build/python-coverage.json
+    ./scripts/ci/cpp-coverage.sh
 
 The consolidated TASK-028 gate additionally runs clang static analysis, the reviewed secret
 baseline, the hashed dependency audit and a fail-closed network-isolated synthetic smoke:
@@ -272,6 +281,30 @@ baseline, the hashed dependency audit and a fail-closed network-isolated synthet
 Apple Clang distributions without libFuzzer use the deterministic ASan/UBSan corpus driver for
 local fuzz checks. The dedicated security CI job requires real libFuzzer and fails configuration
 if its runtime is missing.
+
+Build a local release candidate into a new, narrow output directory:
+
+    python scripts/release/build_release.py \
+        --output-root /tmp/itchlab-release-0.1.0
+
+The builder requires a clean worktree for a publishable candidate, checks the three public version
+declarations, builds and installs the native binary from a fresh Release tree, builds the Python
+wheel/source distribution, creates a deterministic source archive, validates every archive member
+and writes `SHA256SUMS` plus `RELEASE-METADATA.json`. It produces only the current native platform:
+`macos-arm64` or `linux-x86_64`. Raw data, bulk derived data, run output, symlinks, `.DS_Store` files
+and unsafe archive paths are rejected or excluded. `--allow-dirty-candidate` is for explicit local
+diagnostics only and records `publishable: false`; it must not be published.
+
+The full release smoke prepares a hashed dependency wheelhouse, installs the built wheel and native
+archive into clean temporary locations without an index, then disables network access and runs the
+synthetic inspect→replay→validate→convert→dataset→train→simulate→report path:
+
+    ./scripts/release/task030-release-smoke.sh
+
+When validating an uncommitted local change, set
+`ITCHLAB_ALLOW_DIRTY_RELEASE_CANDIDATE=1`; CI and publishable release checks do not set it. The smoke
+removes its bounded temporary workspace on exit and does not publish, stage, commit or upload any
+artefact.
 
 Generate the deterministic, untracked performance fixture and run the release benchmark:
 

@@ -446,6 +446,18 @@ small representatives for integration, CLI and fuzz-regression tests.
 
 Generated code and third-party dependencies are excluded. Any exclusion in project-owned code requires a comment and review.
 
+TASK-030's Python gate aggregates `coverage.py --branch` JSON without rounding before comparison.
+Critical contains interchange readers plus simulator accounting/state; high contains canonical
+config, config validation, features, labels, splits and strategies; every other package module is
+standard. `scripts/ci/check_coverage.py` fails closed on missing tiers or malformed totals.
+
+The C++ coverage preset and `scripts/ci/cpp-coverage.sh` also publish project-only gcov/gcovr line
+and compiler-branch evidence. Its 75% line/35% compiler-branch values are a catastrophic regression
+floor, not a reinterpretation of the source-level tier requirements above: compiler-generated C++
+exception/control-flow arcs are not comparable with coverage.py branches. The scenario, invariant,
+sanitizer and fuzz suites remain primary C++ evidence, and a release may not claim NFR-009 solely
+from passing that compiler regression floor.
+
 ## CI checks
 
 ### Pull-request jobs
@@ -464,6 +476,13 @@ Generated code and third-party dependencies are excluded. Any exclusion in proje
 `.github/workflows/security.yml` supplies the TASK-028 PR, main-branch and weekly scheduled
 security job. Its third-party actions are pinned to full commits, Python installation uses the
 hashed development lock, and real libFuzzer is required before the consolidated gate runs.
+
+`.github/workflows/ci.yml` supplies documentation, quality/coverage, native-platform,
+installed-release and performance-smoke jobs for pull requests, `main`, manual dispatch and a
+weekly schedule. It uses fixed `ubuntu-24.04` x86-64 and `macos-15` ARM64 labels and asserts the
+kernel/architecture before native release work. The release job resolves dependencies before
+entering fail-closed operating-system network isolation, installs from the local wheelhouse and
+built archives, and runs the full synthetic E2E without a source-tree package import.
 
 ### Main/scheduled jobs
 

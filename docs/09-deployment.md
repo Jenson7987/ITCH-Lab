@@ -21,6 +21,15 @@ No production server, domain, database or cloud account is required.
 
 Environment differences must not change research semantics. Scientific parameters live in configs, not environment variables.
 
+## Supported release platforms
+
+TASK-030 fixes the supported native release targets to current macOS ARM64 and Ubuntu x86-64.
+GitHub Actions uses `macos-15` and `ubuntu-24.04`, asserts `arm64` and `x86_64` respectively before
+building, and runs both the native test suite and installed release smoke on each platform. The
+release builder validates the compiled executable with the host `file` tool and refuses an archive
+whose architecture does not match `macos-arm64` or `linux-x86_64`. Other platforms may build from
+source but are not release-tested MVP targets.
+
 ## Local development environment
 
 Required:
@@ -108,6 +117,14 @@ deterministic sanitizer corpus fallback because that toolchain does not ship a l
 The network-disabled smoke fails rather than silently running without macOS sandbox or Linux
 network-namespace isolation.
 
+`.github/workflows/ci.yml` supplies the complementary pull-request, main-branch, manual and weekly
+jobs. It pins third-party actions to full commit hashes and covers documentation contracts, C++ and
+Python formatting/static checks, unit/integration/contract suites, tiered Python branch coverage,
+C++ compiler coverage, both supported native platforms, installed release E2E and the release
+PERF-004 catastrophic-regression threshold. `.github/workflows/security.yml` remains responsible
+for the sanitizer, real-libFuzzer, static-analysis, dependency, secret and network-isolation gates.
+No workflow downloads or stores official market data.
+
 ### Python build
 
 1. Create clean venv.
@@ -115,20 +132,33 @@ network-namespace isolation.
 3. Run Ruff, mypy and pytest.
 4. Build wheel and source distribution.
 5. Install the built wheel into a second clean venv.
-6. Run the synthetic E2E using the installed package.
+6. Resolve the hashed release lock into a local wheelhouse, then install with `--no-index` and
+   `--require-hashes`.
+7. Run the synthetic E2E using only the installed wheel and native archive while network access is
+   denied by the operating system.
 
 ## Release/deployment process
 
-1. Select a clean commit on the main branch.
-2. Complete the release checklist below.
-3. Tag using semantic versioning, beginning at v0.1.0 for the MVP.
-4. Build source archive and optional macOS ARM64/Linux x86-64 binaries.
-5. Build Python wheel/source distribution.
-6. Generate SHA-256 checksums.
-7. Package documentation and synthetic example config/output.
-8. Exclude raw and bulk derived market data.
-9. Publish release notes with schema versions, supported platforms, limitations and migration notes.
-10. Retain the prior release and its documentation.
+1. Select a clean commit on the main branch and complete the release checklist below.
+2. Run `python scripts/release/build_release.py --output-root <new-directory>` independently on
+   macOS ARM64 and Ubuntu x86-64.
+3. Verify `SHA256SUMS` and review `RELEASE-METADATA.json`; a publishable candidate must record a
+   clean tree and `publishable: true`.
+4. Run `scripts/release/task030-release-smoke.sh` on both supported platforms.
+5. Tag using semantic versioning, beginning at v0.1.0 for the MVP.
+6. Publish the source archive, native archives, Python wheel/source distribution, release metadata
+   and checksums without rebuilding them.
+7. Publish release notes with schema versions, supported platforms, limitations and migration
+   notes, and retain the prior release and its documentation.
+
+The builder stages into `<output-root>.partial` and atomically renames it only after all children
+and archive paths validate. The final output root must not already exist, may not be broad or a
+symlink, and may not be beneath `data/raw`, `data/derived` or `runs`. It produces deterministic
+source/native tarballs, a universal Python wheel, Python source distribution, release metadata and
+SHA-256 checksums. Source inventory comes from Git-tracked and explicit untracked candidate files,
+but raw/bulk/run paths, `.DS_Store`, symlinks, traversal and absolute archive members are excluded
+or rejected. A dirty worktree fails unless `--allow-dirty-candidate` is explicit; that mode records
+the candidate as non-publishable and exists only for local pre-commit verification.
 
 Installation from a release must not execute research automatically.
 
@@ -199,8 +229,8 @@ Command health checks:
 
     itchlab --version
     itchlab inspect --input tests/fixtures/synthetic_minimal.itch --all
-    itchlab validate --run tests/golden/replay-v1 --deep
-    python -m itchlab_research doctor
+    itchlab validate --file tests/golden/interchange/synthetic_events_v1.ilb --deep
+    python -m itchlab_research doctor --binary /path/to/itchlab
 
 Recommended doctor output:
 
@@ -210,6 +240,12 @@ Recommended doctor output:
 - Supported schema versions.
 - Writable configured run/data-derived directories.
 - Network is neither required nor tested.
+
+`doctor` requires existing `ITCHLAB_RUNS_DIR` and `<ITCHLAB_DATA_DIR>/derived` directories. It
+rejects symlink or filesystem-root output locations, uses and removes a bounded write probe, checks
+the exact native/Python semantic version match and accumulates dependency/schema failures. Human
+and schema-version-1 JSON output are available; exit 7 means an unhealthy installation. The command
+does not create roots, read market data or initiate network access.
 
 Long-run observability comes from progress logs, terminal status and immutable manifests.
 
@@ -232,6 +268,15 @@ A release is healthy when:
 - No critical/high unaccepted dependency issue exists.
 - Performance smoke is within the recorded catastrophic-regression threshold.
 - Documentation links and reproduction commands work.
+
+The local TASK-030 candidate command is:
+
+    ITCHLAB_ALLOW_DIRTY_RELEASE_CANDIDATE=1 \
+        ITCHLAB_RELEASE_PYTHON=.venv/bin/python \
+        scripts/release/task030-release-smoke.sh
+
+The dirty-candidate switch is omitted for the clean CI/release run. This command is intentionally
+local: it builds and checks artefacts beneath a bounded temporary directory and publishes nothing.
 
 ## Release checklist
 

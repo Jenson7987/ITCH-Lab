@@ -37,13 +37,13 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | NFR-002 | 03 performance/scalability | TASK-004, TASK-016, TASK-017, TASK-029 | PERF-005/007/008, large-stream memory test |
 | NFR-003 | 03 performance; 09 release criteria | TASK-029 | PERF-004 plus platform benchmark report |
 | NFR-004 | 03 errors/file contracts | TASK-012, TASK-013, TASK-014, TASK-017, TASK-019 | TASK-013/TASK-014 injected writer failures, TASK-017/TASK-019 write/cancellation partial-only tests, atomic publication tests, E2E-004, IT-005 |
-| NFR-005 | ADR-002; 09 build | TASK-001, TASK-016, TASK-030 | macOS/Linux build, CT-BIN-001 |
-| NFR-006 | 03 state/file contracts; 09 release | TASK-001, TASK-002, TASK-014, TASK-020, TASK-030 | Canonical-hash, TASK-014 identity/build-lineage, clean-install and E2E-001 |
+| NFR-005 | ADR-002; 09 build | TASK-001, TASK-016, TASK-030 | Fixed macOS ARM64/Ubuntu x86-64 native and installed-release matrices, architecture assertion, CT-BIN-001 |
+| NFR-006 | 03 state/file contracts; 09 release | TASK-001, TASK-002, TASK-014, TASK-020, TASK-030 | Canonical-hash, TASK-014 identity/build-lineage, deterministic checksummed release candidate, clean installed E2E-001 |
 | NFR-007 | 03 logging; 06 progress | TASK-007, TASK-012 | TASK-012 rate-limit and non-TTY JSONL/stderr/quiet tests |
 | NFR-008 | 07 SEC-001/002/012 | TASK-004, TASK-005, TASK-028 | UT-DEC-002, SEC-FUZZ-001, full ASan/UBSan suite |
-| NFR-009 | 08 coverage/CI | TASK-008, TASK-028, TASK-030 | Coverage gates, TASK-028 security workflow and CI matrix |
+| NFR-009 | 08 coverage/CI | TASK-008, TASK-028, TASK-030 | Exact Python tier gate, C++ compiler-coverage regression floor/report, TASK-028 security workflow and CI matrix |
 | NFR-010 | ADR-004; 02 UF-003–005 | TASK-018–020, TASK-023–027, TASK-031 | UT-FEAT-001, UT-LABEL-001, IT-008, partition properties, UT-MODEL-001, simulator properties |
-| NFR-011 | 06 accessibility | TASK-007, TASK-021, TASK-030 | NO_COLOR/TERM, HTML accessibility and plot tests |
+| NFR-011 | 06 accessibility | TASK-007, TASK-021, TASK-030 | NO_COLOR/TERM, doctor human/JSON parity, HTML accessibility and plot tests |
 | NFR-012 | ADR-001–004; AGENTS.md | TASK-001, TASK-032 | API docs review, docs/traceability lint |
 
 ## Security and privacy requirements
@@ -54,10 +54,10 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | SEC-002 | 07 checked arithmetic | TASK-002, TASK-004, TASK-010, TASK-024, TASK-028 | Integer/quantity/cash boundary tests, TASK-024 atomic cash/fee/mark overflow cases |
 | SEC-003 | 07 filesystem writes; 09 incidents | TASK-014, TASK-017, TASK-028 | TASK-017 traversal/source-output-overlap checks, SEC-PATH-001, symlink/alias/cancellation tests |
 | SEC-004 | 07 integrity/provenance | TASK-013–017, TASK-028 | TASK-013 embedded-hash golden and partial-only tests, TASK-014 child-hash verification/IT-004, IT-012, hash-tamper tests |
-| SEC-005 | 07 runtime network | TASK-028, TASK-030 | Network-disabled E2E-001/simulation smoke and source import/header policy test |
+| SEC-005 | 07 runtime network | TASK-028, TASK-030 | Fail-closed OS network isolation around the installed full E2E, simulation smoke and source import/header policy test |
 | SEC-006 | 07 serialisation | TASK-016, TASK-020, TASK-028 | AST no-pickle/eval/unsafe-NumPy policy and malicious artefact rejection |
 | SEC-007 | 07 secrets | TASK-028, TASK-030 | Reviewed detect-secrets baseline and config-schema credential-field test |
-| SEC-008 | 07 dependencies; 09 release | TASK-001, TASK-028, TASK-030 | Hashed-lock pip-audit and exact dependency/licence inventory |
+| SEC-008 | 07 dependencies; 09 release | TASK-001, TASK-028, TASK-030 | Hashed-lock pip-audit, checksummed archives and packaged dependency/licence inventory |
 | SEC-009 | 07 report escaping | TASK-021, TASK-028 | `<script>` and Markdown link/table injection fixtures |
 | SEC-010 | 07 logging restrictions | TASK-014, TASK-021, TASK-028 | TASK-014 recursive absolute-path assertions and payload-log assertions |
 | SEC-011 | 07 misuse/data handling | TASK-003, TASK-021, TASK-027, TASK-028, TASK-031 | Tracked-data policy, synthetic labels and report wording tests |

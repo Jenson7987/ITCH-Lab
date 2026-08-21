@@ -226,6 +226,31 @@ Validation:
 
 The console entry point may be invoked as python -m itchlab_research or itchlab-research.
 
+### doctor
+
+Purpose: validate an installed offline Python/native environment without reading market data or
+using the network.
+
+    itchlab-research doctor \
+        [--binary <itchlab-path>] \
+        [--format human|json] \
+        [--ascii] \
+        [--no-colour]
+
+The command checks Python 3.11 or later; the installed runtime dependencies; all packaged version-1
+config and manifest schemas; an executable `itchlab` whose exact semantic version matches the
+Python package; and existing, non-symlink, narrow writable run and derived-data roots. `--binary`
+overrides the default `PATH` lookup. `ITCHLAB_RUNS_DIR` defaults to `runs`, while the derived root
+is `<ITCHLAB_DATA_DIR>/derived` with `ITCHLAB_DATA_DIR` defaulting to `data`.
+
+All checks are bounded and accumulated so one invocation reports every safe diagnostic. Directory
+writability uses a temporary probe that is removed before return. The command does not create a
+missing root, inspect raw data, initiate research, contact the network or expose an absolute path in
+its normal output. JSON uses schema version 1, command `doctor`, status `completed` or `failed`, a
+platform summary, network status `not_required_or_tested`, and ordered checks containing `name`,
+`status` and `summary`. Exit 0 means healthy, 7 means one or more health checks failed, 2 means
+invalid usage and 70 means an unexpected internal failure.
+
 ### convert
 
     itchlab-research convert \

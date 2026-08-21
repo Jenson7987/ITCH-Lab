@@ -24,6 +24,12 @@ source messages precede effective actions, preserving conservative fill-before-c
 P and cross Q events never fill displayed simulated orders, and a broken E/C match used for a fill
 aborts rather than inventing reinstatement.
 
+The `doctor` command is intentionally lightweight and imports research dependencies only while
+checking them. It validates the installed package, packaged schemas, matching native binary and
+existing writable roots without reading market data or using the network:
+
+    python -m itchlab_research doctor --binary /path/to/itchlab --format json
+
 From the repository root, point `configs/conversion.example.json` at completed replay manifests,
 then run:
 

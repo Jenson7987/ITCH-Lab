@@ -24,6 +24,7 @@ def test_task_001_python_cli_help(capsys: pytest.CaptureFixture[str]) -> None:
 
     captured = capsys.readouterr()
     assert "Offline research package for ITCH-Lab" in captured.out
+    assert "doctor" in captured.out
     assert captured.err == ""
 
 

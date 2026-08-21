@@ -23,6 +23,7 @@ This is a **confirmed non-goal** from the selected project scope. A browser UI w
 | UI-007 | Dataset/model result | convert, build-dataset, train | Summarise immutable output and data/metrics |
 | UI-008 | Simulation result | simulate | Summarise scenarios, fills, inventory and diagnostics |
 | UI-009 | Report | report.md/report.html | Human review of methods, results and limitations |
+| UI-010 | Installed health | doctor | Check the offline Python/native installation and writable roots |
 
 There are no URL routes.
 
@@ -39,7 +40,8 @@ There are no URL routes.
     ├── build-dataset
     ├── train
     ├── simulate
-    └── report
+    ├── report
+    └── doctor
 
 Each leaf command owns its parsed options and delegates validated domain objects to services. Domain components never read argv or print directly.
 
@@ -62,7 +64,8 @@ Each leaf command owns its parsed options and delegates validated domain objects
 - Subcommand help contains purpose, required arguments, defaults, units, one valid example and relevant exit-code categories.
 - Every time value names its unit in the option or help text.
 - Help does not imply live trading or profitability.
-- --version prints semantic application version, Git revision and dirty status when available.
+- --version prints the semantic application version. Git revision and dirty status are recorded in
+  run manifests and release metadata rather than mixed into the stable version string.
 
 ## Configuration behaviour
 
@@ -248,3 +251,10 @@ No user-visible operation is reported optimistically.
 - Every plot has labelled axes, units, caption and text summary.
 - Limitations and negative results are not hidden in an appendix.
 - A simulation report includes the exact relative `simulate` and `report` reproduction commands.
+
+### UI-010 doctor
+
+- Human and JSON forms identify every check as pass or fail without relying on colour.
+- Dependency, schema, native-version and writable-root failures are accumulated when safe.
+- The command neither reads raw data nor performs a network operation, and unhealthy exits use the
+  validation category rather than reporting success.

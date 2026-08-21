@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+import itchlab_research.simulation.accounting as accounting_module
 from itchlab_research.errors import ErrorCode
 from itchlab_research.interchange import EventKind
 from itchlab_research.simulation import (
@@ -630,3 +631,123 @@ def test_task_024_marks_and_inventory_are_isolated_by_symbol() -> None:
         after.inventory_mark_to_market_microusd - before.inventory_mark_to_market_microusd == 10_000
     )
     assert MAX_MID2 == 2 * ((1 << 32) - 1)
+
+
+@pytest.mark.parametrize(
+    ("value", "validator", "code"),
+    [
+        (0, accounting_module._validate_symbol_id, ErrorCode.UNKNOWN_SYMBOL),
+        (True, accounting_module._validate_symbol_id, ErrorCode.UNKNOWN_SYMBOL),
+        (-1, accounting_module._validate_mark_mid2, ErrorCode.PRICE),
+        (MAX_MID2 + 1, accounting_module._validate_mark_mid2, ErrorCode.PRICE),
+    ],
+)
+def test_task_030_critical_accounting_primitive_boundaries(
+    value: object, validator: Any, code: ErrorCode
+) -> None:
+    with pytest.raises(SimulationError) as captured:
+        validator(value)
+    assert captured.value.code is code
+
+
+@pytest.mark.parametrize("inventory_limit", [0, True, MAX_INT64 + 1])
+def test_task_030_critical_accounting_rejects_invalid_inventory_limits(
+    inventory_limit: int,
+) -> None:
+    with pytest.raises(SimulationError) as captured:
+        AccountingLedger(maker_fee_microusd_per_share=0, inventory_limit=inventory_limit)
+    assert captured.value.code is ErrorCode.INVENTORY_LIMIT
+
+
+@pytest.mark.parametrize(
+    ("changes", "code"),
+    [
+        ({"simulated_order_id": 2}, ErrorCode.SIMULATION_ANOMALY),
+        ({"market_message_index": -1}, ErrorCode.SIMULATION_ANOMALY),
+        ({"timestamp_ns": -1}, ErrorCode.TIMESTAMP),
+        ({"quantity": 0}, ErrorCode.QUANTITY),
+        ({"queue_ahead_before": -1}, ErrorCode.QUEUE_STATE),
+        ({"queue_ahead_before": 0, "queue_ahead_after": 1}, ErrorCode.QUEUE_STATE),
+    ],
+)
+def test_task_030_critical_accounting_rejects_malformed_queue_fills(
+    changes: dict[str, int], code: ErrorCode
+) -> None:
+    order = _order_after_fill()
+    fill = replace(_queue_fill(order, quantity=100), **changes)
+    ledger = AccountingLedger(maker_fee_microusd_per_share=0, inventory_limit=100)
+    with pytest.raises(SimulationError) as captured:
+        ledger.record_queue_fill(fill, order, mark_mid2=20_000)
+    assert captured.value.code is code
+    assert ledger.snapshot().passive_fill_count == 0
+
+
+@pytest.mark.parametrize(
+    ("trade", "code"),
+    [
+        (object(), ErrorCode.SIMULATION_ANOMALY),
+        (accounting_module.TerminalTrade(1, 0, 10_000, 1, 20_000, 100), ErrorCode.INVENTORY_LIMIT),
+        (accounting_module.TerminalTrade(1, 1, -1, 1, 20_000, 100), ErrorCode.PRICE),
+        (accounting_module.TerminalTrade(1, 1, 10_000, 0, 20_000, 100), ErrorCode.QUANTITY),
+        (accounting_module.TerminalTrade(1, 1, 10_000, 1, 20_000, -1), ErrorCode.TIMESTAMP),
+    ],
+)
+def test_task_030_critical_accounting_rejects_malformed_terminal_trades(
+    trade: object, code: ErrorCode
+) -> None:
+    ledger = AccountingLedger(maker_fee_microusd_per_share=0, inventory_limit=100)
+    with pytest.raises(SimulationError) as captured:
+        ledger.prepare_terminal_accounting((trade,), taker_fee_microusd_per_share=0)  # type: ignore[arg-type]
+    assert captured.value.code is code
+
+
+def test_task_030_critical_accounting_terminal_state_guards_are_atomic() -> None:
+    order = _order_after_fill()
+    fill = _queue_fill(order, quantity=100)
+    ledger = AccountingLedger(maker_fee_microusd_per_share=0, inventory_limit=100)
+    plan = ledger.prepare_terminal_accounting((), taker_fee_microusd_per_share=0)
+    ledger.commit_terminal_accounting(plan)
+
+    for operation in (
+        lambda: ledger.update_mark(1, 20_000),
+        lambda: ledger.record_queue_fill(fill, order, mark_mid2=20_000),
+        lambda: ledger.prepare_terminal_accounting((), taker_fee_microusd_per_share=0),
+        lambda: ledger.commit_terminal_accounting(plan),
+    ):
+        with pytest.raises(SimulationError) as captured:
+            operation()
+        assert captured.value.code is ErrorCode.SIMULATION_ANOMALY
+
+    fresh = AccountingLedger(maker_fee_microusd_per_share=0, inventory_limit=100)
+    with pytest.raises(SimulationError) as captured:
+        fresh.commit_terminal_accounting(plan)
+    assert captured.value.code is ErrorCode.SIMULATION_ANOMALY
+
+
+def test_task_030_critical_accounting_requires_exact_terminal_trades() -> None:
+    ledger = AccountingLedger(maker_fee_microusd_per_share=0, inventory_limit=100)
+    _record_direct_fill(
+        ledger,
+        order_id=1,
+        symbol_id=1,
+        side=1,
+        price4=10_000,
+        quantity=10,
+        mark_mid2=20_100,
+        message_index=2,
+    )
+    before = ledger.snapshot()
+    with pytest.raises(SimulationError) as missing:
+        ledger.prepare_terminal_accounting((), taker_fee_microusd_per_share=0)
+    assert missing.value.code is ErrorCode.PRICE
+
+    wrong = accounting_module.TerminalTrade(1, 1, 10_000, 10, 20_100, 200)
+    with pytest.raises(SimulationError) as wrong_direction:
+        ledger.prepare_terminal_accounting((wrong,), taker_fee_microusd_per_share=0)
+    assert wrong_direction.value.code is ErrorCode.INVENTORY_LIMIT
+
+    valid = accounting_module.TerminalTrade(1, -1, 10_000, 10, 20_100, 200)
+    with pytest.raises(SimulationError) as duplicate:
+        ledger.prepare_terminal_accounting((valid, valid), taker_fee_microusd_per_share=0)
+    assert duplicate.value.code is ErrorCode.SIMULATION_ANOMALY
+    assert ledger.snapshot() == before
