@@ -366,6 +366,8 @@ Behaviour:
 - Computes feature and label batches independently for one complete day/symbol at a time and joins
   them only when trading date, symbol, message index, symbol ID, timestamp and qualifying ordinal
   agree exactly.
+- Groups E/C signed-flow contributions by match number without collapsing the individual messages;
+  a B message removes every still-windowed contribution in its referenced match group.
 - The primary horizon is 100 qualifying rows and secondary horizons are 20 and 500. Labels compare
   future and current integer `mid2`; exact threshold equality is flat. Primary null tails are
   excluded while secondary null tails are retained.

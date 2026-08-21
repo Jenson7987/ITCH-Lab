@@ -97,6 +97,14 @@ every instrument still receives the same mandatory canonical final digest record
 manifest. Existing diagnostic comparisons and independent event/snapshot binary goldens cover this
 compatibility boundary; no schema, scientific definition or persisted record changed.
 
+The first dataset attempt then stopped before publication when a source match number occurred in
+two adjacent E/C messages. Inspection of the authenticated Parquet rows showed equal timestamps and
+quantities on opposite resting sides, consistent with the two visible legs of one execution. The
+[Nasdaq ITCH FAQ](https://classic.nasdaqtrader.com/Content/TechnicalSupport/FAQs/ITCH_FAQ.pdf)
+defines one match number per execution transaction. Feature state was corrected to retain every E/C
+contribution in a match group and to remove the whole group on a later B; no row from the failed
+partial dataset was inspected and no model or simulation outcome existed.
+
 ## Integrity and publication rules
 
 The two initially missing source hashes were filled into the frozen replay configs immediately

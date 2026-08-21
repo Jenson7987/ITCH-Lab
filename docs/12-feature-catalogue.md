@@ -42,8 +42,9 @@ use only earlier state plus events whose message index is at or before the row's
 For each W in 20, 100 and 500, the feature at ordinal t uses W increments or returns ending at t.
 It therefore requires t at least W and is null during earlier warm-up rows. `execution_imbalance_W`
 uses eligible E/C executions in `(message_index_(t-W), message_index_t]`. A later B removes its
-referenced eligible match from subsequent imbalance values while the original execution remains in
-that interval; it never changes an earlier row or displayed execution rates.
+referenced eligible match group from subsequent imbalance values while any contributing E/C message
+remains in that interval; it never changes an earlier row or displayed execution rates. Each E/C
+message contributes separately when both visible legs of one execution share a match number.
 
 | Name pattern | Dtype | Formula/unit | Post-warm-up null policy |
 | --- | --- | --- | --- |

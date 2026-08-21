@@ -377,6 +377,12 @@ class _ExecutionContribution:
 
 
 @dataclass(slots=True)
+class _ExecutionMatch:
+    contributions: list[_ExecutionContribution] = field(default_factory=list)
+    broken: bool = False
+
+
+@dataclass(slots=True)
 class _ExecutionWindow:
     window: int
     buckets: deque[tuple[_ExecutionContribution, ...]] = field(default_factory=deque)
@@ -424,7 +430,7 @@ class _FeatureState:
         self.squared_return = {window: _RollingSum(window) for window in config.event_windows}
         self.execution = {window: _ExecutionWindow(window) for window in config.event_windows}
         self.pending_executions: list[_ExecutionContribution] = []
-        self.matches: dict[int, _ExecutionContribution] = {}
+        self.matches: dict[int, _ExecutionMatch] = {}
         self.clock_events: dict[tuple[int, str, int], deque[tuple[int, int]]] = {
             (window, category, side): deque()
             for window in config.clock_windows_ns
@@ -524,19 +530,15 @@ class _FeatureState:
                     "Execution event lacks causal flow fields.",
                     message_index=message_index,
                 )
-            if match_number in self.matches:
-                raise _fail(
-                    ErrorCode.INVARIANT,
-                    "Execution match number is duplicated in an active feature window.",
-                    message_index=message_index,
-                )
+            match = self.matches.setdefault(match_number, _ExecutionMatch())
             contribution = _ExecutionContribution(
                 match_number=match_number,
                 signed_quantity=-cast(int, side) * quantity,
                 quantity=quantity,
+                active=not match.broken,
             )
             self.pending_executions.append(contribution)
-            self.matches[match_number] = contribution
+            match.contributions.append(contribution)
         elif event_kind == "broken_trade":
             match_number = row["primary_reference"]
             if not isinstance(match_number, int):
@@ -545,11 +547,14 @@ class _FeatureState:
                     "Broken trade has no match number.",
                     message_index=message_index,
                 )
-            broken_contribution = self.matches.get(match_number)
-            if broken_contribution is not None and broken_contribution.active:
-                for execution_window in self.execution.values():
-                    execution_window.break_contribution(broken_contribution)
-                broken_contribution.active = False
+            broken_match = self.matches.get(match_number)
+            if broken_match is not None and not broken_match.broken:
+                for contribution in broken_match.contributions:
+                    if contribution.active:
+                        for execution_window in self.execution.values():
+                            execution_window.break_contribution(contribution)
+                        contribution.active = False
+                broken_match.broken = True
 
     def validate_snapshot(self, row: Mapping[str, Any]) -> tuple[int, int]:
         message_index, timestamp_ns = self._validate_identity(row, kind="snapshot")
@@ -627,10 +632,13 @@ class _FeatureState:
         for window in self.execution.values():
             evicted.update(window.append(bucket))
         for contribution in evicted:
-            if (
-                not contribution.windows
-                and self.matches.get(contribution.match_number) is contribution
-            ):
+            if contribution.windows:
+                continue
+            match = self.matches.get(contribution.match_number)
+            if match is None:
+                continue
+            match.contributions.remove(contribution)
+            if not match.contributions:
                 del self.matches[contribution.match_number]
 
     @staticmethod

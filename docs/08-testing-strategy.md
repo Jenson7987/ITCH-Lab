@@ -139,7 +139,8 @@ CT-JSON-001 validates the strict completed-manifest schema and rejects unknown k
 - Price4 conversions avoid binary-float values until presentation.
 - TASK-018 hand-calculated cases reconcile the exact catalogue/schema, current depth and
   microprice values, all 20/100/500 qualifying-transition boundaries, 100 ms/1 s event-rate
-  boundaries, realised volatility, observable E/C direction and causal B corrections.
+  boundaries, realised volatility, observable E/C direction, same-match paired E/C contributions
+  and causal whole-match B corrections.
 - UT-FEAT-001 mutates later event/snapshot input and proves the complete earlier Arrow prefix is
   byte-for-byte equivalent. Equal-timestamp events after the decision index are also excluded.
 - Feature boundary tests reject schema/depth, partition/order, session-context, price and quantity

@@ -291,7 +291,7 @@ def test_task_018_observable_flow_and_broken_trade_are_causal() -> None:
                 kind="execute_price",
                 side=-1,
                 quantity=30,
-                secondary_reference=502,
+                secondary_reference=501,
             )
         else:
             event = _event(message_index, timestamp_ns)
@@ -325,7 +325,7 @@ def test_task_018_observable_flow_and_broken_trade_are_causal() -> None:
     assert rows[6]["aggressor_sign"] == 1
     assert rows[7]["aggressor_sign"] is None
     assert rows[20]["execution_imbalance_20"] == pytest.approx(0.5)
-    assert rows[21]["execution_imbalance_20"] == pytest.approx(1.0)
+    assert rows[21]["execution_imbalance_20"] == pytest.approx(0.0)
     assert rows[20]["execution_bid_rate_1s"] == 1.0
     assert rows[20]["execution_ask_rate_1s"] == 1.0
     assert rows[21]["execution_bid_rate_1s"] == 1.0

@@ -95,9 +95,11 @@ For each qualifying row:
   executed quantity. It first becomes valid at qualifying ordinal W and is zero when the complete
   window contains no eligible execution.
 - A B broken-trade message never rewrites an earlier feature row or restores the historical book.
-  At break time, `execution_imbalance_W` removes the referenced E/C match while that original
-  execution remains in the causal event window; displayed-book execution-rate features retain the
-  original E/C mutation. Unknown, P/Q or already broken matches do not create signed flow.
+  Every E/C message contributes its own visible executed quantity, including when two visible legs
+  share one source match number. At break time, `execution_imbalance_W` removes all E/C
+  contributions for the referenced match while they remain in the causal event window;
+  displayed-book execution-rate features retain the original E/C mutations. Unknown, P/Q or
+  already broken matches do not create signed flow.
 
 Required event windows are 20, 100 and 500 qualifying transitions. Clock windows are incomplete
 until that much session time has elapsed. Infinite values are invalid. The feature output retains
