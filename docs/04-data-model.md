@@ -399,6 +399,14 @@ Publication is immutable and manifest-last. The required test grid is the Cartes
 symmetric 0/100,000/1,000,000 ns latency and −2,000/+3,000 microusd/share maker cost; a distinct
 configured scenario is retained as an additional cell.
 
+`diagnostics.json` retains exact positive counts for every diagnostic code. Detailed `records` and
+their independently reconciled `record_counts` retain queue anomalies and any other exceptional
+diagnostics. The high-frequency `DIAG_MISSING_PREDICTION` and `DIAG_STALE_PREDICTION` fallbacks are
+declared in `count_only_codes` under record policy `prediction-fallback-counts-v1` and are not
+duplicated as individual rows. The diagnostics artefact row count is the number of persisted
+detailed records, not the sum of aggregate counts. Legacy version-1 evidence without a record
+policy remains valid when every counted diagnostic has a corresponding detailed record.
+
 ### SimulatedOrder
 
 | Field | Type | Nullable | Default | Constraints |

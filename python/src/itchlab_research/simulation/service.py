@@ -79,6 +79,10 @@ _MAX_JSON_BYTES: Final = 64 << 20
 _HASH_CHUNK_BYTES: Final = 1 << 20
 _ROW_GROUP_ROWS: Final = 65_536
 _RUN_ID_PATTERN: Final = re.compile(r"^[0-9]{8}T[0-9]{6}\.[0-9]{9}Z-[0-9a-f]{12}$")
+_DIAGNOSTIC_RECORD_POLICY: Final = "prediction-fallback-counts-v1"
+_COUNT_ONLY_DIAGNOSTIC_CODES: Final = frozenset(
+    {"DIAG_MISSING_PREDICTION", "DIAG_STALE_PREDICTION"}
+)
 
 CancelCheck: TypeAlias = Callable[[], bool]
 
@@ -1045,6 +1049,81 @@ def _write_json(
     return _Artefact(kind, filename, digest, size, row_count)
 
 
+def _retain_diagnostics(
+    counts: Counter[str],
+    records: list[dict[str, Any]],
+    diagnostics: Sequence[Mapping[str, Any]],
+) -> None:
+    """Count every diagnostic while bounding routine prediction-fallback evidence."""
+    for diagnostic in diagnostics:
+        code = diagnostic.get("code")
+        if not isinstance(code, str) or not code:
+            raise _fail(ErrorCode.INTERNAL, "Simulation diagnostic code is invalid.")
+        counts[code] += 1
+        if code not in _COUNT_ONLY_DIAGNOSTIC_CODES:
+            records.append(dict(diagnostic))
+
+
+def _diagnostics_document(
+    simulation_id: str,
+    queue_anomaly_budget: int,
+    counts: Mapping[str, int],
+    records: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    record_counts = Counter(cast(str, row["code"]) for row in records)
+    return {
+        "schema_version": 1,
+        "simulation_id": simulation_id,
+        "queue_anomaly_budget": queue_anomaly_budget,
+        "record_policy": _DIAGNOSTIC_RECORD_POLICY,
+        "count_only_codes": sorted(_COUNT_ONLY_DIAGNOSTIC_CODES),
+        "counts": dict(sorted(counts.items())),
+        "record_counts": dict(sorted(record_counts.items())),
+        "records": list(records),
+    }
+
+
+def _diagnostics_are_consistent(document: Mapping[str, Any], row_count: int) -> bool:
+    """Validate both legacy full-record and bounded version-1 diagnostics evidence."""
+    records = document.get("records")
+    counts = document.get("counts")
+    if not isinstance(records, list) or len(records) != row_count or not isinstance(counts, dict):
+        return False
+    if any(
+        not isinstance(code, str)
+        or not code
+        or not isinstance(count, int)
+        or isinstance(count, bool)
+        or count <= 0
+        for code, count in counts.items()
+    ):
+        return False
+    record_counts: Counter[str] = Counter()
+    for record in records:
+        if not isinstance(record, dict):
+            return False
+        code = record.get("code")
+        if not isinstance(code, str) or not code:
+            return False
+        record_counts[code] += 1
+
+    policy = document.get("record_policy")
+    if policy is None:
+        return dict(sorted(record_counts.items())) == counts
+    if (
+        policy != _DIAGNOSTIC_RECORD_POLICY
+        or document.get("count_only_codes") != sorted(_COUNT_ONLY_DIAGNOSTIC_CODES)
+        or document.get("record_counts") != dict(sorted(record_counts.items()))
+        or any(code in _COUNT_ONLY_DIAGNOSTIC_CODES for code in record_counts)
+        or not set(record_counts).issubset(counts)
+    ):
+        return False
+    return all(
+        count == record_counts.get(code, 0) if code not in _COUNT_ONLY_DIAGNOSTIC_CODES else True
+        for code, count in counts.items()
+    )
+
+
 def _parent_document(
     dataset: PartitionedDataset, experiment: AuthenticatedExperiment | None
 ) -> dict[str, Any]:
@@ -1246,9 +1325,8 @@ def load_completed_simulation(
                 and len(cast(list[Any], child.get("scenarios"))) != entry["row_count"]
             ):
                 raise _fail(ErrorCode.HASH_MISMATCH, "Simulation metric count is inconsistent.")
-            if (
-                kind == "diagnostics"
-                and len(cast(list[Any], child.get("records"))) != entry["row_count"]
+            if kind == "diagnostics" and not _diagnostics_are_consistent(
+                child, cast(int, entry["row_count"])
             ):
                 raise _fail(ErrorCode.HASH_MISMATCH, "Simulation diagnostic count is inconsistent.")
             evidence[kind] = child
@@ -1522,6 +1600,7 @@ def simulate(
         }
         scenario_documents: list[dict[str, Any]] = []
         diagnostic_rows: list[dict[str, Any]] = []
+        diagnostic_counts: Counter[str] = Counter()
         passive_fill_count = 0
         result_count = 0
         try:
@@ -1549,7 +1628,7 @@ def simulate(
                         "daily": list(result.daily_metrics),
                     }
                 )
-                diagnostic_rows.extend(result.diagnostics)
+                _retain_diagnostics(diagnostic_counts, diagnostic_rows, result.diagnostics)
                 passive_fill_count += len(result.fills)
                 result_count += 1
                 del result
@@ -1566,14 +1645,12 @@ def simulate(
             "selection": selection,
             "scenarios": scenario_documents,
         }
-        diagnostic_counts = Counter(cast(str, row["code"]) for row in diagnostic_rows)
-        diagnostics_document = {
-            "schema_version": 1,
-            "simulation_id": simulation_id,
-            "queue_anomaly_budget": config.execution.max_queue_anomalies,
-            "counts": dict(sorted(diagnostic_counts.items())),
-            "records": diagnostic_rows,
-        }
+        diagnostics_document = _diagnostics_document(
+            simulation_id,
+            config.execution.max_queue_anomalies,
+            diagnostic_counts,
+            diagnostic_rows,
+        )
         artefacts.extend(
             [
                 _write_json(

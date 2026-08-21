@@ -558,6 +558,13 @@ Outputs:
 - orders.parquet, fills.parquet, liquidations.parquet and equity.parquet.
 - metrics.json and diagnostics.json.
 
+`diagnostics.json` always carries exact per-code counts. To keep an expected fallback at every
+decision from exhausting the bounded JSON interface, version 1 record policy
+`prediction-fallback-counts-v1` stores missing/stale-prediction diagnostics as counts only. It
+retains detailed rows and reconciled record counts for queue anomalies and every other diagnostic.
+The manifest row count authenticates those retained rows. Loaders also accept legacy version-1
+documents whose counts reconcile one-for-one to their full record list.
+
 The completed manifest retains the exact training dates, pooled and per-symbol calibration bucket
 aggregates, fitted intercept/kappa values and whether each symbol used its own or the pooled fit.
 
@@ -894,7 +901,9 @@ Contracts:
   authorised validation predictions before selection, freezes model and signal weight, then opens
   test events/predictions and publishes the required immutable scenario grid manifest-last.
   `load_completed_simulation` revalidates config/parent identity, selection/calibration scope,
-  output schemas and every child size/hash/count before returning report evidence.
+  output schemas and every child size/hash/count before returning report evidence. It also
+  reconciles diagnostic aggregate counts, retained-record counts and the declared bounded record
+  policy; legacy full-record diagnostics remain readable.
 - Simulation performs a causal as-of selection of the latest same-symbol prediction at or before each decision and records that prediction's exact immutable row identity.
 - Accounting consumes queue fills in lifecycle order, validates their order/event identity, assigns
   deterministic fill IDs and leaves its prior snapshot unchanged on any validation, limit or
@@ -943,7 +952,9 @@ Stable public codes include:
 New codes may be added within a major version. Existing meanings must not change silently.
 
 Non-fatal diagnostic codes start with DIAG\_; DIAG_MISSING_PREDICTION and
-DIAG_STALE_PREDICTION record zero-signal fallbacks without changing command success by themselves.
+DIAG_STALE_PREDICTION count zero-signal fallbacks without changing command success by themselves.
+Their exact aggregate counts are publication evidence; unlike exceptional diagnostics, their
+routine per-decision rows need not be persisted.
 
 ## File-level idempotency and concurrency
 

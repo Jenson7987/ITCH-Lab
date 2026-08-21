@@ -138,6 +138,16 @@ groups and released one scenario at a time instead of retaining the complete gri
 execution-lifecycle changes preserve row order, schemas, metrics and scenario order; focused
 publication, ordering and slot-release regressions cover the boundary.
 
+The next unpublished full-grid attempt completed all twelve test computations and child Parquet
+files but stopped before manifest publication because routine missing/stale-prediction diagnostic
+rows exceeded the fixed JSON size bound. Aggregate results in that partial run were inspected, so
+it is not reused as final evidence. The publication representation now keeps exact counts for both
+fallback codes without duplicating their expected per-decision rows; queue anomalies and every
+other diagnostic retain detailed records and reconciled record counts. This resource-bound change
+does not alter predictions, strategy decisions, execution, accounting, scenario metrics or any
+frozen scientific choice. The final run uses the resulting new package-content identity and starts
+from the authenticated parents again.
+
 ## Integrity and publication rules
 
 The two initially missing source hashes were filled into the frozen replay configs immediately

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -52,6 +53,34 @@ def test_task_031_simulation_parquet_is_streamed_in_bounded_ordered_groups(
     assert parquet.metadata.num_rows == 5
     assert parquet.metadata.num_row_groups == 3
     assert parquet.read(columns=["message_index"])["message_index"].to_pylist() == list(range(5))
+
+
+def test_task_031_prediction_fallback_diagnostics_are_counted_without_bulk_records() -> None:
+    counts: Counter[str] = Counter()
+    records: list[dict[str, Any]] = []
+    missing = {"code": "DIAG_MISSING_PREDICTION", "message_index": 1}
+    stale = {"code": "DIAG_STALE_PREDICTION", "message_index": 2}
+    anomaly = {"code": "DIAG_QUEUE_UNKNOWN_EXECUTION", "message_index": 3}
+
+    simulation_service._retain_diagnostics(
+        counts,
+        records,
+        [missing] * 10_000 + [stale] * 20_000 + [anomaly],
+    )
+    document = simulation_service._diagnostics_document("simulation", 3_000, counts, records)
+
+    assert document["counts"] == {
+        "DIAG_MISSING_PREDICTION": 10_000,
+        "DIAG_QUEUE_UNKNOWN_EXECUTION": 1,
+        "DIAG_STALE_PREDICTION": 20_000,
+    }
+    assert document["record_counts"] == {"DIAG_QUEUE_UNKNOWN_EXECUTION": 1}
+    assert document["records"] == [anomaly]
+    assert len(json.dumps(document)) < 1_000
+    assert simulation_service._diagnostics_are_consistent(document, 1)
+
+    document["record_counts"] = {}
+    assert not simulation_service._diagnostics_are_consistent(document, 1)
 
 
 def _completed_experiment(tmp_path: Path, dataset_conversion_factory: Any) -> tuple[str, Path]:
