@@ -19,6 +19,6 @@
   "validation": {
     "mode": "strict",
     "max_skipped_messages": 0,
-    "invariant_interval": 1
+    "invariant_interval": 10000
   }
 }

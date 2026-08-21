@@ -41,7 +41,8 @@ Official directory: <https://emi.nasdaq.com/ITCH/Nasdaq%20ITCH/>.
   (`34200000000000` through `57600000000000` nanoseconds since midnight).
 - Trading-state gating: required.
 - Visible depth: 10 levels; unchanged trade snapshots enabled.
-- Validation: strict, zero skipped messages, invariant check after every selected mutation.
+- Validation: strict, zero skipped messages, invariant check every 10,000 selected mutations and at
+  finalisation.
 - Feature depths: 1, 5 and 10.
 - Event windows: 20, 100 and 500 qualifying transitions.
 - Clock windows: 100 ms and 1 s.
@@ -73,6 +74,20 @@ snapshots. Arbitrary unknown types remain fatal in strict mode.
 The test partition is evaluated only after validation has selected the candidate and signal weight.
 All scenario results, including zero-fill, negative and underperforming results, remain in the final
 report.
+
+### Execution-feasibility amendment
+
+The initial protocol used the example cadence of one full book-invariant scan after every selected
+mutation. On 2026-08-21, three parallel unpublished replay attempts were cancelled cleanly after
+about seven minutes when their last emitted event timestamps were only 09:30:39–09:32:30. The
+observed cost projected to many hours per day because each scan traverses the complete live book.
+No completed replay, label, model metric or simulation outcome existed or was inspected.
+
+The cadence was therefore frozen at every 10,000 selected mutations before restarting. Individual
+book operations retain their checked atomic domain validation; arbitrary decode/book errors remain
+fatal; every book receives a mandatory full final invariant check; completed children receive
+streamed deep validation. This operational cadence change affects no emitted record, feature,
+label, model, selection rule or scenario assumption.
 
 ## Integrity and publication rules
 
