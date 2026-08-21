@@ -14,10 +14,10 @@ cross-language boundary. It uses the accepted version-1 contracts and defaults.
 
 ## Frozen data selection
 
-| Partition | Trading date | Official source basename | Published size (bytes) | SHA-256 before acquisition |
+| Partition | Trading date | Official source basename | Verified size (bytes) | Verified SHA-256 |
 | --- | --- | --- | ---: | --- |
-| Train | 2019-07-30 | `07302019.NASDAQ_ITCH50.gz` | 3,662,140,094 | To be recorded after byte-for-byte acquisition |
-| Validation | 2019-10-30 | `10302019.NASDAQ_ITCH50.gz` | 3,872,931,242 | To be recorded after byte-for-byte acquisition |
+| Train | 2019-07-30 | `07302019.NASDAQ_ITCH50.gz` | 3,662,140,094 | `c65784c48c28735901ae442dc00e215834218a359bc12a139ab4eec209bc2d4a` |
+| Validation | 2019-10-30 | `10302019.NASDAQ_ITCH50.gz` | 3,872,931,242 | `0ad86b61a0eb7f1bce2cffca0e08c8658026451c68657ea6b06f61ff3710b999` |
 | Test | 2019-12-30 | `12302019.NASDAQ_ITCH50.gz` | 3,524,013,057 | `ef03df46a27e6bda4dead017f84c2e3979df7211f02c7868b51d53fceb99c689` |
 
 The three dates are distinct full-day files listed in Nasdaq's official sample directory and are
@@ -76,11 +76,12 @@ report.
 
 ## Integrity and publication rules
 
-The two missing source hashes will be filled into the frozen replay configs immediately after
-acquisition and before replay. Recording an observed source identity does not change a scientific
-choice. Each source must match the official directory size, pass full strict inspection and be
-bound into its replay manifest. Every completed replay receives deep validation with source-hash
-verification; downstream manifests and child hashes must authenticate before use.
+The two initially missing source hashes were filled into the frozen replay configs immediately
+after acquisition and before inspection or replay. Recording an observed source identity did not
+change a scientific choice. Each source matched the official directory size and must pass full
+strict inspection and be bound into its replay manifest. Every completed replay receives deep
+validation with source-hash verification; downstream manifests and child hashes must authenticate
+before use.
 
 Raw `.itch`/`.itch.gz` inputs, binary replay children, Parquet datasets, predictions and bulk
 simulation outputs remain under ignored local roots and are never committed. Because permission to

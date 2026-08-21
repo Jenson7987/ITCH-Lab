@@ -2,7 +2,7 @@
   "schema_version": 1,
   "input": {
     "path": "data/raw/07302019.NASDAQ_ITCH50.gz",
-    "sha256": null,
+    "sha256": "c65784c48c28735901ae442dc00e215834218a359bc12a139ab4eec209bc2d4a",
     "trading_date": "2019-07-30",
     "exchange_timezone": "America/New_York"
   },
