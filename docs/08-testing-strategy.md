@@ -171,6 +171,8 @@ current queue equals the exact ahead-reference sum and that cumulative/event fil
 The IT-010 subset additionally covers equal-timestamp activation, C display-price semantics,
 P/Q exclusion, fill-before-cancel, counterfactual invalidation, broken fills and the exact queue
 anomaly budget.
+TASK-031 adds a many-level regression proving that the simulation's exact-level and opposite-best
+indexes preserve activation priority, ahead-reference removal and conservative invalidation.
 
 TASK-024's UT-SIM-004 hand trace independently reconciles a rebated buy, a rebated partial sell,
 an intervening exact-midpoint revaluation and taker-cost terminal liquidation. Deterministic

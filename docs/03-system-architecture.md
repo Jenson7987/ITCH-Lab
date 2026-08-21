@@ -147,6 +147,11 @@ Recommended correctness-first representation:
 
 The public book interface owns all mutation invariants; writers and strategies cannot alter state directly.
 
+The simulation queue model independently indexes authenticated visible orders by exact
+symbol/side/price level and maintains lazy best-price heaps. Activation copies only the matching
+level's source-ordered references, while marketability and counterfactual-cross checks use the
+indexed opposite best. The canonical C++ book and persisted artefacts are unchanged.
+
 ### InvariantChecker
 
 Checks include:

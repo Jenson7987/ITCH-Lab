@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import heapq
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from enum import StrEnum
@@ -148,6 +149,9 @@ class VisibleQueueModel:
         self._state_machine = state_machine
         self._max_queue_anomalies = max_queue_anomalies
         self._visible_orders: dict[int, _VisibleOrder] = {}
+        self._visible_levels: dict[tuple[int, int, int], dict[int, int]] = {}
+        self._price_heaps: dict[tuple[int, int], list[int]] = {}
+        self._heap_prices: dict[tuple[int, int], set[int]] = {}
         self._queues: dict[int, _TrackedQueue] = {}
         self._used_fill_matches: dict[int, int] = {}
         self._diagnostics: list[QueueDiagnostic] = []
@@ -247,20 +251,16 @@ class VisibleQueueModel:
             return None
         ahead: dict[int, int] = {}
         total = 0
-        for visible in self._visible_orders.values():
-            if (
-                visible.symbol_id == order.symbol_id
-                and visible.side == order.side
-                and visible.price4 == order.price4
-            ):
-                if total > MAX_UINT64 - visible.remaining_quantity:
-                    raise _fail(
-                        ErrorCode.QUEUE_STATE,
-                        "Activation queue-ahead quantity overflowed.",
-                        simulated_order_id=order.simulated_order_id,
-                    )
-                ahead[visible.reference] = visible.remaining_quantity
-                total += visible.remaining_quantity
+        level = self._visible_levels.get((order.symbol_id, order.side, order.price4), {})
+        for reference, remaining_quantity in level.items():
+            if total > MAX_UINT64 - remaining_quantity:
+                raise _fail(
+                    ErrorCode.QUEUE_STATE,
+                    "Activation queue-ahead quantity overflowed.",
+                    simulated_order_id=order.simulated_order_id,
+                )
+            ahead[reference] = remaining_quantity
+            total += remaining_quantity
         self._queues[order.simulated_order_id] = _TrackedQueue(
             simulated_order_id=order.simulated_order_id,
             symbol_id=order.symbol_id,
@@ -272,29 +272,27 @@ class VisibleQueueModel:
         return total
 
     def _is_marketable(self, order: SimulatedOrder) -> bool:
-        opposite_prices = [
-            visible.price4
-            for visible in self._visible_orders.values()
-            if visible.symbol_id == order.symbol_id and visible.side == -order.side
-        ]
-        if not opposite_prices:
+        opposite = self._best_visible_price(order.symbol_id, -order.side)
+        if opposite is None:
             return False
         if order.side == 1:
-            return min(opposite_prices) <= order.price4
-        return max(opposite_prices) >= order.price4
+            return opposite <= order.price4
+        return opposite >= order.price4
 
     def _apply_add(self, event: MarketEvent) -> bool:
         reference = cast(int, event.primary_reference)
         if reference in self._visible_orders:
             self._record_anomaly(event, QueueAnomalyReason.DUPLICATE_REFERENCE)
             return False
-        self._visible_orders[reference] = _VisibleOrder(
-            reference=reference,
-            symbol_id=event.symbol_id,
-            side=cast(int, event.side),
-            price4=cast(int, event.price4),
-            remaining_quantity=cast(int, event.quantity),
-            priority_message_index=event.message_index,
+        self._insert_visible_order(
+            _VisibleOrder(
+                reference=reference,
+                symbol_id=event.symbol_id,
+                side=cast(int, event.side),
+                price4=cast(int, event.price4),
+                remaining_quantity=cast(int, event.quantity),
+                priority_message_index=event.message_index,
+            )
         )
         return True
 
@@ -391,7 +389,7 @@ class VisibleQueueModel:
         if event.quantity != visible.remaining_quantity:
             self._record_anomaly(event, QueueAnomalyReason.QUANTITY_MISMATCH)
             return False
-        del self._visible_orders[visible.reference]
+        self._remove_visible_order(visible)
         tracker = self._queue_containing(visible.reference)
         if tracker is not None:
             del tracker.ahead[visible.reference]
@@ -413,14 +411,16 @@ class VisibleQueueModel:
         tracker = self._queue_containing(visible.reference)
         if tracker is not None:
             del tracker.ahead[visible.reference]
-        del self._visible_orders[visible.reference]
-        self._visible_orders[new_reference] = _VisibleOrder(
-            reference=new_reference,
-            symbol_id=event.symbol_id,
-            side=cast(int, event.side),
-            price4=cast(int, event.price4),
-            remaining_quantity=cast(int, event.quantity),
-            priority_message_index=event.message_index,
+        self._remove_visible_order(visible)
+        self._insert_visible_order(
+            _VisibleOrder(
+                reference=new_reference,
+                symbol_id=event.symbol_id,
+                side=cast(int, event.side),
+                price4=cast(int, event.price4),
+                remaining_quantity=cast(int, event.quantity),
+                priority_message_index=event.message_index,
+            )
         )
         return True
 
@@ -461,9 +461,48 @@ class VisibleQueueModel:
     def _decrement_visible(self, visible: _VisibleOrder, quantity: int) -> None:
         remaining = visible.remaining_quantity - quantity
         if remaining == 0:
-            del self._visible_orders[visible.reference]
+            self._remove_visible_order(visible)
         else:
-            self._visible_orders[visible.reference] = replace(visible, remaining_quantity=remaining)
+            updated = replace(visible, remaining_quantity=remaining)
+            self._visible_orders[visible.reference] = updated
+            self._visible_levels[(visible.symbol_id, visible.side, visible.price4)][
+                visible.reference
+            ] = remaining
+
+    def _insert_visible_order(self, visible: _VisibleOrder) -> None:
+        self._visible_orders[visible.reference] = visible
+        level_key = (visible.symbol_id, visible.side, visible.price4)
+        level = self._visible_levels.setdefault(level_key, {})
+        if not level:
+            side_key = (visible.symbol_id, visible.side)
+            known_prices = self._heap_prices.setdefault(side_key, set())
+            if visible.price4 not in known_prices:
+                heap = self._price_heaps.setdefault(side_key, [])
+                heapq.heappush(heap, visible.price4 if visible.side == -1 else -visible.price4)
+                known_prices.add(visible.price4)
+        level[visible.reference] = visible.remaining_quantity
+
+    def _remove_visible_order(self, visible: _VisibleOrder) -> None:
+        del self._visible_orders[visible.reference]
+        level_key = (visible.symbol_id, visible.side, visible.price4)
+        level = self._visible_levels[level_key]
+        del level[visible.reference]
+        if not level:
+            del self._visible_levels[level_key]
+
+    def _best_visible_price(self, symbol_id: int, side: int) -> int | None:
+        side_key = (symbol_id, side)
+        heap = self._price_heaps.get(side_key)
+        if heap is None:
+            return None
+        while heap:
+            encoded = heap[0]
+            price4 = encoded if side == -1 else -encoded
+            if (symbol_id, side, price4) in self._visible_levels:
+                return price4
+            heapq.heappop(heap)
+            self._heap_prices[side_key].remove(price4)
+        return None
 
     def _decrement_ahead(self, tracker: _TrackedQueue, reference: int, quantity: int) -> None:
         tracked = tracker.ahead.get(reference)
@@ -547,16 +586,12 @@ class VisibleQueueModel:
         return tuple(transitions)
 
     def _opposite_book_crosses(self, tracker: _TrackedQueue) -> bool:
-        opposing = [
-            visible.price4
-            for visible in self._visible_orders.values()
-            if visible.symbol_id == tracker.symbol_id and visible.side == -tracker.side
-        ]
-        if not opposing:
+        opposite = self._best_visible_price(tracker.symbol_id, -tracker.side)
+        if opposite is None:
             return False
         if tracker.side == 1:
-            return min(opposing) <= tracker.price4
-        return max(opposing) >= tracker.price4
+            return opposite <= tracker.price4
+        return opposite >= tracker.price4
 
     def _record_anomaly(
         self,

@@ -294,6 +294,32 @@ def test_task_023_equal_timestamp_adds_are_ahead_of_equal_time_activation() -> N
     assert machine.order(1).queue_ahead_initial == 50
 
 
+def test_task_031_level_indexes_preserve_exact_queue_and_best_opposite_price() -> None:
+    machine = OrderStateMachine(submission_latency_ns=0, cancellation_latency_ns=0)
+    model = VisibleQueueModel(machine, max_queue_anomalies=0)
+    for offset in range(1, 257):
+        model.process_market_event(_add(offset, offset, 1, price4=9_000 - offset))
+    for offset in range(1, 257):
+        model.process_market_event(
+            _add(256 + offset, 1_000 + offset, 1, side=-1, price4=11_000 + offset)
+        )
+    first = _add(2_000, 2_000, 20)
+    second = _add(2_001, 2_001, 30)
+    model.process_market_event(first)
+    model.process_market_event(second)
+    _submit(machine, order_id=1, event=second)
+    model.complete_market_timestamp(second.timestamp_ns)
+
+    assert model.queue_snapshot(1).ahead_references == ((2_000, 20), (2_001, 30))
+    model.process_market_event(_delete(2_002, 2_000, 20))
+    assert model.queue_snapshot(1).ahead_references == ((2_001, 30),)
+
+    crossing_ask = _add(2_003, 3_000, 10, side=-1, price4=10_000)
+    result = model.process_market_event(crossing_ask)
+    assert result.diagnostics[-1].code is QueueDiagnosticCode.COUNTERFACTUAL_CROSS
+    assert machine.order(1).state is OrderState.INVALIDATED
+
+
 @pytest.mark.parametrize("ahead_quantity", range(1, 33))
 def test_task_023_generated_queue_and_fill_properties(ahead_quantity: int) -> None:
     machine = OrderStateMachine(submission_latency_ns=0, cancellation_latency_ns=0)

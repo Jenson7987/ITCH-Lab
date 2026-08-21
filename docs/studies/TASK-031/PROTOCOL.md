@@ -65,7 +65,8 @@ snapshots. Arbitrary unknown types remain fatal in strict mode.
 - Decision interval: 100 ms; maximum prediction age: 500 ms.
 - Order quantity: 100 shares; inventory limit: 1,000 shares; gamma: 0.1.
 - Volatility window: 60 seconds; risk horizon: 10 seconds; maximum signal: 2 ticks.
-- Passive-only execution, conservative known-order queue policy and zero queue-anomaly budget.
+- Passive-only execution, conservative known-order queue policy and a 3,000 queue-anomaly budget
+  per scenario/day, as justified by the pre-simulation data-quality amendment below.
 - Terminal inventory: cross the visible spread.
 - Frozen test sensitivity grid: submission/cancellation latency of 0, 100 microseconds and
   1 millisecond, crossed with maker fee/rebate of −2,000 and 3,000 microusd per share. Taker cost is
@@ -104,6 +105,29 @@ quantities on opposite resting sides, consistent with the two visible legs of on
 defines one match number per execution transaction. Feature state was corrected to retain every E/C
 contribution in a match group and to remove the whole group on a later B; no row from the failed
 partial dataset was inspected and no model or simulation outcome existed.
+
+The first simulation attempt retained the initially frozen zero anomaly budget and stopped before
+publication at MSFT message index 15,694,105 with `execution_behind_known_ahead`. A source-only FIFO
+preflight, performed without model predictions, P&L or simulation output, found valid executions of
+later visible references while older same-price references remained:
+
+| Partition day | AAPL | MSFT | AMZN | Total |
+| --- | ---: | ---: | ---: | ---: |
+| 2019-07-30 train | 931 | 661 | 489 | 2,081 |
+| 2019-10-30 validation | 685 | 792 | 275 | 1,752 |
+| 2019-12-30 test | 759 | 1,589 | 402 | 2,750 |
+
+These events expose queue-priority information that the visible feed does not explain; they are not
+safe fill evidence for a hypothetical order. The existing conservative policy already skips their
+simulated effect, records `DIAG_QUEUE_EVENT_SKIPPED`, and aborts above an explicit budget. Before
+any simulation outcome existed, the study budget was therefore frozen at 3,000 per scenario/day:
+the largest preflight total plus 250 events of headroom. A count above that fixed bound remains
+fatal and every accepted anomaly remains visible in the report.
+
+Profiling the failed attempt also showed two repeated full-book scans in activation and
+counterfactual-cross checks. The queue model now uses an exact symbol/side/price index and lazy
+best-price heaps for those same lookups. Unit regressions preserve source-order queue membership,
+marketability and invalidation semantics; no strategy, fill rule or persisted schema changed.
 
 ## Integrity and publication rules
 

@@ -21,7 +21,7 @@
     "maker_fee_microusd_per_share": -2000,
     "taker_fee_microusd_per_share": 3000,
     "queue_policy": "known_orders_conservative",
-    "max_queue_anomalies": 0,
+    "max_queue_anomalies": 3000,
     "terminal_liquidation": "cross_visible_spread"
   },
   "seed": 7987
