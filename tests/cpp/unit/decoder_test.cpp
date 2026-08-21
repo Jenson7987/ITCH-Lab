@@ -425,6 +425,38 @@ TEST_CASE("TASK-009 validates six-byte timestamps for every MVP type",
   }
 }
 
+TEST_CASE("TASK-031 structurally validates and types known non-book messages",
+          "[TASK-031][decoder][boundary]") {
+  struct Case {
+    std::uint8_t source_type;
+    std::size_t expected_length;
+  };
+  constexpr std::array cases{
+      Case{'Y', 20}, Case{'L', 26}, Case{'V', 35}, Case{'W', 12}, Case{'K', 28},
+      Case{'I', 50}, Case{'N', 20}, Case{'J', 35}, Case{'h', 21},
+  };
+  const itchlab::ItchDecoder decoder;
+
+  for (const auto& test_case : cases) {
+    std::vector<std::byte> payload(test_case.expected_length, std::byte{0});
+    payload.front() = static_cast<std::byte>(test_case.source_type);
+    write_big_endian(payload, 1, 2, 7);
+    write_big_endian(payload, 3, 2, 11);
+    write_big_endian(payload, 5, 6, itchlab::kNanosecondsPerDay - 1);
+
+    const auto result = decoder.decode(payload);
+    REQUIRE(result.valid());
+    const auto message = std::get<itchlab::IgnoredMessage>(*result.message);
+    REQUIRE(message.header == itchlab::MessageHeader{7, 11, itchlab::kNanosecondsPerDay - 1});
+    REQUIRE(message.source_type == static_cast<char>(test_case.source_type));
+
+    write_big_endian(payload, 5, 6, itchlab::kNanosecondsPerDay);
+    const auto invalid = decoder.decode(payload);
+    REQUIRE(invalid.error->code == itchlab::ErrorCode::timestamp);
+    REQUIRE(invalid.error->source_type == test_case.source_type);
+  }
+}
+
 TEST_CASE("UT-DEC-002 rejects every wrong known length before field decoding",
           "[TASK-009][UT-DEC-002][decoder][security]") {
   struct Case {
@@ -432,9 +464,10 @@ TEST_CASE("UT-DEC-002 rejects every wrong known length before field decoding",
     std::size_t expected_length;
   };
   constexpr std::array cases{
-      Case{'S', 12}, Case{'R', 39}, Case{'H', 25}, Case{'A', 36}, Case{'F', 40},
-      Case{'E', 31}, Case{'C', 36}, Case{'X', 23}, Case{'D', 19}, Case{'U', 35},
-      Case{'P', 44}, Case{'Q', 40}, Case{'B', 19},
+      Case{'S', 12}, Case{'R', 39}, Case{'H', 25}, Case{'A', 36}, Case{'F', 40}, Case{'E', 31},
+      Case{'C', 36}, Case{'X', 23}, Case{'D', 19}, Case{'U', 35}, Case{'P', 44}, Case{'Q', 40},
+      Case{'B', 19}, Case{'Y', 20}, Case{'L', 26}, Case{'V', 35}, Case{'W', 12}, Case{'K', 28},
+      Case{'I', 50}, Case{'N', 20}, Case{'J', 35}, Case{'h', 21},
   };
   const itchlab::ItchDecoder decoder;
 

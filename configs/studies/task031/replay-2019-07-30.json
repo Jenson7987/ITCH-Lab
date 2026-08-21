@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "input": {
+    "path": "data/raw/07302019.NASDAQ_ITCH50.gz",
+    "sha256": null,
+    "trading_date": "2019-07-30",
+    "exchange_timezone": "America/New_York"
+  },
+  "selection": {
+    "symbols": ["AAPL", "MSFT", "AMZN"],
+    "session_start_ns": 34200000000000,
+    "session_end_ns": 57600000000000,
+    "require_trading_state": true
+  },
+  "output": {
+    "depth": 10,
+    "emit_unchanged_trade_snapshots": true
+  },
+  "validation": {
+    "mode": "strict",
+    "max_skipped_messages": 0,
+    "invariant_interval": 1
+  }
+}

@@ -102,6 +102,8 @@ Responsibilities:
 - Verify exact length for every known type before accessing fields.
 - Decode big-endian integers and six-byte timestamps explicitly.
 - Return a closed variant of typed domain messages.
+- Return a typed, payload-free `IgnoredMessage` for spec-known Y/L/V/W/K/I/N/J/h messages that are
+  structurally valid but have no visible-book MVP route; arbitrary unknown types remain errors.
 - Return stable DecodeError values without throwing for ordinary bad input.
 
 ### InstrumentDirectory
@@ -130,6 +132,7 @@ Responsibilities:
 
 - Apply global/session messages.
 - Route selected instrument messages in source order.
+- Count structurally validated ignored types without changing session/book state or emitting output.
 - Invoke strict/permissive policy.
 - Coordinate books, sinks, progress and cancellation.
 

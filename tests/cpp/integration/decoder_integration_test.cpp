@@ -45,6 +45,11 @@ nlohmann::json header_fields(const itchlab::MessageHeader& header) {
 nlohmann::json message_fields(const itchlab::ItchMessage& message) {
   return std::visit(
       Overloaded{
+          [](const itchlab::IgnoredMessage& ignored) {
+            auto fields = header_fields(ignored.header);
+            fields["source_type"] = alpha_char(ignored.source_type);
+            return fields;
+          },
           [](const itchlab::SystemEvent& event) {
             auto fields = header_fields(event.header);
             fields["event_code"] = alpha_char(event.event_code);

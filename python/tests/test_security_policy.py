@@ -154,7 +154,7 @@ def test_task_028_tracked_data_is_synthetic_and_bulk_outputs_are_absent() -> Non
 def test_task_028_public_examples_contain_no_repository_or_home_path() -> None:
     private_values = {str(REPOSITORY_ROOT), str(Path.home())}
     candidates = [
-        *sorted((REPOSITORY_ROOT / "configs").glob("*.json")),
+        *sorted((REPOSITORY_ROOT / "configs").rglob("*.json")),
         *sorted((REPOSITORY_ROOT / "tests" / "golden").rglob("*.json")),
     ]
     for path in candidates:

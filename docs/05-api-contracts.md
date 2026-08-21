@@ -112,6 +112,11 @@ the book and are emitted with `in_session=false`; selected events at or after `s
 not applied or emitted. Global S events continue to be retained after that boundary so the
 completed manifest has complete session metadata.
 
+Spec-known ITCH 5.0 types Y/L/V/W/K/I/N/J/h are accepted only at their exact specified lengths with
+a valid common header and timestamp. Replay counts them by source type but deliberately performs no
+book/session mutation and emits no event or snapshot. A different type still returns
+`ERR_UNKNOWN_MESSAGE`; this is not a permissive-mode exception.
+
 The production command writes a staged immutable replay directory beneath
 `<output-root>/replay/`. Snapshot timestamps are limited to the configured half-open session.
 Every changed in-session selected trading state emits a snapshot. Ordinary top-N changes and
@@ -627,7 +632,7 @@ Contract:
 
 ```cpp
 using ItchMessage = std::variant<
-  SystemEvent, StockDirectory, TradingAction,
+  IgnoredMessage, SystemEvent, StockDirectory, TradingAction,
   AddOrder, AddOrderWithAttribution,
   OrderExecuted, OrderExecutedWithPrice,
   OrderCancel, OrderDelete, OrderReplace,
@@ -643,6 +648,8 @@ Contract:
 
 - Decoder has no mutable global state.
 - Exact type length is checked before field access.
+- Y/L/V/W/K/I/N/J/h decode to a payload-free `IgnoredMessage` after exact length, common-header and
+  timestamp validation because they have no visible-book MVP route.
 - Unknown messages return ERR_UNKNOWN_MESSAGE with observed type/length.
 - `OrderExecutedWithPrice.execution_price4` is the execution price from C; it does not replace the
   display price established by the order's A/F message.

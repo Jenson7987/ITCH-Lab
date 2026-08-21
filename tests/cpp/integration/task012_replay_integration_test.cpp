@@ -129,6 +129,15 @@ std::filesystem::path source_with_suffix(const std::filesystem::path& destinatio
   return destination;
 }
 
+std::string framed_reg_sho_message_for_selected_locate() {
+  constexpr std::size_t payload_length = 20;
+  std::string frame(payload_length + 2, '\0');
+  frame[1] = static_cast<char>(payload_length);
+  frame[2] = 'Y';
+  frame[4] = '\1';
+  return frame;
+}
+
 class StepClock final : public itchlab::ProgressClock {
 public:
   [[nodiscard]] TimePoint now() const noexcept override {
@@ -191,6 +200,35 @@ private:
 };
 
 } // namespace
+
+TEST_CASE("TASK-031 strict replay ignores a structurally valid non-book message",
+          "[TASK-031][strict][integration][decoder]") {
+  TemporaryDirectory temporary;
+  const auto source = source_with_suffix(temporary.path() / "known-ignored.itch",
+                                         framed_reg_sho_message_for_selected_locate());
+  const auto config = write_replay_config(temporary.path() / "replay.json", source,
+                                          itchlab::ValidationMode::strict, 0);
+  const auto output_root = temporary.path() / "output";
+
+  const auto result = run_command({"replay", "--config", config.string(), "--output-root",
+                                   output_root.string(), "--format", "json"});
+  REQUIRE(result.exit_code == 0);
+  REQUIRE(result.error.empty());
+  const auto envelope = Json::parse(result.output);
+  const auto& summary = envelope.at("summary");
+  REQUIRE(envelope.at("status") == "completed");
+  REQUIRE(summary.at("messages_processed") == 10);
+  REQUIRE(summary.at("decoded_messages") == 10);
+  REQUIRE(summary.at("selected_instrument_messages") == 3);
+  REQUIRE(summary.at("selected_events") == 2);
+  REQUIRE(summary.at("snapshots_written") == 2);
+  REQUIRE(summary.at("errors_observed") == 0);
+
+  const auto manifest =
+      Json::parse(read_file(replay_directory(output_root, envelope) / "replay-manifest.json"));
+  REQUIRE(manifest.at("counts").at("all_by_type").at("Y") == 1);
+  REQUIRE(manifest.at("counts").at("selected_by_type").at("Y") == 1);
+}
 
 TEST_CASE("E2E-003 TASK-012 permissive replay completes degraded for a safely framed unknown type",
           "[TASK-012][E2E-003][permissive][degraded]") {

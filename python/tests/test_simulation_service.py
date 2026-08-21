@@ -137,12 +137,18 @@ def test_e2e_001_simulation_grid_is_immutable_valid_and_reportable(
     html = (report.output_directory / "report.html").read_text(encoding="utf-8")
     assert "Conservative simulation comparison" in markdown
     assert "Test latency and cost sensitivity" in markdown
+    assert "Unfavourable findings and interpretation" in markdown
+    assert "strategy-scenario results had negative marked P&amp;L" in markdown
+    assert "signal-adjusted strategy had lower marked P&amp;L" in markdown
     assert "Assumptions, anomalies and limitations" in markdown
     assert "Maximum drawdown" in markdown
     assert "Submission latency" in markdown
     assert "Maker cost" in markdown
     assert "python -m itchlab_research simulate --config" in markdown
+    assert "No execution simulation" not in markdown
     assert "<caption>Metrics by test scenario and strategy</caption>" in html
+    assert "<h2>Unfavourable findings and interpretation</h2>" in html
+    assert "No execution simulation" not in html
     assert "<strong>Queue/prediction diagnostics:</strong>" in html
     assert html.endswith("</main></body></html>\n")
     _assert_accessible_html(report.output_directory / "report.html")

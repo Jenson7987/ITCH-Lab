@@ -35,6 +35,16 @@ struct MessageHeader {
   friend bool operator==(const MessageHeader&, const MessageHeader&) = default;
 };
 
+// The wire format is known and structurally validated, but the message has no route in the
+// selected visible-book MVP. Keeping it typed distinguishes intentional omission from an
+// arbitrary unknown message without exposing unvalidated payload bytes.
+struct IgnoredMessage {
+  MessageHeader header;
+  char source_type{};
+
+  friend bool operator==(const IgnoredMessage&, const IgnoredMessage&) = default;
+};
+
 struct SystemEvent {
   MessageHeader header;
   char event_code{};
@@ -172,8 +182,8 @@ struct BrokenTrade {
 };
 
 using ItchMessage =
-    std::variant<SystemEvent, StockDirectory, TradingAction, AddOrder, AddOrderWithAttribution,
-                 OrderExecuted, OrderExecutedWithPrice, OrderCancel, OrderDelete, OrderReplace,
-                 Trade, CrossTrade, BrokenTrade>;
+    std::variant<IgnoredMessage, SystemEvent, StockDirectory, TradingAction, AddOrder,
+                 AddOrderWithAttribution, OrderExecuted, OrderExecutedWithPrice, OrderCancel,
+                 OrderDelete, OrderReplace, Trade, CrossTrade, BrokenTrade>;
 
 } // namespace itchlab

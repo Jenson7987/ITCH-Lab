@@ -12,6 +12,17 @@ CORPUS_ROOT = REPOSITORY_ROOT / "tests" / "fuzz" / "corpus"
 MIXED_FIXTURE = REPOSITORY_ROOT / "tests" / "fixtures" / "synthetic_mixed.itch"
 MINIMAL_FIXTURE = REPOSITORY_ROOT / "tests" / "fixtures" / "synthetic_minimal.itch"
 SUPPORTED_TYPES = b"SRHAFECXDUPQB"
+IGNORED_LENGTHS = {
+    ord("Y"): 20,
+    ord("L"): 26,
+    ord("V"): 35,
+    ord("W"): 12,
+    ord("K"): 28,
+    ord("I"): 50,
+    ord("N"): 20,
+    ord("J"): 35,
+    ord("h"): 21,
+}
 
 
 def _frames(content: bytes) -> tuple[bytes, ...]:
@@ -56,6 +67,11 @@ def _expected_files() -> dict[Path, bytes]:
         expected[CORPUS_ROOT / "decoder" / f"type-{chr(source_type)}.bin"] = (
             first_by_type[source_type]
         )
+    for source_type, length in IGNORED_LENGTHS.items():
+        payload = bytearray(length)
+        payload[0] = source_type
+        name = "lower-h" if source_type == ord("h") else chr(source_type)
+        expected[CORPUS_ROOT / "decoder" / f"type-{name}.bin"] = bytes(payload)
     invalid_timestamp = bytearray(first_by_type[ord("S")])
     invalid_timestamp[5:11] = b"\xff" * 6
     expected[CORPUS_ROOT / "decoder" / "invalid-timestamp.bin"] = bytes(

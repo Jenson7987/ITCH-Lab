@@ -282,6 +282,9 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
                      "Selected message symbol disagrees with Stock Directory.", frame.message_index,
                      frame.source_offset, source_type);
     }
+    if (std::holds_alternative<IgnoredMessage>(*decoded.message)) {
+      continue;
+    }
     if (header.timestamp_ns >= config.selection.session_end_ns) {
       continue;
     }

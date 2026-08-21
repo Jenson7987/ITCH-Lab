@@ -687,7 +687,7 @@ def _markdown_report(evidence: ReportEvidence) -> str:
         "## Limitations and non-claims",
         "",
         "- No execution simulation, fill model, latency/cost sensitivity, inventory or P&L is "
-        "included in TASK-021.",
+        "included in this predictive report.",
         "- Nasdaq visible order-book data do not reveal hidden liquidity, off-venue activity, "
         "market impact or counterfactual participant behaviour.",
         "- Predictive classification metrics do not establish economic value or executable "
@@ -966,7 +966,8 @@ def _html_report(evidence: ReportEvidence) -> str:
         "Limitations and non-claims</h2>",
         "<ul><li>No execution simulation, fill model, latency/cost sensitivity, inventory or "
         "P&amp;L "
-        "is included in TASK-021.</li><li>Nasdaq visible order-book data do not reveal hidden "
+        "is included in this predictive report.</li><li>Nasdaq visible order-book data do not "
+        "reveal hidden "
         "liquidity, off-venue activity, market impact or counterfactual participant behaviour.</li>"
         "<li>Predictive classification metrics do not establish economic value or executable "
         "performance.</li><li>Results are historical and local; there is no profitability "
@@ -1275,6 +1276,51 @@ _SIMULATION_HEADERS = (
 )
 
 
+def _simulation_interpretation(evidence: SimulationReportEvidence) -> list[str]:
+    rows = cast(list[dict[str, Any]], evidence.simulation.metrics["scenarios"])
+    negative_pnl = 0
+    zero_fills = 0
+    unfavourable_markout = 0
+    paired: dict[str, dict[str, int]] = {}
+    for item in rows:
+        metrics = cast(dict[str, Any], item["metrics"])
+        marked_pnl = cast(int, metrics["marked_pnl_microusd"])
+        negative_pnl += marked_pnl < 0
+        zero_fills += cast(int, metrics["passive_fill_count"]) == 0
+        unfavourable_markout += (
+            cast(float, metrics["adverse_selection_coverage"]) > 0
+            and cast(int, metrics["adverse_selection_100ms_microusd"]) > 0
+        )
+        paired.setdefault(cast(str, item["scenario_id"]), {})[cast(str, item["strategy_name"])] = (
+            marked_pnl
+        )
+
+    baseline = "inventory_aware_avellaneda_stoikov"
+    signal = "signal_adjusted_avellaneda_stoikov"
+    comparable = [values for values in paired.values() if baseline in values and signal in values]
+    underperformed = sum(values[signal] < values[baseline] for values in comparable)
+    outperformed = sum(values[signal] > values[baseline] for values in comparable)
+    tied = len(comparable) - underperformed - outperformed
+    comparison = (
+        "No paired signal-adjusted versus inventory-aware baseline comparison was available."
+        if not comparable
+        else (
+            "The signal-adjusted strategy had lower marked P&L than the inventory-aware baseline "
+            f"in {underperformed} of {len(comparable)} paired scenarios, higher marked P&L in "
+            f"{outperformed}, and equal marked P&L in {tied}."
+        )
+    )
+    return [
+        f"{negative_pnl} of {len(rows)} strategy-scenario results had negative marked P&L; "
+        f"{zero_fills} had no passive fills.",
+        f"{unfavourable_markout} of {len(rows)} results had both measured markout coverage and "
+        "positive (unfavourable) 100 ms adverse selection.",
+        comparison,
+        "These test outcomes are reported without filtering; they are historical observations "
+        "under the stated conservative assumptions, not evidence of profitability.",
+    ]
+
+
 def _simulation_markdown(evidence: SimulationReportEvidence) -> str:
     manifest = evidence.simulation.manifest
     selection = cast(dict[str, Any], manifest["selection"])
@@ -1309,6 +1355,10 @@ def _simulation_markdown(evidence: SimulationReportEvidence) -> str:
         "Turnover is absolute gross passive-plus-liquidation notional. Maximum drawdown uses the "
         "chronologically concatenated marked-equity path. Positive 100 ms adverse selection is "
         "unfavourable to the passive fill; coverage reports fills with an available future mark.",
+        "",
+        "## Unfavourable findings and interpretation",
+        "",
+        *[f"- {_markdown_text(item)}" for item in _simulation_interpretation(evidence)],
         "",
         "## Assumptions, anomalies and limitations",
         "",
@@ -1414,6 +1464,9 @@ def _simulation_html(evidence: SimulationReportEvidence) -> str:
         + "<p>Turnover is absolute gross passive-plus-liquidation notional. Maximum drawdown uses "
         "the chronologically concatenated marked-equity path. Positive 100 ms adverse selection "
         "is unfavourable to the passive fill; coverage reports available future marks.</p>"
+        "<h2>Unfavourable findings and interpretation</h2><ul>"
+        + "".join(f"<li>{html.escape(item)}</li>" for item in _simulation_interpretation(evidence))
+        + "</ul>"
         "<h2>Assumptions, anomalies and limitations</h2><ul>"
         + list_items
         + "</ul><h2>Reproduction</h2><pre><code>"
@@ -1474,6 +1527,12 @@ def render_simulation_report_bundle(evidence: SimulationReportEvidence) -> dict[
                 "profitability.",
                 "a live-trading system, trading advice or evidence of profitability; execution "
                 "results follow in a separate conservative section.",
+            )
+            predictive_html = predictive_html.replace(
+                "No execution simulation, fill model, latency/cost sensitivity, inventory or "
+                "P&amp;L is included in this predictive report.",
+                "Predictive metrics remain descriptive and are not evidence of executable "
+                "profitability.",
             )
             predictive_html = predictive_html.replace("</main></body></html>\n", "")
             simulation_body = html_value.split("<main>", 1)[1]

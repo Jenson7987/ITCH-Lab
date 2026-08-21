@@ -77,9 +77,11 @@ Classification legend used throughout the documentation:
 The repository structure is being implemented incrementally according to `TASKS.md`. The current
 foundation provides buildable version/help CLIs, fixed C++ domain/error types, strict validated
 configuration contracts with canonical cross-language hashes, and bounded streaming of verified
-`itch-length-v1` plain/gzip sources. It decodes S/R/H/A/F/E/C/X/D/U/P/Q/B with exact length,
-big-endian and timestamp validation, applies the full visible lifecycle to deterministic per-symbol
-level-3 books and exposes bounded inspect plus multi-symbol replay. Replay has
+`itch-length-v1` plain/gzip sources. It domain-decodes S/R/H/A/F/E/C/X/D/U/P/Q/B and structurally
+validates the spec-known Y/L/V/W/K/I/N/J/h types with exact length, big-endian header and timestamp
+checks. The latter are counted and intentionally ignored by the visible-book MVP; arbitrary unknown
+types remain errors. Replay applies the full visible lifecycle to deterministic per-symbol level-3
+books and exposes bounded inspect plus multi-symbol replay. Replay has
 stage-aware strict/permissive error policy, stable error counts, degraded disclosure, rate-limited
 human or JSONL progress and graceful SIGINT exit 130 with retained partial artefacts. The C++
 writers produce deterministic event-v1 and snapshot-v1 headers, dictionaries and records. Replay

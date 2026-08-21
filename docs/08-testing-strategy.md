@@ -37,6 +37,7 @@ For each MVP message type S, R, H, A, F, E, C, X, D, U, P, Q and B:
 - Minimum and maximum integer values.
 - Six-byte timestamp and big-endian boundary cases.
 - Space-padded symbol/attribution handling.
+- Exact length and timestamp validation for spec-known ignored Y/L/V/W/K/I/N/J/h messages.
 - Unknown type behaviour in strict/permissive policy.
 
 Implemented decoder coverage:
@@ -56,6 +57,7 @@ Implemented decoder coverage:
 | P | 44 | Trade | UT-DEC-001/002, TASK-009 mixed-stream golden |
 | Q | 40 | CrossTrade | UT-DEC-001/002, TASK-009 mixed-stream golden |
 | B | 19 | BrokenTrade | UT-DEC-001/002, TASK-009 mixed-stream golden |
+| Y/L/V/W/K/I/N/J/h | 20/26/35/12/28/50/20/35/21 | IgnoredMessage | TASK-031 decoder boundary and strict replay integration |
 
 ### C++ order book
 
@@ -328,8 +330,9 @@ Defined in 07-security-and-privacy.md and implemented through:
 
 TASK-028 maintains separate framing and typed-decoder corpora under `tests/fuzz/corpus/`. The
 generator derives valid type seeds from the independent mixed fixture and fixes empty, truncated,
-maximum, oversized, unknown-type, wrong-length and invalid-timestamp boundaries. Verify the corpus
-and run the configured 10,000-mutation budget with:
+maximum, oversized, unknown-type, wrong-length and invalid-timestamp boundaries. It also synthesises
+valid common-header seeds for the TASK-031 spec-known ignored types. Verify the corpus and run the
+configured 10,000-mutation budget with:
 
     python tests/fuzz/generate_corpus.py --check
     cmake --preset fuzz

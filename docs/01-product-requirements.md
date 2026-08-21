@@ -363,6 +363,7 @@ Acceptance criteria:
 | Compression | gzip or uncompressed framing; unsupported formats fail explicitly | ERR_UNSUPPORTED_COMPRESSION |
 | Message framing | Outer frame is 1–512 bytes; boundary EOF is clean, while zero, oversized and partial frames fail before decoding | ERR_FRAMING or ERR_TRUNCATED_MESSAGE |
 | Message length | A safely framed known type must equal its exact specified length before field access | ERR_MESSAGE_LENGTH |
+| Known non-book message | Y/L/V/W/K/I/N/J/h must pass exact length, common-header and timestamp validation; they are counted but do not mutate the visible-book MVP | ERR_MESSAGE_LENGTH or ERR_TIMESTAMP |
 | Unknown message | Strict mode fails; permissive mode may skip using the outer length frame and count it | ERR_UNKNOWN_MESSAGE |
 | Symbol | Must exactly match a symbol announced by Stock Directory after trimming right padding | ERR_UNKNOWN_SYMBOL |
 | Trading date | ISO 8601 date supplied by config; filename inference may suggest but never silently confirm it | ERR_TRADING_DATE |

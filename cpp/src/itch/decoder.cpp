@@ -27,6 +27,15 @@ constexpr std::size_t kOrderReplaceLength = 35;
 constexpr std::size_t kTradeLength = 44;
 constexpr std::size_t kCrossTradeLength = 40;
 constexpr std::size_t kBrokenTradeLength = 19;
+constexpr std::size_t kRegShoRestrictionLength = 20;
+constexpr std::size_t kMarketParticipantPositionLength = 26;
+constexpr std::size_t kMwcbDeclineLevelLength = 35;
+constexpr std::size_t kMwcbStatusLength = 12;
+constexpr std::size_t kIpoQuotingPeriodLength = 28;
+constexpr std::size_t kNoiiLength = 50;
+constexpr std::size_t kRetailPriceImprovementLength = 20;
+constexpr std::size_t kLuldAuctionCollarLength = 35;
+constexpr std::size_t kOperationalHaltLength = 21;
 
 [[nodiscard]] std::optional<std::size_t> expected_length(const std::uint8_t source_type) noexcept {
   switch (source_type) {
@@ -56,6 +65,24 @@ constexpr std::size_t kBrokenTradeLength = 19;
     return kCrossTradeLength;
   case 'B':
     return kBrokenTradeLength;
+  case 'Y':
+    return kRegShoRestrictionLength;
+  case 'L':
+    return kMarketParticipantPositionLength;
+  case 'V':
+    return kMwcbDeclineLevelLength;
+  case 'W':
+    return kMwcbStatusLength;
+  case 'K':
+    return kIpoQuotingPeriodLength;
+  case 'I':
+    return kNoiiLength;
+  case 'N':
+    return kRetailPriceImprovementLength;
+  case 'J':
+    return kLuldAuctionCollarLength;
+  case 'h':
+    return kOperationalHaltLength;
   default:
     return std::nullopt;
   }
@@ -371,6 +398,16 @@ DecodeResult ItchDecoder::decode(const std::span<const std::byte> payload) const
     return decode_cross_trade(payload, *header);
   case 'B':
     return decode_broken_trade(payload, *header);
+  case 'Y':
+  case 'L':
+  case 'V':
+  case 'W':
+  case 'K':
+  case 'I':
+  case 'N':
+  case 'J':
+  case 'h':
+    return DecodeResult::success(IgnoredMessage{*header, static_cast<char>(source_type)});
   default:
     return invalid_internal_field(source_type, payload.size());
   }
