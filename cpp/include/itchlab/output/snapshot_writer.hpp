@@ -44,6 +44,7 @@ public:
   SnapshotWriter& operator=(SnapshotWriter&&) = delete;
   ~SnapshotWriter() override;
 
+  [[nodiscard]] bool requires_intermediate_book_digest() const noexcept override { return false; }
   [[nodiscard]] std::optional<DiagnosticWriteError>
   write_snapshot(const DiagnosticSnapshot& snapshot) override;
   [[nodiscard]] std::optional<DiagnosticWriteError> finalise(const EventFileMetadata& metadata);

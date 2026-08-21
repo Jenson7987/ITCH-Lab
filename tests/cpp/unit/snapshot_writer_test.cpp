@@ -147,13 +147,14 @@ std::string read_file(const std::filesystem::path& path) {
 } // namespace
 
 TEST_CASE("UT-OUT-002 TASK-014 snapshot writer matches the independent v1 golden byte for byte",
-          "[TASK-014][UT-OUT-002][golden][contract]") {
+          "[TASK-014][TASK-031][UT-OUT-002][golden][contract]") {
   static_assert(itchlab::kSnapshotFixedRecordSize == 48);
   static_assert(itchlab::kSnapshotDepthEntrySize == 28);
   REQUIRE(itchlab::snapshot_record_size(2) == 104);
 
   auto fixture = make_writer();
   REQUIRE(fixture.opened.valid());
+  REQUIRE_FALSE(fixture.opened.writer->requires_intermediate_book_digest());
   REQUIRE_FALSE(fixture.opened.writer->write_snapshot(first_snapshot()).has_value());
   REQUIRE_FALSE(fixture.opened.writer->write_snapshot(second_snapshot()).has_value());
   REQUIRE_FALSE(fixture.opened.writer->finalise(metadata()).has_value());

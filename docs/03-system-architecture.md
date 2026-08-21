@@ -168,6 +168,11 @@ Responsibilities:
 - Reject unsupported schema/config changes mid-stream.
 - Publish only after validation.
 
+Diagnostic sinks request canonical per-event book digests. The production event-v1 and snapshot-v1
+sinks opt out because neither schema serialises that field; this avoids hashing the complete live
+book after every selected event. The replay coordinator still performs the canonical final digest
+for every selected instrument, and diagnostic output retains its per-event digest evidence.
+
 ### ManifestBuilder and ArtefactValidator
 
 Responsibilities:

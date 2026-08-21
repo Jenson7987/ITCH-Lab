@@ -48,6 +48,13 @@ itchlab::ReplayConfig session_config(const bool require_trading_state = true) {
 
 class CollectingDiagnosticSink final : public itchlab::DiagnosticSink {
 public:
+  explicit CollectingDiagnosticSink(const bool require_intermediate_digest = true)
+      : require_intermediate_digest_{require_intermediate_digest} {}
+
+  [[nodiscard]] bool requires_intermediate_book_digest() const noexcept override {
+    return require_intermediate_digest_;
+  }
+
   std::optional<itchlab::DiagnosticWriteError>
   write_event(const itchlab::DiagnosticEvent& event) override {
     events.push_back(event);
@@ -62,6 +69,9 @@ public:
 
   std::vector<itchlab::DiagnosticEvent> events;
   std::vector<itchlab::DiagnosticSnapshot> snapshots;
+
+private:
+  bool require_intermediate_digest_;
 };
 
 struct ReplayTrace {
@@ -69,8 +79,13 @@ struct ReplayTrace {
   CollectingDiagnosticSink diagnostics;
 };
 
-ReplayTrace replay(itchlab::ByteSource& source, const itchlab::ReplayConfig& config) {
-  CollectingDiagnosticSink diagnostics;
+ReplayTrace replay(itchlab::ByteSource& source, const itchlab::ReplayConfig& config,
+                   const bool require_intermediate_digest = true) {
+  CollectingDiagnosticSink diagnostics{require_intermediate_digest};
+  const auto& event_sink = static_cast<const itchlab::EventSink&>(diagnostics);
+  const auto& snapshot_sink = static_cast<const itchlab::SnapshotSink&>(diagnostics);
+  REQUIRE(event_sink.requires_intermediate_book_digest() == require_intermediate_digest);
+  REQUIRE(snapshot_sink.requires_intermediate_book_digest() == require_intermediate_digest);
   const itchlab::ReplayCoordinator coordinator;
   const auto result = coordinator.run(source, config, diagnostics);
   REQUIRE(result.valid());
@@ -213,6 +228,35 @@ TEST_CASE("TASK-011 trading-state gating suppresses only ordinary halt-time snap
   REQUIRE(std::ranges::any_of(trace.diagnostics.snapshots, [](const auto& snapshot) {
     return snapshot.message_index == 17 && snapshot.event_kind == "trade";
   }));
+}
+
+TEST_CASE("TASK-031 sink capability skips only intermediate book digests",
+          "[TASK-031][integration][replay][digest]") {
+  auto diagnostic_source =
+      itchlab::open_file_source(repository_path("tests/fixtures/synthetic_session.itch"));
+  auto production_style_source =
+      itchlab::open_file_source(repository_path("tests/fixtures/synthetic_session.itch"));
+  REQUIRE(diagnostic_source.valid());
+  REQUIRE(production_style_source.valid());
+
+  const auto config = session_config();
+  const auto diagnostic_trace = replay(*diagnostic_source.source, config);
+  const auto production_style_trace = replay(*production_style_source.source, config, false);
+
+  const auto empty_digest = itchlab::ContentHash{};
+  REQUIRE(std::ranges::all_of(production_style_trace.diagnostics.events, [&](const auto& event) {
+    return event.book_digest == empty_digest;
+  }));
+  REQUIRE(std::ranges::all_of(production_style_trace.diagnostics.snapshots,
+                              [&](const auto& snapshot) {
+                                return snapshot.book_digest == empty_digest;
+                              }));
+  for (const auto& instrument : diagnostic_trace.summary.instruments) {
+    const auto& production_instrument =
+        instrument_summary(production_style_trace, instrument.instrument.symbol);
+    REQUIRE(itchlab::content_hash_to_hex(production_instrument.final_book_digest) ==
+            itchlab::content_hash_to_hex(instrument.final_book_digest));
+  }
 }
 
 TEST_CASE("TASK-011 replay routes every supported selected-instrument message type",

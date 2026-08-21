@@ -262,13 +262,14 @@ std::uint16_t little_u16(const std::vector<std::byte>& bytes, const std::size_t 
 } // namespace
 
 TEST_CASE("UT-OUT-001 TASK-013 event writer matches the independent v1 golden byte for byte",
-          "[TASK-013][UT-OUT-001][golden][contract]") {
+          "[TASK-013][TASK-031][UT-OUT-001][golden][contract]") {
   static_assert(itchlab::kInterchangeHeaderSize == 104);
   static_assert(itchlab::kInterchangeSymbolEntrySize == 16);
   static_assert(itchlab::kEventRecordSize == 72);
 
   auto fixture = make_writer(2);
   REQUIRE(fixture.opened.valid());
+  REQUIRE_FALSE(fixture.opened.writer->requires_intermediate_book_digest());
   for (const auto& item : golden_events()) {
     REQUIRE_FALSE(fixture.opened.writer->write_event(item).has_value());
   }

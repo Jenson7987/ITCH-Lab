@@ -62,6 +62,9 @@ struct DiagnosticWriteError {
 
 class EventSink {
 public:
+  // Diagnostic sinks retain per-event canonical state evidence. Production event-v1 does not
+  // serialise that field and may opt out to avoid an otherwise quadratic full-book hash cost.
+  [[nodiscard]] virtual bool requires_intermediate_book_digest() const noexcept { return true; }
   [[nodiscard]] virtual std::optional<DiagnosticWriteError>
   write_event(const DiagnosticEvent& event) = 0;
   virtual ~EventSink() = default;
@@ -69,6 +72,7 @@ public:
 
 class SnapshotSink {
 public:
+  [[nodiscard]] virtual bool requires_intermediate_book_digest() const noexcept { return true; }
   [[nodiscard]] virtual std::optional<DiagnosticWriteError>
   write_snapshot(const DiagnosticSnapshot& snapshot) = 0;
   virtual ~SnapshotSink() = default;

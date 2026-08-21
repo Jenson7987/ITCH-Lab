@@ -130,6 +130,8 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
   std::uint64_t skipped_decode_messages{};
   FramedMessageReader reader{source};
   const ItchDecoder decoder;
+  const auto intermediate_digest_required = events.requires_intermediate_book_digest() ||
+                                            snapshots.requires_intermediate_book_digest();
   InstrumentDirectory directory{config.selection.symbols};
   SessionState session;
   std::unordered_map<StockLocate, std::unique_ptr<OrderBook>> books;
@@ -335,7 +337,7 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
                        frame.source_offset, source_type);
       }
       const auto reason = std::string{trimmed_alpha(action->reason)};
-      const auto digest = book.digest();
+      const auto digest = intermediate_digest_required ? book.digest() : ContentHash{};
       const DiagnosticEvent event{frame.message_index,
                                   frame.source_offset,
                                   header.timestamp_ns,
@@ -501,7 +503,7 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
       }
 
       const auto after = book.top_levels(config.output.depth);
-      const auto digest = book.digest();
+      const auto digest = intermediate_digest_required ? book.digest() : ContentHash{};
       if (!event_quantity && delta.kind == BookMutationKind::delete_order) {
         event_quantity = delta.previous_remaining;
       }
@@ -581,7 +583,7 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
         return failure(ErrorCode::internal, "Selected trading state disappeared.",
                        frame.message_index, frame.source_offset, source_type);
       }
-      const auto digest = book.digest();
+      const auto digest = intermediate_digest_required ? book.digest() : ContentHash{};
       const DiagnosticEvent event{frame.message_index,
                                   frame.source_offset,
                                   header.timestamp_ns,
@@ -651,7 +653,7 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
       return failure(ErrorCode::internal, "Selected trading state disappeared.",
                      frame.message_index, frame.source_offset, source_type);
     }
-    const auto digest = book.digest();
+    const auto digest = intermediate_digest_required ? book.digest() : ContentHash{};
     const DiagnosticEvent event{frame.message_index,
                                 frame.source_offset,
                                 header.timestamp_ns,

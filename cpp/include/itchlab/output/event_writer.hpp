@@ -77,6 +77,7 @@ public:
   EventWriter& operator=(EventWriter&&) = delete;
   ~EventWriter() override;
 
+  [[nodiscard]] bool requires_intermediate_book_digest() const noexcept override { return false; }
   [[nodiscard]] std::optional<DiagnosticWriteError>
   write_event(const DiagnosticEvent& event) override;
 

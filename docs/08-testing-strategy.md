@@ -87,6 +87,10 @@ unchanged digest and valid post-rejection invariants.
 - TASK-011 integration tests assert no unrequested or out-of-session snapshot, mandatory halt/resume
   snapshots, optional halt-time snapshot gating, requested-order identities, full global metadata
   and exact all/selected/category count reconciliation.
+- TASK-031 contract assertions keep diagnostic sinks opted into per-event canonical book digests and
+  production event-v1/snapshot-v1 writers opted out. Existing replay digest comparisons and
+  independent binary goldens prove that diagnostic evidence and persisted schema bytes are
+  unchanged.
 - The `synthetic_mixed` integration test routes every supported selected-instrument source type
   through the coordinator, while the CLI test proves byte-identical plain/gzip diagnostics.
 

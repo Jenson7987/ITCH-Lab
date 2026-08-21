@@ -89,6 +89,14 @@ fatal; every book receives a mandatory full final invariant check; completed chi
 streamed deep validation. This operational cadence change affects no emitted record, feature,
 label, model, selection rule or scenario assumption.
 
+A second set of unpublished attempts at that cadence was cancelled cleanly after profiling showed
+that production replay also computed the canonical full-book digest after every selected event.
+Neither event-v1 nor snapshot-v1 serialises that intermediate diagnostic field. The production
+sinks now explicitly opt out of it, while diagnostic sinks retain the existing per-event digest and
+every instrument still receives the same mandatory canonical final digest recorded in the replay
+manifest. Existing diagnostic comparisons and independent event/snapshot binary goldens cover this
+compatibility boundary; no schema, scientific definition or persisted record changed.
+
 ## Integrity and publication rules
 
 The two initially missing source hashes were filled into the frozen replay configs immediately

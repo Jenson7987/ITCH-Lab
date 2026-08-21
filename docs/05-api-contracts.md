@@ -710,6 +710,10 @@ public:
 Contract:
 
 - Calls sinks in source order.
+- EventSink and SnapshotSink default to requiring the intermediate canonical book digest. A sink
+  may opt out only when it does not persist or otherwise observe that field. If either sink requires
+  it, both receive the digest; production event-v1 and snapshot-v1 writers opt out because their
+  fixed schemas omit it.
 - Checks cancellation at complete framed-message boundaries.
 - Reports observational progress without contributing wall-clock state to deterministic output.
 - Does not publish final artefacts; publication belongs to the command coordinator.
