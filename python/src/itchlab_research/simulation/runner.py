@@ -47,17 +47,6 @@ def _snapshot_by_key(day: SimulationDayInput) -> dict[tuple[int, int], dict[str,
     return result
 
 
-def _active_order(state: OrderStateMachine, symbol_id: int, side: int) -> SimulatedOrder | None:
-    matches = tuple(
-        order
-        for order in state.orders
-        if order.symbol_id == symbol_id and order.side == side and not order.terminal
-    )
-    if len(matches) > 1:
-        raise _fail(ErrorCode.INVARIANT, "More than one order occupies a symbol-side slot.")
-    return None if not matches else matches[0]
-
-
 def _prediction_index(decision: object) -> int | None:
     if not isinstance(decision, SignalAdjustedDecision) or decision.prediction is None:
         return None
@@ -87,7 +76,7 @@ def _refresh_quotes(
     )
     prediction_message_index = _prediction_index(decision)
     for side, proposal in ((1, bid), (-1, ask)):
-        current = _active_order(state, symbol_id, side)
+        current = state.occupied_order(symbol_id, side)
         desired_price = None if proposal is None else proposal.price4
         if current is not None and current.price4 != desired_price:
             if current.cancel_requested_ns is None:

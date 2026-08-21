@@ -328,6 +328,8 @@ def test_task_022_symbol_side_slot_releases_only_at_terminal_state() -> None:
     machine = OrderStateMachine(submission_latency_ns=0, cancellation_latency_ns=0)
     machine.before_market_event(100, 1)
     machine.submit(_request(1, 100, 1))
+    assert machine.occupied_order(1, 1) == machine.order(1)
+    assert machine.occupied_order(1, -1) is None
 
     snapshot = machine.orders
     pending = machine.pending_actions
@@ -340,8 +342,10 @@ def test_task_022_symbol_side_slot_releases_only_at_terminal_state() -> None:
     machine.after_market_timestamp(100)
     machine.before_market_event(101, 2)
     machine.record_fill(1, quantity=100, timestamp_ns=101, market_message_index=2)
+    assert machine.occupied_order(1, 1) is None
     machine.submit(_request(2, 101, 2))
     assert machine.order(2).state is OrderState.PENDING_SUBMIT
+    assert machine.occupied_order(1, 1) == machine.order(2)
 
 
 @pytest.mark.parametrize("quantity", range(1, 65))

@@ -129,6 +129,15 @@ counterfactual-cross checks. The queue model now uses an exact symbol/side/price
 best-price heaps for those same lookups. Unit regressions preserve source-order queue membership,
 marketability and invalidation semantics; no strategy, fill rule or persisted schema changed.
 
+A later unpublished full-grid attempt was stopped before test access after its validation-only
+selection remained CPU-bound for 26 minutes. Inspection found that every quote decision rebuilt
+and scanned the complete historical simulated-order tuple twice even though the order state machine
+already owned an exact symbol/side occupancy index. The runner now uses that existing index for the
+same non-terminal order lookup. Full-day scenario children are also written in bounded Parquet row
+groups and released one scenario at a time instead of retaining the complete grid in memory. These
+execution-lifecycle changes preserve row order, schemas, metrics and scenario order; focused
+publication, ordering and slot-release regressions cover the boundary.
+
 ## Integrity and publication rules
 
 The two initially missing source hashes were filled into the frozen replay configs immediately

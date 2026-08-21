@@ -107,6 +107,20 @@ class OrderStateMachine:
                 ),
             ) from error
 
+    def occupied_order(self, symbol_id: int, side: int) -> SimulatedOrder | None:
+        """Return the non-terminal order occupying one symbol-side slot, if any."""
+        order_id = self._occupied_slots.get((symbol_id, side))
+        if order_id is None:
+            return None
+        order = self.order(order_id)
+        if order.terminal:
+            raise _fail(
+                ErrorCode.INVARIANT,
+                "A terminal order still occupies its symbol-side slot.",
+                simulated_order_id=order_id,
+            )
+        return order
+
     @property
     def orders(self) -> tuple[SimulatedOrder, ...]:
         """Return every owned order in deterministic identifier order."""
