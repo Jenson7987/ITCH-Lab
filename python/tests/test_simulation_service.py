@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,36 @@ from test_models import _experiment_config
 from test_reporting import _assert_accessible_html
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _equity_row(message_index: int) -> dict[str, Any]:
+    return {
+        "scenario_id": "scenario",
+        "strategy_name": "inventory_aware_avellaneda_stoikov",
+        "trading_date": date(2019, 12, 30),
+        "message_index": message_index,
+        "timestamp_ns": message_index,
+        "marked_pnl_microusd": message_index,
+        "cash_microusd": 0,
+        "marked_inventory_value_microusd": message_index,
+    }
+
+
+def test_task_031_simulation_parquet_is_streamed_in_bounded_ordered_groups(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(simulation_service, "_ROW_GROUP_ROWS", 2)
+    writer = simulation_service._StreamingParquetWriter(tmp_path, "equity", lambda: False)
+
+    writer.write(tuple(_equity_row(index) for index in range(3)))
+    writer.write(tuple(_equity_row(index) for index in range(3, 5)))
+    artefact = writer.finish()
+
+    parquet = simulation_service.pq.ParquetFile(tmp_path / artefact.path)
+    assert artefact.row_count == 5
+    assert parquet.metadata.num_rows == 5
+    assert parquet.metadata.num_row_groups == 3
+    assert parquet.read(columns=["message_index"])["message_index"].to_pylist() == list(range(5))
 
 
 def _completed_experiment(tmp_path: Path, dataset_conversion_factory: Any) -> tuple[str, Path]:

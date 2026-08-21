@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 import hashlib
 import json
 import os
@@ -10,7 +11,7 @@ import re
 import stat
 import time
 from collections import Counter, defaultdict
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from datetime import UTC, date, datetime
 from functools import lru_cache
@@ -96,6 +97,94 @@ class _RunPaths:
     lock_path: Path
     staging_directory: Path
     final_directory: Path
+
+
+class _StreamingParquetWriter:
+    """Write bounded row groups while preserving one immutable Parquet artefact."""
+
+    def __init__(self, directory: Path, kind: str, cancel_requested: CancelCheck) -> None:
+        self._kind = kind
+        self._schema = _OUTPUT_SCHEMAS[kind]
+        self._cancel_requested = cancel_requested
+        filename = f"{kind}.parquet"
+        self._partial = directory / f"{filename}.partial"
+        self._final = directory / filename
+        self._row_count = 0
+        try:
+            self._writer = pq.ParquetWriter(
+                self._partial,
+                self._schema,
+                compression="zstd",
+                use_dictionary=False,
+                write_statistics=True,
+            )
+        except (OSError, pa.ArrowException, TypeError, ValueError) as error:
+            raise _fail(
+                ErrorCode.DISK_WRITE,
+                f"Simulation {kind} Parquet could not be opened.",
+                partial_exists=True,
+            ) from error
+
+    def write(self, rows: Sequence[Mapping[str, Any]]) -> None:
+        """Append rows in bounded deterministic row groups."""
+        try:
+            for offset in range(0, len(rows), _ROW_GROUP_ROWS):
+                _check_cancel(self._cancel_requested, partial_exists=True)
+                batch = rows[offset : offset + _ROW_GROUP_ROWS]
+                table = pa.Table.from_pylist(list(batch), schema=self._schema)
+                self._writer.write_table(table, row_group_size=_ROW_GROUP_ROWS)
+                self._row_count += len(batch)
+        except SimulationError:
+            raise
+        except (OSError, pa.ArrowException, MemoryError, TypeError, ValueError) as error:
+            raise _fail(
+                ErrorCode.DISK_WRITE,
+                f"Simulation {self._kind} Parquet could not be written.",
+                partial_exists=True,
+            ) from error
+
+    def close_partial(self) -> None:
+        """Close a failed staged writer without publishing its child."""
+        try:
+            self._writer.close()
+        except (OSError, pa.ArrowException):
+            pass
+
+    def finish(self) -> _Artefact:
+        """Close, validate and atomically publish the staged child."""
+        try:
+            self._writer.close()
+            self._partial.rename(self._final)
+        except (OSError, pa.ArrowException) as error:
+            raise _fail(
+                ErrorCode.DISK_WRITE,
+                f"Simulation {self._kind} Parquet could not be finalised.",
+                partial_exists=True,
+            ) from error
+        digest, size = _sha256_file(self._final, self._cancel_requested)
+        try:
+            parquet = pq.ParquetFile(self._final)
+            if parquet.schema_arrow != self._schema or parquet.metadata.num_rows != self._row_count:
+                raise _fail(
+                    ErrorCode.INVARIANT,
+                    f"Written simulation {self._kind} Parquet is inconsistent.",
+                    partial_exists=True,
+                )
+        except SimulationError:
+            raise
+        except (OSError, pa.ArrowException) as error:
+            raise _fail(
+                ErrorCode.SCHEMA_VERSION,
+                f"Written simulation {self._kind} Parquet is invalid.",
+                partial_exists=True,
+            ) from error
+        return _Artefact(
+            self._kind,
+            self._final.name,
+            digest,
+            size,
+            self._row_count,
+        )
 
 
 def _fail(code: ErrorCode, message: str, *, partial_exists: bool = False) -> SimulationError:
@@ -877,7 +966,7 @@ def _run_test_scenarios(
     model_name: PredictionModelName | None,
     selected_weight: float,
     cancel_requested: CancelCheck,
-) -> tuple[ScenarioResult, ...]:
+) -> Iterator[ScenarioResult]:
     test_days = tuple(
         _with_predictions(days[value], predictions)
         for value in dataset_config.partitions.test_dates
@@ -888,27 +977,23 @@ def _run_test_scenarios(
         if experiment is not None
         else ("inventory_aware_avellaneda_stoikov",)
     )
-    results: list[ScenarioResult] = []
     for scenario in _execution_scenarios(config):
         for strategy_name in strategies:
             _check_cancel(cancel_requested)
-            results.append(
-                run_scenario(
-                    test_days,
-                    config,
-                    calibration,
-                    scenario,
-                    strategy_name=strategy_name,
-                    signal_weight_ticks=(
-                        selected_weight
-                        if strategy_name == "signal_adjusted_avellaneda_stoikov"
-                        else 0.0
-                    ),
-                    experiment_id=None if experiment is None else experiment.experiment_id,
-                    model_name="prior" if model_name is None else model_name,
-                )
+            yield run_scenario(
+                test_days,
+                config,
+                calibration,
+                scenario,
+                strategy_name=strategy_name,
+                signal_weight_ticks=(
+                    selected_weight
+                    if strategy_name == "signal_adjusted_avellaneda_stoikov"
+                    else 0.0
+                ),
+                experiment_id=None if experiment is None else experiment.experiment_id,
+                model_name="prior" if model_name is None else model_name,
             )
-    return tuple(results)
 
 
 def _write_parquet(
@@ -917,43 +1002,13 @@ def _write_parquet(
     rows: Sequence[Mapping[str, Any]],
     cancel_requested: CancelCheck,
 ) -> _Artefact:
-    schema = _OUTPUT_SCHEMAS[kind]
-    filename = f"{kind}.parquet"
-    partial = directory / f"{filename}.partial"
-    final = directory / filename
+    writer = _StreamingParquetWriter(directory, kind, cancel_requested)
     try:
-        table = pa.Table.from_pylist(list(rows), schema=schema)
-        pq.write_table(
-            table,
-            partial,
-            compression="zstd",
-            use_dictionary=False,
-            write_statistics=True,
-            row_group_size=_ROW_GROUP_ROWS,
-        )
-        partial.rename(final)
-    except (OSError, pa.ArrowException, TypeError, ValueError) as error:
-        raise _fail(
-            ErrorCode.DISK_WRITE,
-            f"Simulation {kind} Parquet could not be written.",
-            partial_exists=True,
-        ) from error
-    digest, size = _sha256_file(final, cancel_requested)
-    try:
-        parquet = pq.ParquetFile(final)
-        if parquet.schema_arrow != schema or parquet.metadata.num_rows != len(rows):
-            raise _fail(
-                ErrorCode.INVARIANT,
-                f"Written simulation {kind} Parquet is inconsistent.",
-                partial_exists=True,
-            )
-    except (OSError, pa.ArrowException) as error:
-        raise _fail(
-            ErrorCode.SCHEMA_VERSION,
-            f"Written simulation {kind} Parquet is invalid.",
-            partial_exists=True,
-        ) from error
-    return _Artefact(kind, filename, digest, size, len(rows))
+        writer.write(rows)
+        return writer.finish()
+    except Exception:
+        writer.close_partial()
+        raise
 
 
 def _write_json(
@@ -1429,6 +1484,8 @@ def simulate(
         model_name,
         cancellation,
     )
+    del validation_predictions, selection_days, selection_events, selection_snapshots
+    gc.collect()
 
     test_dates = set(dataset_config.partitions.test_dates)
     test_events, test_snapshots = _read_conversion_rows(
@@ -1439,6 +1496,8 @@ def simulate(
         selected_dates=test_dates,
     )
     test_days = _build_days(dataset_config, test_events, test_snapshots, windows)
+    del test_events, test_snapshots
+    gc.collect()
     test_predictions: dict[str, tuple[SignalPrediction, ...]] = {}
     if experiment is not None and model_name is not None:
         test_predictions = _load_predictions(experiment, test_days, model_name, cancellation)
@@ -1456,70 +1515,87 @@ def simulate(
     paths = prepared
     started_at_ns = time.time_ns()
     try:
-        results = _run_test_scenarios(
-            config,
-            dataset_config,
-            test_days,
-            calibration,
-            experiment,
-            test_predictions,
-            model_name,
-            selected_weight,
-            cancellation,
-        )
-        order_rows = tuple(row for result in results for row in result.orders)
-        fill_rows = tuple(row for result in results for row in result.fills)
-        liquidation_rows = tuple(row for result in results for row in result.liquidations)
-        equity_rows = tuple(row for result in results for row in result.equity)
         simulation_id = paths.final_directory.name
+        parquet_writers = {
+            kind: _StreamingParquetWriter(paths.staging_directory, kind, cancellation)
+            for kind in _OUTPUT_SCHEMAS
+        }
+        scenario_documents: list[dict[str, Any]] = []
+        diagnostic_rows: list[dict[str, Any]] = []
+        passive_fill_count = 0
+        result_count = 0
+        try:
+            for result in _run_test_scenarios(
+                config,
+                dataset_config,
+                test_days,
+                calibration,
+                experiment,
+                test_predictions,
+                model_name,
+                selected_weight,
+                cancellation,
+            ):
+                parquet_writers["orders"].write(result.orders)
+                parquet_writers["fills"].write(result.fills)
+                parquet_writers["liquidations"].write(result.liquidations)
+                parquet_writers["equity"].write(result.equity)
+                scenario_documents.append(
+                    {
+                        **asdict(result.scenario),
+                        "strategy_name": result.strategy_name,
+                        "signal_weight_ticks": result.signal_weight_ticks,
+                        "metrics": result.metrics,
+                        "daily": list(result.daily_metrics),
+                    }
+                )
+                diagnostic_rows.extend(result.diagnostics)
+                passive_fill_count += len(result.fills)
+                result_count += 1
+                del result
+                gc.collect()
+            artefacts = [parquet_writers[kind].finish() for kind in _OUTPUT_SCHEMAS]
+        except BaseException:
+            for writer in parquet_writers.values():
+                writer.close_partial()
+            raise
+
         metrics_document = {
             "schema_version": 1,
             "simulation_id": simulation_id,
             "selection": selection,
-            "scenarios": [
-                {
-                    **asdict(result.scenario),
-                    "strategy_name": result.strategy_name,
-                    "signal_weight_ticks": result.signal_weight_ticks,
-                    "metrics": result.metrics,
-                    "daily": list(result.daily_metrics),
-                }
-                for result in results
-            ],
+            "scenarios": scenario_documents,
         }
-        diagnostic_rows = tuple(row for result in results for row in result.diagnostics)
         diagnostic_counts = Counter(cast(str, row["code"]) for row in diagnostic_rows)
         diagnostics_document = {
             "schema_version": 1,
             "simulation_id": simulation_id,
             "queue_anomaly_budget": config.execution.max_queue_anomalies,
             "counts": dict(sorted(diagnostic_counts.items())),
-            "records": list(diagnostic_rows),
+            "records": diagnostic_rows,
         }
-        artefacts = [
-            _write_parquet(paths.staging_directory, "orders", order_rows, cancellation),
-            _write_parquet(paths.staging_directory, "fills", fill_rows, cancellation),
-            _write_parquet(paths.staging_directory, "liquidations", liquidation_rows, cancellation),
-            _write_parquet(paths.staging_directory, "equity", equity_rows, cancellation),
-            _write_json(
-                paths.staging_directory,
-                "metrics",
-                "metrics.json",
-                metrics_document,
-                len(results),
-                cancellation,
-            ),
-            _write_json(
-                paths.staging_directory,
-                "diagnostics",
-                "diagnostics.json",
-                diagnostics_document,
-                len(diagnostic_rows),
-                cancellation,
-            ),
-        ]
+        artefacts.extend(
+            [
+                _write_json(
+                    paths.staging_directory,
+                    "metrics",
+                    "metrics.json",
+                    metrics_document,
+                    result_count,
+                    cancellation,
+                ),
+                _write_json(
+                    paths.staging_directory,
+                    "diagnostics",
+                    "diagnostics.json",
+                    diagnostics_document,
+                    len(diagnostic_rows),
+                    cancellation,
+                ),
+            ]
+        )
         warnings: list[str] = []
-        if not fill_rows:
+        if passive_fill_count == 0:
             warnings.append("No passive fills occurred; zero-fill metrics remain valid.")
         if experiment is None:
             warnings.append("Baseline-only run; no signal-adjusted comparison was available.")
