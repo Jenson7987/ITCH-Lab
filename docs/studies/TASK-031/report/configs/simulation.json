@@ -1,0 +1,28 @@
+{
+  "dataset_manifest": "runs/dataset/20260821T180641.067291000Z-bcdb1ae22a29/dataset-manifest.json",
+  "execution": {
+    "cancellation_latency_ns": 100000,
+    "maker_fee_microusd_per_share": -2000,
+    "max_queue_anomalies": 3000,
+    "passive_only": true,
+    "queue_policy": "known_orders_conservative",
+    "submission_latency_ns": 100000,
+    "taker_fee_microusd_per_share": 3000,
+    "terminal_liquidation": "cross_visible_spread"
+  },
+  "prediction_manifest": "runs/experiment/20260821T181625.772904000Z-01c0e689bac1/experiment-manifest.json",
+  "schema_version": 1,
+  "seed": 7987,
+  "strategy": {
+    "decision_interval_ns": 100000000,
+    "gamma": 0.1,
+    "inventory_limit": 1000,
+    "max_prediction_age_ns": 500000000,
+    "max_signal_ticks": 2.0,
+    "name": "signal_adjusted_avellaneda_stoikov",
+    "order_quantity": 100,
+    "risk_horizon_seconds": 10.0,
+    "signal_weight_ticks": null,
+    "volatility_window_ns": 60000000000
+  }
+}

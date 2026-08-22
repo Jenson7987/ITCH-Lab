@@ -1,0 +1,28 @@
+{
+  "input": {
+    "exchange_timezone": "America/New_York",
+    "path": "10302019.NASDAQ_ITCH50.gz",
+    "sha256": "0ad86b61a0eb7f1bce2cffca0e08c8658026451c68657ea6b06f61ff3710b999",
+    "trading_date": "2019-10-30"
+  },
+  "output": {
+    "depth": 10,
+    "emit_unchanged_trade_snapshots": true
+  },
+  "schema_version": 1,
+  "selection": {
+    "require_trading_state": true,
+    "session_end_ns": 57600000000000,
+    "session_start_ns": 34200000000000,
+    "symbols": [
+      "AAPL",
+      "MSFT",
+      "AMZN"
+    ]
+  },
+  "validation": {
+    "invariant_interval": 10000,
+    "max_skipped_messages": 0,
+    "mode": "strict"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "conversion_manifests": [
+    "runs/conversion/20260821T180335.592249000Z-8e6d43b3e013/conversion-manifest.json"
+  ],
+  "features": {
+    "clock_windows_ns": [
+      100000000,
+      1000000000
+    ],
+    "depth_levels": [
+      1,
+      5,
+      10
+    ],
+    "event_windows": [
+      20,
+      100,
+      500
+    ]
+  },
+  "labels": {
+    "flat_threshold_ticks": 0,
+    "primary_event_horizon": 100,
+    "secondary_event_horizons": [
+      20,
+      500
+    ]
+  },
+  "partitions": {
+    "test_dates": [
+      "2019-12-30"
+    ],
+    "train_dates": [
+      "2019-07-30"
+    ],
+    "validation_dates": [
+      "2019-10-30"
+    ]
+  },
+  "sampling": {
+    "row_stride": 10
+  },
+  "schema_version": 1,
+  "symbols": [
+    "AAPL",
+    "MSFT",
+    "AMZN"
+  ],
+  "tick_size4_by_symbol": {
+    "AAPL": 100,
+    "AMZN": 100,
+    "MSFT": 100
+  }
+}

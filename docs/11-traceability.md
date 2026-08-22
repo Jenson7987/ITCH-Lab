@@ -24,7 +24,7 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | FR-016 | 02 UF-005; 04 SimulationRun/Fill/TerminalLiquidation | TASK-022, TASK-024, TASK-027 | UT-SIM-001/004, IT-010 runner/publication, risk/liquidation/zero-fill and exact scenario-grid assertions |
 | FR-017 | ADR-004; 01 inventory-aware baseline; 05 strategy/calibration interfaces | TASK-025 | UT-STRAT-001 decision-table golden, causal-volatility, training-only calibration/fallback and parameter-boundary tests |
 | FR-018 | ADR-004; 01 signal adjustment; 05 simulate/strategy interfaces | TASK-026 | UT-STRAT-002, controlled-signal golden, causal prediction-key/fallback and validation-only selection tests |
-| FR-019 | 02 UF-004/UF-005; 06 UI-009 | TASK-021, TASK-027, TASK-031 | IT-011 predictive/combined report, E2E-001 and report-content/accessibility checks |
+| FR-019 | 02 UF-004/UF-005; 06 UI-009 | TASK-021, TASK-027, TASK-031 | IT-011 predictive/combined report, E2E-001, report-content/accessibility checks and TASK-031 final report/evidence |
 | FR-020 | 03 performance; 05 benchmark | TASK-029 | PERF-001 through PERF-008 |
 | FR-021 | 03 file contracts; 04 run entities | TASK-002 (canonical hashes), TASK-014, TASK-017, TASK-027 | Simulation manifest/schema/tamper, canonical-hash, verified-reuse, force-new-run and identity contract tests |
 | FR-022 | 03 ArtefactValidator; 05 validate | TASK-015 | IT-012, CT-BIN-001, tamper/version tests |
@@ -42,7 +42,7 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | NFR-007 | 03 logging; 06 progress | TASK-007, TASK-012 | TASK-012 rate-limit and non-TTY JSONL/stderr/quiet tests |
 | NFR-008 | 07 SEC-001/002/012 | TASK-004, TASK-005, TASK-028 | UT-DEC-002, SEC-FUZZ-001, full ASan/UBSan suite |
 | NFR-009 | 08 coverage/CI | TASK-008, TASK-028, TASK-030 | Exact Python tier gate, C++ compiler-coverage regression floor/report, TASK-028 security workflow and CI matrix |
-| NFR-010 | ADR-004; 02 UF-003–005 | TASK-018–020, TASK-023–027, TASK-031 | UT-FEAT-001, UT-LABEL-001, IT-008, partition properties, UT-MODEL-001, simulator properties |
+| NFR-010 | ADR-004; 02 UF-003–005 | TASK-018–020, TASK-023–027, TASK-031 | UT-FEAT-001, UT-LABEL-001, IT-008, partition properties, UT-MODEL-001, simulator properties and TASK-031 full-day validation/reproduction spot-check |
 | NFR-011 | 06 accessibility | TASK-007, TASK-021, TASK-030 | NO_COLOR/TERM, doctor human/JSON parity, HTML accessibility and plot tests |
 | NFR-012 | ADR-001–004; AGENTS.md | TASK-001, TASK-032 | API docs review, docs/traceability lint |
 
@@ -60,7 +60,7 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | SEC-008 | 07 dependencies; 09 release | TASK-001, TASK-028, TASK-030 | Hashed-lock pip-audit, checksummed archives and packaged dependency/licence inventory |
 | SEC-009 | 07 report escaping | TASK-021, TASK-028 | `<script>` and Markdown link/table injection fixtures |
 | SEC-010 | 07 logging restrictions | TASK-014, TASK-021, TASK-028 | TASK-014 recursive absolute-path assertions and payload-log assertions |
-| SEC-011 | 07 misuse/data handling | TASK-003, TASK-021, TASK-027, TASK-028, TASK-031 | Tracked-data policy, synthetic labels and report wording tests |
+| SEC-011 | 07 misuse/data handling | TASK-003, TASK-021, TASK-027, TASK-028, TASK-031 | Tracked-data policy, synthetic labels, report wording tests and TASK-031 public-safe evidence review |
 | SEC-012 | 07 resource exhaustion | TASK-004, TASK-012, TASK-017, TASK-028 | PERF-008, oversized-frame, disk/cancel tests |
 
 ## Coverage review checklist

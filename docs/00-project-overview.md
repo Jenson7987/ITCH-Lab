@@ -142,8 +142,8 @@ The MVP succeeds when:
 
 | ID | Question | Current treatment |
 | --- | --- | --- |
-| OQ-001 | Which exact sample dates and symbols will be used in the published report? | Freeze at the start of TASK-031 after storage/data-quality preflight and before inspecting test results |
-| OQ-002 | Does the official source's current licence permit publishing small transformed excerpts? | Publish synthetic fixtures only until confirmed |
+| OQ-001 | Which exact sample dates and symbols will be used in the published report? | Resolved by TASK-031: AAPL, MSFT and AMZN on 2019-07-30 train, 2019-10-30 validation and 2019-12-30 test |
+| OQ-002 | Does the official source's current licence permit publishing small transformed excerpts? | Resolved conservatively for v0.1 by TASK-031: publish no official-source raw or transformed row excerpts; retain synthetic fixtures only |
 | OQ-003 | What measured throughput target is realistic on the development machine? | Resolved by TASK-029: 9.71 million uncompressed parser-plus-book messages/second on the pinned synthetic fixture; retain the 1 million messages/second release floor |
 
 ## Primary references

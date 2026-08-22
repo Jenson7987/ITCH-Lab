@@ -164,9 +164,10 @@ transformed row excerpts. It is limited to public-safe configs, hashes, manifest
 machine-specific paths, aggregate report artefacts, deterministic reproduction instructions and
 the existing synthetic fixtures. This resolves OQ-002 conservatively.
 
-The final study evidence will reference the pinned performance result in
+The final [study evidence](EVIDENCE.md) references the pinned performance result in
 `docs/performance/TASK-029-performance.md`; TASK-031 does not rerun optimisation or change its
-release throughput floor.
+release throughput floor. The generated [Markdown](report/report.md) and
+[HTML](report/report.html) reports retain the complete favourable and unfavourable outcomes.
 
 ## Execution gates
 
@@ -182,5 +183,7 @@ manifest paths are recorded in the final evidence index.
 ./build/release/itchlab replay --config configs/studies/task031/replay-2019-12-30.json --output-root runs --format json --quiet
 ```
 
-Conversion, dataset, experiment and simulation configs will be added with authenticated parent
-locators once their immutable IDs exist. Their parameter values must match this protocol exactly.
+The conversion, dataset, experiment and simulation configs now contain the authenticated immutable
+parent locators established by this execution. Their scientific parameter values match this
+protocol. Exact run IDs, child hashes, validation totals and the reproduction spot-check are
+recorded in [EVIDENCE.md](EVIDENCE.md).

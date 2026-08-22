@@ -1,0 +1,1025 @@
+{
+  "scenarios": [
+    {
+      "cancellation_latency_ns": 0,
+      "daily": [
+        {
+          "adverse_selection_100ms_microusd": 849065000,
+          "adverse_selection_coverage": 1.0,
+          "adverse_selection_eligible_fill_count": 967,
+          "adverse_selection_observation_count": 967,
+          "cash_microusd": -104018000,
+          "ending_inventory_by_symbol": {
+            "1": 0,
+            "2": 0,
+            "3": 0
+          },
+          "fee_contribution_microusd": 122502000,
+          "gross_cash_microusd": -226520000,
+          "inventory_mark_to_market_microusd": -1002010000,
+          "liquidation_count": 3,
+          "liquidation_quantity": 114,
+          "maker_fee_microusd": -122844000,
+          "marked_inventory_value_microusd": 0,
+          "marked_pnl_microusd": -104018000,
+          "max_abs_inventory_by_symbol": {
+            "1": 255,
+            "2": 283,
+            "3": 141
+          },
+          "max_drawdown_microusd": 383820000,
+          "passive_fill_count": 967,
+          "passive_fill_quantity": 61422,
+          "passive_spread_capture_microusd": 779135000,
+          "reconciled": true,
+          "settled": true,
+          "signed_fee_microusd": -122502000,
+          "taker_fee_microusd": 342000,
+          "terminal_liquidation_slippage_microusd": -3645000,
+          "trading_date": "2019-12-30",
+          "turnover_microusd": 21136208100000
+        }
+      ],
+      "maker_fee_microusd_per_share": -2000,
+      "metrics": {
+        "adverse_selection_100ms_microusd": 849065000,
+        "adverse_selection_coverage": 1.0,
+        "adverse_selection_eligible_fill_count": 967,
+        "adverse_selection_observation_count": 967,
+        "cash_microusd": -104018000,
+        "fee_contribution_microusd": 122502000,
+        "gross_cash_microusd": -226520000,
+        "inventory_mark_to_market_microusd": -1002010000,
+        "liquidation_count": 3,
+        "liquidation_quantity": 114,
+        "maker_fee_microusd": -122844000,
+        "marked_pnl_microusd": -104018000,
+        "max_abs_inventory_by_symbol": {
+          "1": 255,
+          "2": 283,
+          "3": 141
+        },
+        "max_drawdown_microusd": 383820000,
+        "passive_fill_count": 967,
+        "passive_fill_quantity": 61422,
+        "passive_spread_capture_microusd": 779135000,
+        "reconciled": true,
+        "settled": true,
+        "signed_fee_microusd": -122502000,
+        "taker_fee_microusd": 342000,
+        "terminal_liquidation_slippage_microusd": -3645000,
+        "trading_days": 1,
+        "turnover_microusd": 21136208100000
+      },
+      "scenario_id": "latency-0-maker--2000",
+      "signal_weight_ticks": 0.0,
+      "strategy_name": "inventory_aware_avellaneda_stoikov",
+      "submission_latency_ns": 0,
+      "taker_fee_microusd_per_share": 3000
+    },
+    {
+      "cancellation_latency_ns": 0,
+      "daily": [
+        {
+          "adverse_selection_100ms_microusd": 753590000,
+          "adverse_selection_coverage": 1.0,
+          "adverse_selection_eligible_fill_count": 806,
+          "adverse_selection_observation_count": 806,
+          "cash_microusd": 61236000,
+          "ending_inventory_by_symbol": {
+            "1": 0,
+            "2": 0,
+            "3": 0
+          },
+          "fee_contribution_microusd": 102136000,
+          "gross_cash_microusd": -40900000,
+          "inventory_mark_to_market_microusd": -759140000,
+          "liquidation_count": 3,
+          "liquidation_quantity": 144,
+          "maker_fee_microusd": -102568000,
+          "marked_inventory_value_microusd": 0,
+          "marked_pnl_microusd": 61236000,
+          "max_abs_inventory_by_symbol": {
+            "1": 309,
+            "2": 291,
+            "3": 141
+          },
+          "max_drawdown_microusd": 320966000,
+          "passive_fill_count": 806,
+          "passive_fill_quantity": 51284,
+          "passive_spread_capture_microusd": 721045000,
+          "reconciled": true,
+          "settled": true,
+          "signed_fee_microusd": -102136000,
+          "taker_fee_microusd": 432000,
+          "terminal_liquidation_slippage_microusd": -2805000,
+          "trading_date": "2019-12-30",
+          "turnover_microusd": 18069525300000
+        }
+      ],
+      "maker_fee_microusd_per_share": -2000,
+      "metrics": {
+        "adverse_selection_100ms_microusd": 753590000,
+        "adverse_selection_coverage": 1.0,
+        "adverse_selection_eligible_fill_count": 806,
+        "adverse_selection_observation_count": 806,
+        "cash_microusd": 61236000,
+        "fee_contribution_microusd": 102136000,
+        "gross_cash_microusd": -40900000,
+        "inventory_mark_to_market_microusd": -759140000,
+        "liquidation_count": 3,
+        "liquidation_quantity": 144,
+        "maker_fee_microusd": -102568000,
+        "marked_pnl_microusd": 61236000,
+        "max_abs_inventory_by_symbol": {
+          "1": 309,
+          "2": 291,
+          "3": 141
+        },
+        "max_drawdown_microusd": 320966000,
+        "passive_fill_count": 806,
+        "passive_fill_quantity": 51284,
+        "passive_spread_capture_microusd": 721045000,
+        "reconciled": true,
+        "settled": true,
+        "signed_fee_microusd": -102136000,
+        "taker_fee_microusd": 432000,
+        "terminal_liquidation_slippage_microusd": -2805000,
+        "trading_days": 1,
+        "turnover_microusd": 18069525300000
+      },
+      "scenario_id": "latency-0-maker--2000",
+      "signal_weight_ticks": 2.0,
+      "strategy_name": "signal_adjusted_avellaneda_stoikov",
+      "submission_latency_ns": 0,
+      "taker_fee_microusd_per_share": 3000
+    },
+    {
+      "cancellation_latency_ns": 0,
+      "daily": [
+        {
+          "adverse_selection_100ms_microusd": 849065000,
+          "adverse_selection_coverage": 1.0,
+          "adverse_selection_eligible_fill_count": 967,
+          "adverse_selection_observation_count": 967,
+          "cash_microusd": -411128000,
+          "ending_inventory_by_symbol": {
+            "1": 0,
+            "2": 0,
+            "3": 0
+          },
+          "fee_contribution_microusd": -184608000,
+          "gross_cash_microusd": -226520000,
+          "inventory_mark_to_market_microusd": -1002010000,
+          "liquidation_count": 3,
+          "liquidation_quantity": 114,
+          "maker_fee_microusd": 184266000,
+          "marked_inventory_value_microusd": 0,
+          "marked_pnl_microusd": -411128000,
+          "max_abs_inventory_by_symbol": {
+            "1": 255,
+            "2": 283,
+            "3": 141
+          },
+          "max_drawdown_microusd": 545323000,
+          "passive_fill_count": 967,
+          "passive_fill_quantity": 61422,
+          "passive_spread_capture_microusd": 779135000,
+          "reconciled": true,
+          "settled": true,
+          "signed_fee_microusd": 184608000,
+          "taker_fee_microusd": 342000,
+          "terminal_liquidation_slippage_microusd": -3645000,
+          "trading_date": "2019-12-30",
+          "turnover_microusd": 21136208100000
+        }
+      ],
+      "maker_fee_microusd_per_share": 3000,
+      "metrics": {
+        "adverse_selection_100ms_microusd": 849065000,
+        "adverse_selection_coverage": 1.0,
+        "adverse_selection_eligible_fill_count": 967,
+        "adverse_selection_observation_count": 967,
+        "cash_microusd": -411128000,
+        "fee_contribution_microusd": -184608000,
+        "gross_cash_microusd": -226520000,
+        "inventory_mark_to_market_microusd": -1002010000,
+        "liquidation_count": 3,
+        "liquidation_quantity": 114,
+        "maker_fee_microusd": 184266000,
+        "marked_pnl_microusd": -411128000,
+        "max_abs_inventory_by_symbol": {
+          "1": 255,
+          "2": 283,
+          "3": 141
+        },
+        "max_drawdown_microusd": 545323000,
+        "passive_fill_count": 967,
+        "passive_fill_quantity": 61422,
+        "passive_spread_capture_microusd": 779135000,
+        "reconciled": true,
+        "settled": true,
+        "signed_fee_microusd": 184608000,
+        "taker_fee_microusd": 342000,
+        "terminal_liquidation_slippage_microusd": -3645000,
+        "trading_days": 1,
+        "turnover_microusd": 21136208100000
+      },
+      "scenario_id": "latency-0-maker-3000",
+      "signal_weight_ticks": 0.0,
+      "strategy_name": "inventory_aware_avellaneda_stoikov",
+      "submission_latency_ns": 0,
+      "taker_fee_microusd_per_share": 3000
+    },
+    {
+      "cancellation_latency_ns": 0,
+      "daily": [
+        {
+          "adverse_selection_100ms_microusd": 753590000,
+          "adverse_selection_coverage": 1.0,
+          "adverse_selection_eligible_fill_count": 806,
+          "adverse_selection_observation_count": 806,
+          "cash_microusd": -195184000,
+          "ending_inventory_by_symbol": {
+            "1": 0,
+            "2": 0,
+            "3": 0
+          },
+          "fee_contribution_microusd": -154284000,
+          "gross_cash_microusd": -40900000,
+          "inventory_mark_to_market_microusd": -759140000,
+          "liquidation_count": 3,
+          "liquidation_quantity": 144,
+          "maker_fee_microusd": 153852000,
+          "marked_inventory_value_microusd": 0,
+          "marked_pnl_microusd": -195184000,
+          "max_abs_inventory_by_symbol": {
+            "1": 309,
+            "2": 291,
+            "3": 141
+          },
+          "max_drawdown_microusd": 393609000,
+          "passive_fill_count": 806,
+          "passive_fill_quantity": 51284,
+          "passive_spread_capture_microusd": 721045000,
+          "reconciled": true,
+          "settled": true,
+          "signed_fee_microusd": 154284000,
+          "taker_fee_microusd": 432000,
+          "terminal_liquidation_slippage_microusd": -2805000,
+          "trading_date": "2019-12-30",
+          "turnover_microusd": 18069525300000
+        }
+      ],
+      "maker_fee_microusd_per_share": 3000,
+      "metrics": {
+        "adverse_selection_100ms_microusd": 753590000,
+        "adverse_selection_coverage": 1.0,
+        "adverse_selection_eligible_fill_count": 806,
+        "adverse_selection_observation_count": 806,
+        "cash_microusd": -195184000,
+        "fee_contribution_microusd": -154284000,
+        "gross_cash_microusd": -40900000,
+        "inventory_mark_to_market_microusd": -759140000,
+        "liquidation_count": 3,
+        "liquidation_quantity": 144,
+        "maker_fee_microusd": 153852000,
+        "marked_pnl_microusd": -195184000,
+        "max_abs_inventory_by_symbol": {
+          "1": 309,
+          "2": 291,
+          "3": 141
+        },
+        "max_drawdown_microusd": 393609000,
+        "passive_fill_count": 806,
+        "passive_fill_quantity": 51284,
+        "passive_spread_capture_microusd": 721045000,
+        "reconciled": true,
+        "settled": true,
+        "signed_fee_microusd": 154284000,
+        "taker_fee_microusd": 432000,
+        "terminal_liquidation_slippage_microusd": -2805000,
+        "trading_days": 1,
+        "turnover_microusd": 18069525300000
+      },
+      "scenario_id": "latency-0-maker-3000",
+      "signal_weight_ticks": 2.0,
+      "strategy_name": "signal_adjusted_avellaneda_stoikov",
+      "submission_latency_ns": 0,
+      "taker_fee_microusd_per_share": 3000
+    },
+    {
+      "cancellation_latency_ns": 100000,
+      "daily": [
+        {
+          "adverse_selection_100ms_microusd": 941290000,
+          "adverse_selection_coverage": 1.0,
+          "adverse_selection_eligible_fill_count": 1010,
+          "adverse_selection_observation_count": 1010,
+          "cash_microusd": -425923000,
+          "ending_inventory_by_symbol": {
+            "1": 0,
+            "2": 0,
+            "3": 0
+          },
+          "fee_contribution_microusd": 131777000,
+          "gross_cash_microusd": -557700000,
+          "inventory_mark_to_market_microusd": -1341285000,
+          "liquidation_count": 3,
+          "liquidation_quantity": 311,
+          "maker_fee_microusd": -132710000,
+          "marked_inventory_value_microusd": 0,
+          "marked_pnl_microusd": -425923000,
+          "max_abs_inventory_by_symbol": {
+            "1": 258,
+            "2": 283,
+            "3": 137
+          },
+          "max_drawdown_microusd": 467652000,
+          "passive_fill_count": 1010,
+          "passive_fill_quantity": 66355,
+          "passive_spread_capture_microusd": 794125000,
+          "reconciled": true,
+          "settled": true,
+          "signed_fee_microusd": -131777000,
+          "taker_fee_microusd": 933000,
+          "terminal_liquidation_slippage_microusd": -10540000,
+          "trading_date": "2019-12-30",
+          "turnover_microusd": 21885019180000
+        }
+      ],
+      "maker_fee_microusd_per_share": -2000,
+      "metrics": {
+        "adverse_selection_100ms_microusd": 941290000,
+        "adverse_selection_coverage": 1.0,
+        "adverse_selection_eligible_fill_count": 1010,
+        "adverse_selection_observation_count": 1010,
+        "cash_microusd": -425923000,
+        "fee_contribution_microusd": 131777000,
+        "gross_cash_microusd": -557700000,
+        "inventory_mark_to_market_microusd": -1341285000,
+        "liquidation_count": 3,
+        "liquidation_quantity": 311,
+        "maker_fee_microusd": -132710000,
+        "marked_pnl_microusd": -425923000,
+        "max_abs_inventory_by_symbol": {
+          "1": 258,
+          "2": 283,
+          "3": 137
+        },
+        "max_drawdown_microusd": 467652000,
+        "passive_fill_count": 1010,
+        "passive_fill_quantity": 66355,
+        "passive_spread_capture_microusd": 794125000,
+        "reconciled": true,
+        "settled": true,
+        "signed_fee_microusd": -131777000,
+        "taker_fee_microusd": 933000,
+        "terminal_liquidation_slippage_microusd": -10540000,
+        "trading_days": 1,
+        "turnover_microusd": 21885019180000
+      },
+      "scenario_id": "latency-100000-maker--2000",
+      "signal_weight_ticks": 0.0,
+      "strategy_name": "inventory_aware_avellaneda_stoikov",
+      "submission_latency_ns": 100000,
+      "taker_fee_microusd_per_share": 3000
+    },
+    {
+      "cancellation_latency_ns": 100000,
+      "daily": [
+        {
+          "adverse_selection_100ms_microusd": 775720000,
+          "adverse_selection_coverage": 1.0,
+          "adverse_selection_eligible_fill_count": 812,
+          "adverse_selection_observation_count": 812,
+          "cash_microusd": -182295000,
+          "ending_inventory_by_symbol": {
+            "1": 0,
+            "2": 0,
+            "3": 0
+          },
+          "fee_contribution_microusd": 100545000,
+          "gross_cash_microusd": -282840000,
+          "inventory_mark_to_market_microusd": -951755000,
+          "liquidation_count": 3,
+          "liquidation_quantity": 167,
+          "maker_fee_microusd": -101046000,
+          "marked_inventory_value_microusd": 0,
+          "marked_pnl_microusd": -182295000,
+          "max_abs_inventory_by_symbol": {
+            "1": 207,
+            "2": 291,
+            "3": 138
+          },
+          "max_drawdown_microusd": 338093000,
+          "passive_fill_count": 812,
+          "passive_fill_quantity": 50523,
+          "passive_spread_capture_microusd": 673680000,
+          "reconciled": true,
+          "settled": true,
+          "signed_fee_microusd": -100545000,
+          "taker_fee_microusd": 501000,
+          "terminal_liquidation_slippage_microusd": -4765000,
+          "trading_date": "2019-12-30",
+          "turnover_microusd": 17169388700000
+        }
+      ],
+      "maker_fee_microusd_per_share": -2000,
+      "metrics": {
+        "adverse_selection_100ms_microusd": 775720000,
+        "adverse_selection_coverage": 1.0,
+        "adverse_selection_eligible_fill_count": 812,
+        "adverse_selection_observation_count": 812,
+        "cash_microusd": -182295000,
+        "fee_contribution_microusd": 100545000,
+        "gross_cash_microusd": -282840000,
+        "inventory_mark_to_market_microusd": -951755000,
+        "liquidation_count": 3,
+        "liquidation_quantity": 167,
+        "maker_fee_microusd": -101046000,
+        "marked_pnl_microusd": -182295000,
+        "max_abs_inventory_by_symbol": {
+          "1": 207,
+          "2": 291,
+          "3": 138
+        },
+        "max_drawdown_microusd": 338093000,
+        "passive_fill_count": 812,
+        "passive_fill_quantity": 50523,
+        "passive_spread_capture_microusd": 673680000,
+        "reconciled": true,
+        "settled": true,
+        "signed_fee_microusd": -100545000,
+        "taker_fee_microusd": 501000,
+        "terminal_liquidation_slippage_microusd": -4765000,
+        "trading_days": 1,
+        "turnover_microusd": 17169388700000
+      },
+      "scenario_id": "latency-100000-maker--2000",
+      "signal_weight_ticks": 2.0,
+      "strategy_name": "signal_adjusted_avellaneda_stoikov",
+      "submission_latency_ns": 100000,
+      "taker_fee_microusd_per_share": 3000
+    },
+    {
+      "cancellation_latency_ns": 100000,
+      "daily": [
+        {
+          "adverse_selection_100ms_microusd": 941290000,
+          "adverse_selection_coverage": 1.0,
+          "adverse_selection_eligible_fill_count": 1010,
+          "adverse_selection_observation_count": 1010,
+          "cash_microusd": -757698000,
+          "ending_inventory_by_symbol": {
+            "1": 0,
+            "2": 0,
+            "3": 0
+          },
+          "fee_contribution_microusd": -199998000,
+          "gross_cash_microusd": -557700000,
+          "inventory_mark_to_market_microusd": -1341285000,
+          "liquidation_count": 3,
+          "liquidation_quantity": 311,
+          "maker_fee_microusd": 199065000,
+          "marked_inventory_value_microusd": 0,
+          "marked_pnl_microusd": -757698000,
+          "max_abs_inventory_by_symbol": {
+            "1": 258,
+            "2": 283,
+            "3": 137
+          },
+          "max_drawdown_microusd": 790597000,
+          "passive_fill_count": 1010,
+          "passive_fill_quantity": 66355,
+          "passive_spread_capture_microusd": 794125000,
+          "reconciled": true,
+          "settled": true,
+          "signed_fee_microusd": 199998000,
+          "taker_fee_microusd": 933000,
+          "terminal_liquidation_slippage_microusd": -10540000,
+          "trading_date": "2019-12-30",
+          "turnover_microusd": 21885019180000
+        }
+      ],
+      "maker_fee_microusd_per_share": 3000,
+      "metrics": {
+        "adverse_selection_100ms_microusd": 941290000,
+        "adverse_selection_coverage": 1.0,
+        "adverse_selection_eligible_fill_count": 1010,
+        "adverse_selection_observation_count": 1010,
+        "cash_microusd": -757698000,
+        "fee_contribution_microusd": -199998000,
+        "gross_cash_microusd": -557700000,
+        "inventory_mark_to_market_microusd": -1341285000,
+        "liquidation_count": 3,
+        "liquidation_quantity": 311,
+        "maker_fee_microusd": 199065000,
+        "marked_pnl_microusd": -757698000,
+        "max_abs_inventory_by_symbol": {
+          "1": 258,
+          "2": 283,
+          "3": 137
+        },
+        "max_drawdown_microusd": 790597000,
+        "passive_fill_count": 1010,
+        "passive_fill_quantity": 66355,
+        "passive_spread_capture_microusd": 794125000,
+        "reconciled": true,
+        "settled": true,
+        "signed_fee_microusd": 199998000,
+        "taker_fee_microusd": 933000,
+        "terminal_liquidation_slippage_microusd": -10540000,
+        "trading_days": 1,
+        "turnover_microusd": 21885019180000
+      },
+      "scenario_id": "latency-100000-maker-3000",
+      "signal_weight_ticks": 0.0,
+      "strategy_name": "inventory_aware_avellaneda_stoikov",
+      "submission_latency_ns": 100000,
+      "taker_fee_microusd_per_share": 3000
+    },
+    {
+      "cancellation_latency_ns": 100000,
+      "daily": [
+        {
+          "adverse_selection_100ms_microusd": 775720000,
+          "adverse_selection_coverage": 1.0,
+          "adverse_selection_eligible_fill_count": 812,
+          "adverse_selection_observation_count": 812,
+          "cash_microusd": -434910000,
+          "ending_inventory_by_symbol": {
+            "1": 0,
+            "2": 0,
+            "3": 0
+          },
+          "fee_contribution_microusd": -152070000,
+          "gross_cash_microusd": -282840000,
+          "inventory_mark_to_market_microusd": -951755000,
+          "liquidation_count": 3,
+          "liquidation_quantity": 167,
+          "maker_fee_microusd": 151569000,
+          "marked_inventory_value_microusd": 0,
+          "marked_pnl_microusd": -434910000,
+          "max_abs_inventory_by_symbol": {
+            "1": 207,
+            "2": 291,
+            "3": 138
+          },
+          "max_drawdown_microusd": 491034000,
+          "passive_fill_count": 812,
+          "passive_fill_quantity": 50523,
+          "passive_spread_capture_microusd": 673680000,
+          "reconciled": true,
+          "settled": true,
+          "signed_fee_microusd": 152070000,
+          "taker_fee_microusd": 501000,
+          "terminal_liquidation_slippage_microusd": -4765000,
+          "trading_date": "2019-12-30",
+          "turnover_microusd": 17169388700000
+        }
+      ],
+      "maker_fee_microusd_per_share": 3000,
+      "metrics": {
+        "adverse_selection_100ms_microusd": 775720000,
+        "adverse_selection_coverage": 1.0,
+        "adverse_selection_eligible_fill_count": 812,
+        "adverse_selection_observation_count": 812,
+        "cash_microusd": -434910000,
+        "fee_contribution_microusd": -152070000,
+        "gross_cash_microusd": -282840000,
+        "inventory_mark_to_market_microusd": -951755000,
+        "liquidation_count": 3,
+        "liquidation_quantity": 167,
+        "maker_fee_microusd": 151569000,
+        "marked_pnl_microusd": -434910000,
+        "max_abs_inventory_by_symbol": {
+          "1": 207,
+          "2": 291,
+          "3": 138
+        },
+        "max_drawdown_microusd": 491034000,
+        "passive_fill_count": 812,
+        "passive_fill_quantity": 50523,
+        "passive_spread_capture_microusd": 673680000,
+        "reconciled": true,
+        "settled": true,
+        "signed_fee_microusd": 152070000,
+        "taker_fee_microusd": 501000,
+        "terminal_liquidation_slippage_microusd": -4765000,
+        "trading_days": 1,
+        "turnover_microusd": 17169388700000
+      },
+      "scenario_id": "latency-100000-maker-3000",
+      "signal_weight_ticks": 2.0,
+      "strategy_name": "signal_adjusted_avellaneda_stoikov",
+      "submission_latency_ns": 100000,
+      "taker_fee_microusd_per_share": 3000
+    },
+    {
+      "cancellation_latency_ns": 1000000,
+      "daily": [
+        {
+          "adverse_selection_100ms_microusd": 968130000,
+          "adverse_selection_coverage": 1.0,
+          "adverse_selection_eligible_fill_count": 1039,
+          "adverse_selection_observation_count": 1039,
+          "cash_microusd": -167012000,
+          "ending_inventory_by_symbol": {
+            "1": 0,
+            "2": 0,
+            "3": 0
+          },
+          "fee_contribution_microusd": 131388000,
+          "gross_cash_microusd": -298400000,
+          "inventory_mark_to_market_microusd": -1164125000,
+          "liquidation_count": 3,
+          "liquidation_quantity": 336,
+          "maker_fee_microusd": -132396000,
+          "marked_inventory_value_microusd": 0,
+          "marked_pnl_microusd": -167012000,
+          "max_abs_inventory_by_symbol": {
+            "1": 255,
+            "2": 285,
+            "3": 142
+          },
+          "max_drawdown_microusd": 492782000,
+          "passive_fill_count": 1039,
+          "passive_fill_quantity": 66198,
+          "passive_spread_capture_microusd": 876645000,
+          "reconciled": true,
+          "settled": true,
+          "signed_fee_microusd": -131388000,
+          "taker_fee_microusd": 1008000,
+          "terminal_liquidation_slippage_microusd": -10920000,
+          "trading_date": "2019-12-30",
+          "turnover_microusd": 23503213180000
+        }
+      ],
+      "maker_fee_microusd_per_share": -2000,
+      "metrics": {
+        "adverse_selection_100ms_microusd": 968130000,
+        "adverse_selection_coverage": 1.0,
+        "adverse_selection_eligible_fill_count": 1039,
+        "adverse_selection_observation_count": 1039,
+        "cash_microusd": -167012000,
+        "fee_contribution_microusd": 131388000,
+        "gross_cash_microusd": -298400000,
+        "inventory_mark_to_market_microusd": -1164125000,
+        "liquidation_count": 3,
+        "liquidation_quantity": 336,
+        "maker_fee_microusd": -132396000,
+        "marked_pnl_microusd": -167012000,
+        "max_abs_inventory_by_symbol": {
+          "1": 255,
+          "2": 285,
+          "3": 142
+        },
+        "max_drawdown_microusd": 492782000,
+        "passive_fill_count": 1039,
+        "passive_fill_quantity": 66198,
+        "passive_spread_capture_microusd": 876645000,
+        "reconciled": true,
+        "settled": true,
+        "signed_fee_microusd": -131388000,
+        "taker_fee_microusd": 1008000,
+        "terminal_liquidation_slippage_microusd": -10920000,
+        "trading_days": 1,
+        "turnover_microusd": 23503213180000
+      },
+      "scenario_id": "latency-1000000-maker--2000",
+      "signal_weight_ticks": 0.0,
+      "strategy_name": "inventory_aware_avellaneda_stoikov",
+      "submission_latency_ns": 1000000,
+      "taker_fee_microusd_per_share": 3000
+    },
+    {
+      "cancellation_latency_ns": 1000000,
+      "daily": [
+        {
+          "adverse_selection_100ms_microusd": 826340000,
+          "adverse_selection_coverage": 1.0,
+          "adverse_selection_eligible_fill_count": 866,
+          "adverse_selection_observation_count": 866,
+          "cash_microusd": -46976000,
+          "ending_inventory_by_symbol": {
+            "1": 0,
+            "2": 0,
+            "3": 0
+          },
+          "fee_contribution_microusd": 111984000,
+          "gross_cash_microusd": -158960000,
+          "inventory_mark_to_market_microusd": -941135000,
+          "liquidation_count": 3,
+          "liquidation_quantity": 148,
+          "maker_fee_microusd": -112428000,
+          "marked_inventory_value_microusd": 0,
+          "marked_pnl_microusd": -46976000,
+          "max_abs_inventory_by_symbol": {
+            "1": 210,
+            "2": 326,
+            "3": 142
+          },
+          "max_drawdown_microusd": 523442000,
+          "passive_fill_count": 866,
+          "passive_fill_quantity": 56214,
+          "passive_spread_capture_microusd": 785075000,
+          "reconciled": true,
+          "settled": true,
+          "signed_fee_microusd": -111984000,
+          "taker_fee_microusd": 444000,
+          "terminal_liquidation_slippage_microusd": -2900000,
+          "trading_date": "2019-12-30",
+          "turnover_microusd": 20566039820000
+        }
+      ],
+      "maker_fee_microusd_per_share": -2000,
+      "metrics": {
+        "adverse_selection_100ms_microusd": 826340000,
+        "adverse_selection_coverage": 1.0,
+        "adverse_selection_eligible_fill_count": 866,
+        "adverse_selection_observation_count": 866,
+        "cash_microusd": -46976000,
+        "fee_contribution_microusd": 111984000,
+        "gross_cash_microusd": -158960000,
+        "inventory_mark_to_market_microusd": -941135000,
+        "liquidation_count": 3,
+        "liquidation_quantity": 148,
+        "maker_fee_microusd": -112428000,
+        "marked_pnl_microusd": -46976000,
+        "max_abs_inventory_by_symbol": {
+          "1": 210,
+          "2": 326,
+          "3": 142
+        },
+        "max_drawdown_microusd": 523442000,
+        "passive_fill_count": 866,
+        "passive_fill_quantity": 56214,
+        "passive_spread_capture_microusd": 785075000,
+        "reconciled": true,
+        "settled": true,
+        "signed_fee_microusd": -111984000,
+        "taker_fee_microusd": 444000,
+        "terminal_liquidation_slippage_microusd": -2900000,
+        "trading_days": 1,
+        "turnover_microusd": 20566039820000
+      },
+      "scenario_id": "latency-1000000-maker--2000",
+      "signal_weight_ticks": 2.0,
+      "strategy_name": "signal_adjusted_avellaneda_stoikov",
+      "submission_latency_ns": 1000000,
+      "taker_fee_microusd_per_share": 3000
+    },
+    {
+      "cancellation_latency_ns": 1000000,
+      "daily": [
+        {
+          "adverse_selection_100ms_microusd": 968130000,
+          "adverse_selection_coverage": 1.0,
+          "adverse_selection_eligible_fill_count": 1039,
+          "adverse_selection_observation_count": 1039,
+          "cash_microusd": -498002000,
+          "ending_inventory_by_symbol": {
+            "1": 0,
+            "2": 0,
+            "3": 0
+          },
+          "fee_contribution_microusd": -199602000,
+          "gross_cash_microusd": -298400000,
+          "inventory_mark_to_market_microusd": -1164125000,
+          "liquidation_count": 3,
+          "liquidation_quantity": 336,
+          "maker_fee_microusd": 198594000,
+          "marked_inventory_value_microusd": 0,
+          "marked_pnl_microusd": -498002000,
+          "max_abs_inventory_by_symbol": {
+            "1": 255,
+            "2": 285,
+            "3": 142
+          },
+          "max_drawdown_microusd": 626070000,
+          "passive_fill_count": 1039,
+          "passive_fill_quantity": 66198,
+          "passive_spread_capture_microusd": 876645000,
+          "reconciled": true,
+          "settled": true,
+          "signed_fee_microusd": 199602000,
+          "taker_fee_microusd": 1008000,
+          "terminal_liquidation_slippage_microusd": -10920000,
+          "trading_date": "2019-12-30",
+          "turnover_microusd": 23503213180000
+        }
+      ],
+      "maker_fee_microusd_per_share": 3000,
+      "metrics": {
+        "adverse_selection_100ms_microusd": 968130000,
+        "adverse_selection_coverage": 1.0,
+        "adverse_selection_eligible_fill_count": 1039,
+        "adverse_selection_observation_count": 1039,
+        "cash_microusd": -498002000,
+        "fee_contribution_microusd": -199602000,
+        "gross_cash_microusd": -298400000,
+        "inventory_mark_to_market_microusd": -1164125000,
+        "liquidation_count": 3,
+        "liquidation_quantity": 336,
+        "maker_fee_microusd": 198594000,
+        "marked_pnl_microusd": -498002000,
+        "max_abs_inventory_by_symbol": {
+          "1": 255,
+          "2": 285,
+          "3": 142
+        },
+        "max_drawdown_microusd": 626070000,
+        "passive_fill_count": 1039,
+        "passive_fill_quantity": 66198,
+        "passive_spread_capture_microusd": 876645000,
+        "reconciled": true,
+        "settled": true,
+        "signed_fee_microusd": 199602000,
+        "taker_fee_microusd": 1008000,
+        "terminal_liquidation_slippage_microusd": -10920000,
+        "trading_days": 1,
+        "turnover_microusd": 23503213180000
+      },
+      "scenario_id": "latency-1000000-maker-3000",
+      "signal_weight_ticks": 0.0,
+      "strategy_name": "inventory_aware_avellaneda_stoikov",
+      "submission_latency_ns": 1000000,
+      "taker_fee_microusd_per_share": 3000
+    },
+    {
+      "cancellation_latency_ns": 1000000,
+      "daily": [
+        {
+          "adverse_selection_100ms_microusd": 826340000,
+          "adverse_selection_coverage": 1.0,
+          "adverse_selection_eligible_fill_count": 866,
+          "adverse_selection_observation_count": 866,
+          "cash_microusd": -328046000,
+          "ending_inventory_by_symbol": {
+            "1": 0,
+            "2": 0,
+            "3": 0
+          },
+          "fee_contribution_microusd": -169086000,
+          "gross_cash_microusd": -158960000,
+          "inventory_mark_to_market_microusd": -941135000,
+          "liquidation_count": 3,
+          "liquidation_quantity": 148,
+          "maker_fee_microusd": 168642000,
+          "marked_inventory_value_microusd": 0,
+          "marked_pnl_microusd": -328046000,
+          "max_abs_inventory_by_symbol": {
+            "1": 210,
+            "2": 326,
+            "3": 142
+          },
+          "max_drawdown_microusd": 594012000,
+          "passive_fill_count": 866,
+          "passive_fill_quantity": 56214,
+          "passive_spread_capture_microusd": 785075000,
+          "reconciled": true,
+          "settled": true,
+          "signed_fee_microusd": 169086000,
+          "taker_fee_microusd": 444000,
+          "terminal_liquidation_slippage_microusd": -2900000,
+          "trading_date": "2019-12-30",
+          "turnover_microusd": 20566039820000
+        }
+      ],
+      "maker_fee_microusd_per_share": 3000,
+      "metrics": {
+        "adverse_selection_100ms_microusd": 826340000,
+        "adverse_selection_coverage": 1.0,
+        "adverse_selection_eligible_fill_count": 866,
+        "adverse_selection_observation_count": 866,
+        "cash_microusd": -328046000,
+        "fee_contribution_microusd": -169086000,
+        "gross_cash_microusd": -158960000,
+        "inventory_mark_to_market_microusd": -941135000,
+        "liquidation_count": 3,
+        "liquidation_quantity": 148,
+        "maker_fee_microusd": 168642000,
+        "marked_pnl_microusd": -328046000,
+        "max_abs_inventory_by_symbol": {
+          "1": 210,
+          "2": 326,
+          "3": 142
+        },
+        "max_drawdown_microusd": 594012000,
+        "passive_fill_count": 866,
+        "passive_fill_quantity": 56214,
+        "passive_spread_capture_microusd": 785075000,
+        "reconciled": true,
+        "settled": true,
+        "signed_fee_microusd": 169086000,
+        "taker_fee_microusd": 444000,
+        "terminal_liquidation_slippage_microusd": -2900000,
+        "trading_days": 1,
+        "turnover_microusd": 20566039820000
+      },
+      "scenario_id": "latency-1000000-maker-3000",
+      "signal_weight_ticks": 2.0,
+      "strategy_name": "signal_adjusted_avellaneda_stoikov",
+      "submission_latency_ns": 1000000,
+      "taker_fee_microusd_per_share": 3000
+    }
+  ],
+  "schema_version": 1,
+  "selection": {
+    "model": {
+      "evaluations": [
+        {
+          "model_name": "prior",
+          "multiclass_log_loss": 1.0326547079317192,
+          "partition": "validation"
+        },
+        {
+          "model_name": "logistic_regression",
+          "multiclass_log_loss": 0.9812070527243368,
+          "partition": "validation"
+        },
+        {
+          "model_name": "hist_gradient_boosting",
+          "multiclass_log_loss": 0.9564774963317508,
+          "partition": "validation"
+        }
+      ],
+      "model_name": "hist_gradient_boosting",
+      "validation_log_loss": 0.9564774963317508
+    },
+    "signal_weight": {
+      "daily_evidence": [
+        {
+          "cancellation_latency_ns": 100000,
+          "maker_fee_microusd_per_share": -2000,
+          "net_pnl_microusd": -905308000,
+          "partition": "validation",
+          "signal_weight_ticks": 0.0,
+          "submission_latency_ns": 100000,
+          "trading_date": "2019-10-30"
+        },
+        {
+          "cancellation_latency_ns": 100000,
+          "maker_fee_microusd_per_share": -2000,
+          "net_pnl_microusd": -604891000,
+          "partition": "validation",
+          "signal_weight_ticks": 0.5,
+          "submission_latency_ns": 100000,
+          "trading_date": "2019-10-30"
+        },
+        {
+          "cancellation_latency_ns": 100000,
+          "maker_fee_microusd_per_share": -2000,
+          "net_pnl_microusd": -676402000,
+          "partition": "validation",
+          "signal_weight_ticks": 1.0,
+          "submission_latency_ns": 100000,
+          "trading_date": "2019-10-30"
+        },
+        {
+          "cancellation_latency_ns": 100000,
+          "maker_fee_microusd_per_share": -2000,
+          "net_pnl_microusd": -587303000,
+          "partition": "validation",
+          "signal_weight_ticks": 2.0,
+          "submission_latency_ns": 100000,
+          "trading_date": "2019-10-30"
+        }
+      ],
+      "evaluations": [
+        {
+          "mean_net_pnl_microusd": -905308000.0,
+          "signal_weight_ticks": 0.0,
+          "total_net_pnl_microusd": -905308000,
+          "validation_days": 1
+        },
+        {
+          "mean_net_pnl_microusd": -604891000.0,
+          "signal_weight_ticks": 0.5,
+          "total_net_pnl_microusd": -604891000,
+          "validation_days": 1
+        },
+        {
+          "mean_net_pnl_microusd": -676402000.0,
+          "signal_weight_ticks": 1.0,
+          "total_net_pnl_microusd": -676402000,
+          "validation_days": 1
+        },
+        {
+          "mean_net_pnl_microusd": -587303000.0,
+          "signal_weight_ticks": 2.0,
+          "total_net_pnl_microusd": -587303000,
+          "validation_days": 1
+        }
+      ],
+      "fixed_cancellation_latency_ns": 100000,
+      "fixed_maker_fee_microusd_per_share": -2000,
+      "fixed_submission_latency_ns": 100000,
+      "fixed_taker_fee_microusd_per_share": 3000,
+      "selected": 2.0
+    },
+    "test_dates_accessed_after_selection": true
+  },
+  "simulation_id": "20260822T000247.776720000Z-55a2f298d636"
+}

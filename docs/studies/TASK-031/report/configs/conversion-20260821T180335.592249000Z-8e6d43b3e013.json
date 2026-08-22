@@ -1,0 +1,18 @@
+{
+  "allow_degraded": false,
+  "output_root": "runs",
+  "parquet": {
+    "compression": "zstd",
+    "partition_keys": [
+      "trading_date",
+      "symbol"
+    ],
+    "row_group_size": 65536
+  },
+  "replay_manifests": [
+    "runs/replay/20260821T165837.436440000Z-7bb0da7c2f45/replay-manifest.json",
+    "runs/replay/20260821T165837.436440000Z-cb17d1ecb6ac/replay-manifest.json",
+    "runs/replay/20260821T165837.436841000Z-972055e967e0/replay-manifest.json"
+  ],
+  "schema_version": 1
+}

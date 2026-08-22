@@ -12,12 +12,6 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Tests: Full CI/release smoke
   - Documentation to update: README and 09-deployment.md
 
-- [ ] TASK-031: Execute official-data study
-  - Dependencies: TASK-030
-  - Acceptance criteria: Three+ symbols/days and complete validated final study
-  - Tests: Full-day validation and reproduction spot-check
-  - Documentation to update: Resolve OQ-001/OQ-005 and final report
-
 - [ ] TASK-032: Final documentation and traceability review
   - Dependencies: TASK-031
   - Acceptance criteria: No contradiction or unmapped requirement; v0.1.0 ready
@@ -25,6 +19,20 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Documentation to update: All authoritative documents
 
 ## Completed
+
+- [x] TASK-031: Execute official-data study
+  - Completed: 2026-08-22
+  - Evidence: The frozen AAPL/MSFT/AMZN study used chronological official sample days for train,
+    validation and one-shot test. Strict inspection decoded 844,963,543 messages with zero errors;
+    three replay runs deep-validated 14,455,244 event/snapshot records and authenticated the exact
+    sources, children and final book digests. The immutable conversion, 604,054-row dataset,
+    1,149,636-prediction experiment and twelve-cell simulation all authenticated; the final report
+    retains every result, including eleven negative marked-P&L cells. A forced full December replay
+    reproduced byte-identical children and final digests. Development, Release and ASan/UBSan each
+    passed 136 CTests with one authorised-data opt-in skip; both 10,000-mutation fuzz targets, all
+    684 Python tests, formatting, lint, mypy, package build, static analysis, dependency/secret and
+    network-disabled security checks, docs lint and the installed release smoke passed. OQ-001 and
+    conservative OQ-002 are resolved; the absent OQ-005 reference is documented in the evidence.
 
 - [x] TASK-029: Benchmark/profile/optimise one bottleneck
   - Completed: 2026-08-18
@@ -51,7 +59,8 @@ Authoritative task details and evidence requirements are in docs/10-implementati
     symlinks, success, failure and cancellation. Repository policy tests cover executable
     serialisation/code execution, network APIs, credential schema fields, tracked data, private
     paths and packaged schema parity; report injection covers script and Markdown metacharacters.
-    The reviewed secret baseline contains 18 false-positive test hashes/literals and zero secrets;
+    The reviewed secret baseline contains 24 false-positive test/study hashes/literals and zero
+    secrets;
     pip-audit found no known vulnerability in the hashed release lock, and the exact dependency
     licence inventory has no unaccepted high/critical issue. The network-disabled synthetic smoke,
     clang-analyzer checks over all 28 project translation units, two SEC-FUZZ-001 tests, all 128

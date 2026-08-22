@@ -245,6 +245,19 @@ runtime download is attempted.
     python -m itchlab_research simulate --config configs/simulation.example.json
     python -m itchlab_research report --run-id <simulation-id> --output-format both
 
+## Official-data study
+
+TASK-031 executed the complete frozen pipeline for AAPL, MSFT and AMZN over chronological train,
+validation and test sample days. The [study evidence](docs/studies/TASK-031/EVIDENCE.md) records exact
+source identities, authenticated run lineage, full-day validation and a byte-identical reproduction
+spot-check. The generated [Markdown report](docs/studies/TASK-031/report/report.md) and
+[HTML report](docs/studies/TASK-031/report/report.html) retain all predictive and conservative
+simulation outcomes, including the predominantly negative P&L results.
+
+Official source files and bulk run outputs are not distributed. Reproduction requires separately
+authorised files matching the recorded basenames, sizes and SHA-256 values; the application never
+downloads them at runtime.
+
 ## Testing and quality commands
 
 The first synthetic inspect/replay slice has a clean-checkout smoke command. It configures and

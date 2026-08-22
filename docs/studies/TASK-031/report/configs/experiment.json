@@ -1,0 +1,43 @@
+{
+  "dataset_manifest": "runs/dataset/20260821T180641.067291000Z-bcdb1ae22a29/dataset-manifest.json",
+  "models": {
+    "hist_gradient_boosting": {
+      "l2_regularization": [
+        0.0,
+        1.0
+      ],
+      "learning_rates": [
+        0.05,
+        0.1
+      ],
+      "max_iter": 100,
+      "max_leaf_nodes": [
+        15,
+        31
+      ]
+    },
+    "logistic_regression": {
+      "c_values": [
+        0.01,
+        0.1,
+        1.0,
+        10.0
+      ],
+      "max_iter": 2000,
+      "penalty": "l2",
+      "solver": "lbfgs"
+    },
+    "prior": {
+      "enabled": true
+    }
+  },
+  "preprocessing": {
+    "continuous_imputation": "median",
+    "standardise_hist_gradient_boosting": false,
+    "standardise_logistic": true,
+    "unknown_symbol": "all_zero"
+  },
+  "schema_version": 1,
+  "seed": 7987,
+  "selection_metric": "multiclass_log_loss"
+}
