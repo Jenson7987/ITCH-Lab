@@ -130,8 +130,8 @@ ReplayResult ReplayCoordinator::run(ByteSource& source, const ReplayConfig& conf
   std::uint64_t skipped_decode_messages{};
   FramedMessageReader reader{source};
   const ItchDecoder decoder;
-  const auto intermediate_digest_required = events.requires_intermediate_book_digest() ||
-                                            snapshots.requires_intermediate_book_digest();
+  const auto intermediate_digest_required =
+      events.requires_intermediate_book_digest() || snapshots.requires_intermediate_book_digest();
   InstrumentDirectory directory{config.selection.symbols};
   SessionState session;
   std::unordered_map<StockLocate, std::unique_ptr<OrderBook>> books;
