@@ -6,11 +6,13 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Queued
 
-- [ ] TASK-030: Finish CI, doctor and release packaging
+- [x] TASK-030: Finish CI, doctor and release packaging
   - Dependencies: TASK-028–029
   - Acceptance criteria: Clean offline installed E2E and safe release archive
   - Tests: Full CI/release smoke
   - Documentation to update: README and 09-deployment.md
+  - Evidence: local installed-wheel E2E passed offline on macOS ARM64 (2,580 messages over three replay dates); Python suite passed (681 tests); C++ dev, release, coverage and sanitizer builds each passed all 133 runnable tests, with the authorised official-data test skipped; security, coverage and release-performance gates passed.
+  - Limitation: the Ubuntu x86_64 and macOS ARM64 hosted GitHub Actions matrix definitions are in place but have not been executed remotely; all completed evidence is local.
 
 - [ ] TASK-032: Final documentation and traceability review
   - Dependencies: TASK-031
