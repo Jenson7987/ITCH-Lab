@@ -206,3 +206,8 @@ See the [testing strategy](docs/08-testing-strategy.md),
 
 When documents conflict, accepted ADRs take precedence, followed by product requirements,
 architecture/data/contracts, and then testing and implementation plans.
+
+## Licence
+
+ITCH-Lab is available under the [MIT Licence](LICENSE). Third-party components retain their own
+terms, recorded in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -37,7 +37,7 @@ def test_task_001_module_cli_version() -> None:
     )
 
     assert completed.returncode == 0
-    assert completed.stdout == "itchlab-research 0.1.0\n"
+    assert completed.stdout == "itchlab-research 0.1.3\n"
     assert completed.stderr == ""
 
 
@@ -51,7 +51,7 @@ def test_task_001_console_cli_version() -> None:
     )
 
     assert completed.returncode == 0
-    assert completed.stdout == "itchlab-research 0.1.0\n"
+    assert completed.stdout == "itchlab-research 0.1.3\n"
     assert completed.stderr == ""
 
 

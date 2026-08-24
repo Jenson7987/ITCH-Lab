@@ -6,7 +6,12 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Current
 
-- [ ] TASK-032: Final documentation and traceability review
+No open tasks.
+
+## Completed
+
+- [x] TASK-032: Final documentation and traceability review
+  - Completed: 2026-08-24
   - Dependencies: TASK-031
   - Acceptance criteria: No contradiction or unmapped requirement; v0.1.0 ready
   - Tests: Docs lint, traceability validator, reviewer walkthrough
@@ -16,11 +21,10 @@ Authoritative task details and evidence requirements are in docs/10-implementati
     tests, all 136 locally runnable C++ tests in development/Release/ASan-UBSan, coverage, fuzz,
     security, package-build and installed E2E results. Hosted Ubuntu x86-64 and macOS ARM64 native
     and installed-release jobs passed, as did the hosted security workflow.
-  - Release state: the annotated `v0.1.0` tag exists at the pre-cleanup commit
-    `0ef502ca41f691cab48df0759c3f380c1a136cda`. This post-tag polish remains uncommitted, so the task
-    stays unchecked until the release owner reconciles the final commit and tag identity.
-
-## Completed
+  - Release state: `v0.1.0` identifies the verified MVP; `v0.1.1` and `v0.1.2` preserve the
+    subsequent public-documentation polish and CI-regression fix without rewriting published tags.
+    CI and security both passed at `v0.1.2` commit
+    `ba6556f65e32ddc28ce5946c305ef1332f7214af`.
 
 - [x] TASK-031: Execute official-data study
   - Completed: 2026-08-22

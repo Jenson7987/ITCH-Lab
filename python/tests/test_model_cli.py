@@ -22,7 +22,7 @@ def test_task_020_train_help_version_and_duplicate_options(
     assert "required predictive baselines" in capsys.readouterr().out
 
     assert main(["train", "--version"]) == 0
-    assert "itchlab-research 0.1.0" in capsys.readouterr().out
+    assert "itchlab-research 0.1.3" in capsys.readouterr().out
 
     assert main(["train", "--config", "one", "--config", "two"]) == 2
     assert "duplicate option --config" in capsys.readouterr().err

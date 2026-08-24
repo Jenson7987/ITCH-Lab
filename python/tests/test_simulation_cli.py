@@ -55,7 +55,7 @@ def test_simulate_help_version_and_duplicate_options(
     assert "conservative historical market-making" in capsys.readouterr().out
 
     assert cli.main(["simulate", "--version"]) == 0
-    assert "itchlab-research 0.1.0" in capsys.readouterr().out
+    assert "itchlab-research 0.1.3" in capsys.readouterr().out
 
     assert cli.main(["simulate", "--config", "one", "--config", "two"]) == 2
     assert "duplicate option --config" in capsys.readouterr().err

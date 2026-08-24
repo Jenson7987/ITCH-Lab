@@ -26,7 +26,7 @@ def test_task_019_build_dataset_help_version_and_duplicate_options(
     assert "frozen chronological day partitions" in capsys.readouterr().out
 
     assert main(["build-dataset", "--version"]) == 0
-    assert "itchlab-research 0.1.0" in capsys.readouterr().out
+    assert "itchlab-research 0.1.3" in capsys.readouterr().out
 
     assert (
         main(

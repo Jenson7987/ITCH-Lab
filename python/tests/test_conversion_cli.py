@@ -42,7 +42,7 @@ def test_task_017_convert_help_and_duplicate_options(
     assert "partitioned Parquet" in capsys.readouterr().out
 
     assert main(["convert", "--version"]) == 0
-    assert "itchlab-research 0.1.0" in capsys.readouterr().out
+    assert "itchlab-research 0.1.3" in capsys.readouterr().out
 
     assert main(["convert", "--config", "one", "--config", "two"]) == 2
     captured = capsys.readouterr()

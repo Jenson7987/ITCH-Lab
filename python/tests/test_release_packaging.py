@@ -27,11 +27,11 @@ def _release_module() -> ModuleType:
 def test_task_030_public_versions_agree() -> None:
     release = _release_module()
     assert release.repository_versions() == {
-        "cmake": "0.1.0",
-        "pyproject": "0.1.0",
-        "python_package": "0.1.0",
+        "cmake": "0.1.3",
+        "pyproject": "0.1.3",
+        "python_package": "0.1.3",
     }
-    assert release.checked_version() == "0.1.0"
+    assert release.checked_version() == "0.1.3"
 
 
 @pytest.mark.parametrize(
@@ -56,6 +56,7 @@ def test_task_030_source_inventory_excludes_raw_bulk_and_operating_system_files(
     release = _release_module()
     files = release.source_files()
 
+    assert PurePosixPath("LICENSE") in files
     assert PurePosixPath("README.md") in files
     assert PurePosixPath("THIRD_PARTY_NOTICES.md") in files
     assert all(".DS_Store" not in path.parts for path in files)
@@ -87,20 +88,20 @@ def test_task_030_archive_is_deterministic_and_rejects_unsafe_members(tmp_path: 
     first = release._tar_bytes(
         root=tmp_path,
         members=members,
-        prefix=PurePosixPath("itchlab-0.1.0"),
+        prefix=PurePosixPath("itchlab-0.1.3"),
         epoch=1_700_000_000,
     )
     second = release._tar_bytes(
         root=tmp_path,
         members=members,
-        prefix=PurePosixPath("itchlab-0.1.0"),
+        prefix=PurePosixPath("itchlab-0.1.3"),
         epoch=1_700_000_000,
     )
     assert first == second
 
     archive_path = tmp_path / "unsafe.tar.gz"
     with tarfile.open(archive_path, mode="w:gz") as archive:
-        archive.add(payload, arcname="itchlab-0.1.0/data/raw/payload.itch")
+        archive.add(payload, arcname="itchlab-0.1.3/data/raw/payload.itch")
     with pytest.raises(release.ReleaseError, match="unsafe release archive member"):
         release.validate_archive(archive_path)
 
@@ -108,7 +109,7 @@ def test_task_030_archive_is_deterministic_and_rejects_unsafe_members(tmp_path: 
         release._tar_bytes(
             root=tmp_path,
             members=[(PurePosixPath("data/derived/payload.parquet"), payload)],
-            prefix=PurePosixPath("itchlab-0.1.0"),
+            prefix=PurePosixPath("itchlab-0.1.3"),
             epoch=1_700_000_000,
         )
 

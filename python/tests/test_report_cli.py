@@ -22,7 +22,7 @@ def test_task_021_report_help_version_and_duplicate_options(
     assert "completed experiment or simulation" in capsys.readouterr().out
 
     assert main(["report", "--version"]) == 0
-    assert "itchlab-research 0.1.0" in capsys.readouterr().out
+    assert "itchlab-research 0.1.3" in capsys.readouterr().out
 
     assert main(["report", "--run-id", "one", "--run-id", "two"]) == 2
     assert "duplicate option --run-id" in capsys.readouterr().err

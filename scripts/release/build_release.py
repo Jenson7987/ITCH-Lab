@@ -34,6 +34,7 @@ _FORBIDDEN_PREFIXES: Final = (
     PurePosixPath("runs"),
 )
 _REQUIRED_SOURCE_FILES: Final = (
+    PurePosixPath("LICENSE"),
     PurePosixPath("README.md"),
     PurePosixPath("THIRD_PARTY_NOTICES.md"),
     PurePosixPath("docs/09-deployment.md"),

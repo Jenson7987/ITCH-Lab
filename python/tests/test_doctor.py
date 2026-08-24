@@ -17,7 +17,7 @@ from itchlab_research.doctor import DoctorCheck, DoctorReport, run_doctor
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
-def _binary(path: Path, version: str = "0.1.0") -> Path:
+def _binary(path: Path, version: str = "0.1.3") -> Path:
     path.write_text(f"#!/bin/sh\nprintf 'itchlab {version}\\n'\n", encoding="utf-8")
     path.chmod(0o755)
     return path
@@ -40,7 +40,7 @@ def test_task_030_doctor_checks_installed_runtime_without_network(
     report = run_doctor(binary=_binary(tmp_path / "itchlab"))
 
     assert report.healthy is True
-    assert report.application_version == "0.1.0"
+    assert report.application_version == "0.1.3"
     assert {check.name for check in report.checks} == {
         "python",
         "dependency:jsonschema",
@@ -125,7 +125,7 @@ def test_task_030_doctor_cli_help_json_and_failure_exit(
     assert "installed offline runtime" in capsys.readouterr().out
 
     report = DoctorReport(
-        application_version="0.1.0",
+        application_version="0.1.3",
         operating_system="TestOS",
         architecture="test-arch",
         checks=(DoctorCheck("cpp_binary", "fail", "Binary missing."),),
