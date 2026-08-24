@@ -72,5 +72,5 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 - [x] CI validates source/matrix/task inventories and mapping fields.
 - [x] No verification reference depends only on inaccessible raw market data.
 
-TASK-032's [v0.1.0 final review](release/v0.1.0-review.md) records the fresh-reviewer walkthrough,
-local command evidence and the release-owner evidence still required before the task can close.
+The [v0.1.0 verification record](release/v0.1.0-review.md) records the final documentation
+walkthrough, local command evidence and hosted release-platform results.

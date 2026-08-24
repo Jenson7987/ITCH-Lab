@@ -104,7 +104,8 @@ For each qualifying row:
 Required event windows are 20, 100 and 500 qualifying transitions. Clock windows are incomplete
 until that much session time has elapsed. Infinite values are invalid. The feature output retains
 all qualifying rows with individual warm-up values set to null and an explicit `history_complete`
-flag; TASK-019 counts and excludes rows without every required history window before sampling.
+flag; the dataset stage counts and excludes rows without every required history window before
+sampling.
 
 ### Labels
 

@@ -1,4 +1,6 @@
-# TASK-031 official-data study evidence
+# Official-data study evidence
+
+Traceability: TASK-031.
 
 Status: completed on 2026-08-22 under the frozen [protocol](PROTOCOL.md).
 
@@ -126,21 +128,12 @@ and focused regression under all three already-passing build modes.
 | Hashed release-lock dependency audit | Pass: no known vulnerabilities |
 | Network-disabled synthetic security smoke | Pass: 3 CTests and 2 Python tests |
 | Isolated installed release smoke | Pass: complete synthetic inspect-to-report vertical slice and 10 doctor checks |
-| Documentation lint | Pass: 30 Markdown files; TASK-032 subsequently added the separate traceability contract gate |
+| Documentation lint | Pass: all 30 Markdown files present in the study revision |
 
-The pinned TASK-029 performance result remains the applicable release evidence; this scientific
-execution did not change its fixture or throughput floor.
+The pinned [performance result](../../performance/TASK-029-performance.md) remains the applicable
+release evidence; this scientific execution did not change its fixture or throughput floor.
 
-## Specification note and limitations
-
-`TASKS.md` asked TASK-031 to resolve `OQ-001/OQ-005`, but the authoritative open-question table has
-no OQ-005. The only unresolved data-publication question was OQ-002, so this task resolves OQ-001
-and applies the conservative OQ-002 treatment. No new question or architectural decision was
-invented.
-
-At TASK-031 completion, TASK-030 was still listed as queued even though its release implementation
-was present and its full installed smoke passed during this study. TASK-031 used that existing
-repository behaviour without changing the adjacent task; TASK-030 was completed subsequently.
+## Limitations
 
 The study has only one day per chronological partition, so confidence intervals that require at
 least five trading days are correctly omitted. Results cover three selected symbols and the

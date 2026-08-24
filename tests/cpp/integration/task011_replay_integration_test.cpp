@@ -247,10 +247,10 @@ TEST_CASE("TASK-031 sink capability skips only intermediate book digests",
   REQUIRE(std::ranges::all_of(production_style_trace.diagnostics.events, [&](const auto& event) {
     return event.book_digest == empty_digest;
   }));
-  REQUIRE(std::ranges::all_of(production_style_trace.diagnostics.snapshots,
-                              [&](const auto& snapshot) {
-                                return snapshot.book_digest == empty_digest;
-                              }));
+  REQUIRE(
+      std::ranges::all_of(production_style_trace.diagnostics.snapshots, [&](const auto& snapshot) {
+        return snapshot.book_digest == empty_digest;
+      }));
   for (const auto& instrument : diagnostic_trace.summary.instruments) {
     const auto& production_instrument =
         instrument_summary(production_style_trace, instrument.instrument.symbol);

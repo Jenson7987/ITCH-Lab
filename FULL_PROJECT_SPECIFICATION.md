@@ -50,8 +50,8 @@
 
 ## Status and classification
 
-Status: the v0.1.0 MVP and official-data study are implemented. Local final review is complete;
-the release-owner commit and `v0.1.0` tag evidence remain pending.
+Status: the v0.1.0 MVP, official-data study, documentation review and hosted release-platform
+verification are complete.
 
 - **Confirmed requirement**: accepted through selection of the ITCH-Lab concept.
 - **Assumption**: planning premise requiring confirmation/evidence.
@@ -469,16 +469,18 @@ A task is not done merely because code compiles. It must:
 - Avoid unrelated edits and raw/generated-data commits.
 - Record concrete completion evidence in TASKS.md.
 
-## Key assumptions and open decisions
+## Key assumptions and resolved release choices
 
 - Primary machine is an M2 Pro MacBook; Linux is supported through CI.
-- ADR-005 records TASK-004 verification of `itch-length-v1` against the public Nasdaq 2019-12-30
+- ADR-005 records verification of `itch-length-v1` against the public Nasdaq 2019-12-30
   TotalView-ITCH 5.0 sample.
 - At least three days/symbols demonstrate method but cannot establish deployable alpha.
-- Exact published dates/symbols are chosen before viewing final test results.
+- The published study fixes AAPL, MSFT and AMZN across chronological 2019-07-30, 2019-10-30 and
+  2019-12-30 partitions selected before final test inspection.
 - Primary horizon is fixed at 100 qualifying updates for the MVP; changing it creates a new experiment family.
 - Queue cancellation policy uses exact known ahead orders conservatively.
-- Whether transformed real excerpts may be published depends on the applicable data terms; synthetic fixtures are the default.
+- The public evidence contains no official-source raw or transformed row excerpts; synthetic
+  fixtures are the only committed market-event bytes.
 
 ## Traceability summary
 

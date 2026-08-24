@@ -1,4 +1,6 @@
-# TASK-029 performance evidence
+# Release performance evidence
+
+Traceability: TASK-029.
 
 ## Scope and method
 
@@ -15,7 +17,7 @@ metadata are deliberately ignored by Git; the generator is the committed source 
 
 Measurements used ten timed repetitions after one warm-up and report the median and median absolute
 deviation (MAD), never the best run. The host was an Apple M2 Pro MacBook Pro running macOS 26.3.1.
-The Release binary used Apple Clang 21.0.0.21000101 with `-O3 -DNDEBUG`. The current shell and CMake
+The Release binary used Apple Clang 21.0.0.21000101 with `-O3 -DNDEBUG`. The profiling shell and CMake
 toolchain target were x86_64 under Rosetta; these results must not be presented as native arm64
 numbers. Peak RSS is process high-water RSS and therefore an upper bound across the requested pass
 set.

@@ -206,31 +206,31 @@ Release is blocked unless:
 9. Example/public manifests contain no workspace-specific absolute paths.
 10. Report includes the prescribed simulation/research limitations.
 
-## TASK-028 threat review and completion evidence
+## v0.1.0 security review and evidence
 
-Review date: 2026-08-17. The implemented system still matches the local, single-user and offline
-threat model above. Source/config/manifest/interchange/Parquet/report fields remain the trust
-boundaries; no account, credential, database, listener, broker, telemetry or runtime-download
-surface exists. The review found no unaccepted high- or critical-severity issue and introduced no
-security exception. Hosted CI execution is observational evidence supplied by the next workflow
-run; the equivalent gates below passed locally before TASK-028 was closed.
+The final review confirmed that the implementation still matches the local, single-user and
+offline threat model above. Source, config, manifest, interchange, Parquet and report fields remain
+the trust boundaries; no account, credential, database, listener, broker, telemetry or
+runtime-download surface exists. The review found no unaccepted high- or critical-severity issue
+and introduced no security exception.
 
 | Acceptance criterion | Completion evidence |
 | --- | --- |
 | 1. ASan/UBSan | The complete sanitizer preset executed all 128 locally runnable CTest cases without a finding; the opt-in authorised official-data case was the single documented skip. |
 | 2. Fuzz budget | `SEC-FUZZ-001` ran 10,000 mutations for each framing and decoder target over committed synthetic boundary seeds without a crash. Apple Clang lacks libFuzzer, so the preset uses the deterministic ASan/UBSan corpus driver; the same budget also passed locally with LLVM 22.1.8 real libFuzzer, which CI explicitly requires. |
-| 3. Path safety | `SEC-PATH-001`, TASK-012 cancellation and Python conversion tests cover aliases, symlink roots/staged files and traversal-like paths. Source and unrelated sentinel bytes remain unchanged after success, failure and cancellation. |
+| 3. Path safety | `SEC-PATH-001`, replay-cancellation and Python conversion tests cover aliases, symlink roots/staged files and traversal-like paths. Source and unrelated sentinel bytes remain unchanged after success, failure and cancellation. |
 | 4. Hash tampering | IT-004 and IT-012 authenticate completed parent/child lineage and reject modified manifests/interchange before deep record use. |
 | 5. Safe serialisation | The repository security-policy test rejects project imports of pickle/joblib/dill/marshal, `eval`/`exec` and NumPy loads without literal `allow_pickle=False`; reproduction retrains instead of loading executable models. |
 | 6. Network disabled | The synthetic C++ replay/validation and Python simulation smoke passed inside a macOS sandbox that denied socket creation. Linux CI uses a distinct network namespace and fails closed when isolation cannot be established. |
-| 7. Dependency/secrets | `pip-audit` found no known vulnerability in the hashed release lock. `detect-secrets` found zero real secrets; 24 reviewed entropy findings are fixed hashes and partition/path test literals recorded as false positives in the baseline, including six TASK-031 official-source integrity-hash locations. |
+| 7. Dependency/secrets | `pip-audit` found no known vulnerability in the hashed release lock. `detect-secrets` found zero real secrets; 24 reviewed entropy findings are fixed hashes and partition/path test literals recorded as false positives in the baseline, including six official-source integrity-hash locations. |
 | 8. Report injection | Markdown and HTML tests cover `<script>` and Markdown link/table metacharacters and require escaped output with no trusted raw data HTML. |
 | 9. Private paths | Policy tests scan public configs and minimal golden manifests for the repository and home paths; existing manifest/report recursive assertions also pass. |
 | 10. Honest limitations | Predictive and simulation report tests require historical/simulated status, fill/latency/venue assumptions and the absence of profitability guarantees. |
 
-TASK-032's [v0.1.0 final review](release/v0.1.0-review.md) re-ran the consolidated local security
-gate and records the final locally verifiable release evidence. It introduced no threat-model,
-dependency or security-policy change.
+The [v0.1.0 verification record](release/v0.1.0-review.md) contains the complete release-gate
+results. The hosted [security workflow](../.github/workflows/security.yml), run 32677936414, also
+passed against the tagged commit with the real-libFuzzer, sanitizer, static-analysis, dependency,
+secret and network-isolation gates enabled.
 
 Local evidence toolchain:
 

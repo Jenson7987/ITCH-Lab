@@ -7,10 +7,10 @@ Accepted for MVP.
 ## Context
 
 The system architecture originally named CLI11 as the command-line parser, but the repository did
-not declare or pin that dependency. TASK-001 already established a small project-owned entry point,
-and TASK-007 needs only two bounded subcommands with explicit long options. Adding another
-third-party dependency would not remove the need for project-owned result envelopes, channel
-routing, stable exit-code translation or semantic validation.
+not declare or pin that dependency. The initial project-owned entry point required only two bounded
+subcommands with explicit long options. Adding another third-party dependency would not remove the
+need for project-owned result envelopes, channel routing, stable exit-code translation or semantic
+validation.
 
 ## Decision
 

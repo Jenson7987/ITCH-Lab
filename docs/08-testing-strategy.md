@@ -46,18 +46,18 @@ Implemented decoder coverage:
 | --- | ---: | --- | --- |
 | S | 12 | SystemEvent | UT-DEC-001/002, IT-001/002 |
 | R | 39 | StockDirectory | UT-DEC-001/002, IT-001/002 |
-| H | 25 | TradingAction | UT-DEC-001/002, TASK-009 mixed-stream golden |
+| H | 25 | TradingAction | UT-DEC-001/002, mixed-stream golden |
 | A | 36 | AddOrder | UT-DEC-001/002, IT-001/002 |
-| F | 40 | AddOrderWithAttribution | UT-DEC-001/002, TASK-009 mixed-stream golden |
-| E | 31 | OrderExecuted | UT-DEC-001/002, TASK-009 mixed-stream golden |
-| C | 36 | OrderExecutedWithPrice | UT-DEC-001/002, TASK-009 mixed-stream golden |
-| X | 23 | OrderCancel | UT-DEC-001/002, TASK-009 mixed-stream golden |
+| F | 40 | AddOrderWithAttribution | UT-DEC-001/002, mixed-stream golden |
+| E | 31 | OrderExecuted | UT-DEC-001/002, mixed-stream golden |
+| C | 36 | OrderExecutedWithPrice | UT-DEC-001/002, mixed-stream golden |
+| X | 23 | OrderCancel | UT-DEC-001/002, mixed-stream golden |
 | D | 19 | OrderDelete | UT-DEC-001/002, IT-001/002 |
-| U | 35 | OrderReplace | UT-DEC-001/002, TASK-009 mixed-stream golden |
-| P | 44 | Trade | UT-DEC-001/002, TASK-009 mixed-stream golden |
-| Q | 40 | CrossTrade | UT-DEC-001/002, TASK-009 mixed-stream golden |
-| B | 19 | BrokenTrade | UT-DEC-001/002, TASK-009 mixed-stream golden |
-| Y/L/V/W/K/I/N/J/h | 20/26/35/12/28/50/20/35/21 | IgnoredMessage | TASK-031 decoder boundary and strict replay integration |
+| U | 35 | OrderReplace | UT-DEC-001/002, mixed-stream golden |
+| P | 44 | Trade | UT-DEC-001/002, mixed-stream golden |
+| Q | 40 | CrossTrade | UT-DEC-001/002, mixed-stream golden |
+| B | 19 | BrokenTrade | UT-DEC-001/002, mixed-stream golden |
+| Y/L/V/W/K/I/N/J/h | 20/26/35/12/28/50/20/35/21 | IgnoredMessage | Decoder boundary and strict replay integration |
 
 ### C++ order book
 
@@ -84,10 +84,10 @@ unchanged digest and valid post-rejection invariants.
   at system open, end-of-market close and invalid transitions.
 - The independent `synthetic_session` plain/gzip fixture selects MSFT and AAPL while filtering AMZN;
   it includes pre-session warm-up, a half-open boundary, halt-time book/trade activity and resume.
-- TASK-011 integration tests assert no unrequested or out-of-session snapshot, mandatory halt/resume
+- Integration tests assert no unrequested or out-of-session snapshot, mandatory halt/resume
   snapshots, optional halt-time snapshot gating, requested-order identities, full global metadata
   and exact all/selected/category count reconciliation.
-- TASK-031 contract assertions keep diagnostic sinks opted into per-event canonical book digests and
+- Contract assertions keep diagnostic sinks opted into per-event canonical book digests and
   production event-v1/snapshot-v1 writers opted out. Existing replay digest comparisons and
   independent binary goldens prove that diagnostic evidence and persisted schema bytes are
   unchanged.
@@ -103,14 +103,14 @@ unchanged digest and valid post-rejection invariants.
 - Partial publication and hash mismatch.
 - Unknown schema/flag rejection.
 
-TASK-013 fixes event-v1 with an independently generated 856-byte synthetic golden containing the
+Event-v1 is fixed by an independently generated 856-byte synthetic golden containing the
 104-byte header, two requested-order dictionary entries and all ten 72-byte event kinds. Unit tests
 cover every validity bit, valid numeric zeroes, reserved bytes, checked 32-bit remaining quantity,
 monotonic ordering and injected reservation/record/seek/patch/flush/close failures. A mixed-stream
 integration test routes all selected events through the real replay coordinator and confirms exact
 source message-index order while leaving only `events.ilb.partial`.
 
-TASK-014 adds an independently generated 344-byte snapshot-v1 golden with depth two, paired
+Snapshot-v1 has an independently generated 344-byte golden with depth two, paired
 bid/ask validity, nullable trigger/last-trade fields and exact state/top-change flag bytes. IT-004
 publishes a full replay directory, rehashes both children, checks manifest lineage/counts/build
 metadata, proves identity reuse/forced immutability and recursively rejects private path leakage.
@@ -118,7 +118,7 @@ CT-JSON-001 validates the strict completed-manifest schema and rejects unknown k
 
 ### Python datasets/models
 
-- TASK-017 IT-007 converts the independent event-v1/snapshot-v1 golden values and checks exact
+- IT-007 converts the independent event-v1/snapshot-v1 golden values and checks exact
   Arrow dtypes, nulls, integer zeroes, URI-safe partition paths, per-symbol order, row-group bounds,
   per-partition counts and the strict conversion-manifest schema.
 - Conversion boundary tests cover authenticated parent tampering, degraded-policy propagation,
@@ -129,7 +129,7 @@ CT-JSON-001 validates the strict completed-manifest schema and rejects unknown k
   and 256 MiB process peak-RSS growth while preserving configured row-group bounds. Injected writer
   failure and service cancellation leave only partial output; a real subprocess SIGINT exits 130
   without a completed manifest.
-- TASK-019 UT-LABEL-001 fixes exact integer threshold semantics, batch-boundary horizons and null
+- UT-LABEL-001 fixes exact integer threshold semantics, batch-boundary horizons and null
   tails. Partition properties reject overlap, disorder and immutable-key mismatch, and prove that
   stride sampling uses the original qualifying ordinal after the disjoint history/tail filters.
 - IT-008 publishes three complete synthetic day partitions with independently pinned retained-row,
@@ -137,7 +137,7 @@ CT-JSON-001 validates the strict completed-manifest schema and rejects unknown k
   reuse, forced immutability, parent/output tampering, missing days, unsafe paths, cancellation and
   injected write failure.
 - Price4 conversions avoid binary-float values until presentation.
-- TASK-018 hand-calculated cases reconcile the exact catalogue/schema, current depth and
+- Hand-calculated cases reconcile the exact catalogue/schema, current depth and
   microprice values, all 20/100/500 qualifying-transition boundaries, 100 ms/1 s event-rate
   boundaries, realised volatility, observable E/C direction, same-match paired E/C contributions
   and causal whole-match B corrections.
@@ -165,13 +165,13 @@ CT-JSON-001 validates the strict completed-manifest schema and rejects unknown k
 - Reservation price moves opposite inventory risk.
 - Signal weight zero equals baseline.
 
-TASK-023's UT-SIM-002 hand trace fixes the exact initial reference set, E/C/X/D/U depletion,
+The UT-SIM-002 hand trace fixes the exact initial reference set, E/C/X/D/U depletion,
 replacement priority reset and two bounded fills. Deterministic generated quantities assert that
 current queue equals the exact ahead-reference sum and that cumulative/event fill limits hold.
 The IT-010 subset additionally covers equal-timestamp activation, C display-price semantics,
 P/Q exclusion, fill-before-cancel, counterfactual invalidation, broken fills and the exact queue
 anomaly budget.
-TASK-031 adds a many-level regression proving that the simulation's exact-level and opposite-best
+A many-level regression proves that the simulation's exact-level and opposite-best
 indexes preserve activation priority, ahead-reference removal and conservative invalidation. The
 state-machine slot regression additionally proves that indexed symbol/side lookup returns pending
 and live orders and releases the slot only at a terminal transition. A bounded-row-group
@@ -180,14 +180,14 @@ bounded-diagnostics regression exercises tens of thousands of missing/stale pred
 proves their exact aggregate counts, retains an exceptional queue record and rejects inconsistent
 retained-record counts.
 
-TASK-024's UT-SIM-004 hand trace independently reconciles a rebated buy, a rebated partial sell,
+The UT-SIM-004 hand trace independently reconciles a rebated buy, a rebated partial sell,
 an intervening exact-midpoint revaluation and taker-cost terminal liquidation. Deterministic
 generated side/quantity cases assert cash-plus-inventory-mark and P&L-component identities. Boundary
 tests cover projected quote suppression, fill-limit defence, signed fee/rebate direction, cash/fee/
 mark overflow with atomic state, fill ordering, long/short liquidation, missing/locked/crossed
 terminal quotes, session-end expiry, per-symbol isolation and flat zero-fill metrics.
 
-TASK-025's UT-STRAT-001 decision table fixes flat, long and short inventory equation inputs,
+The UT-STRAT-001 decision table fixes flat, long and short inventory equation inputs,
 reservation prices, half-spreads and outward-rounded passive Price4 proposals. Calibration tests
 independently calculate the smoothed intensities and exposure-weighted regression, exercise valid
 symbol and pooled fallback estimates, reject non-training observations and fail when no valid
@@ -196,7 +196,7 @@ half-open expiry, equal-timestamp source order and future-prefix invariance. Par
 boundaries cover non-finite values, atomic invalid observations, crossed/locked/off-grid books,
 uint32 quote bounds and both projected inventory-limit suppressions.
 
-TASK-026's UT-STRAT-002 compares the zero-weight signal path with the exact baseline economic
+UT-STRAT-002 compares the zero-weight signal path with the exact baseline economic
 decision and order-request projection while a fail-on-read prediction stream proves it is not
 consumed. The controlled signal golden covers positive/negative clipping, sub-tick adjustment,
 missing and stale fallbacks and exact prediction-key propagation. Join tests cover exact-index and
@@ -228,8 +228,8 @@ Each failing generated case is reduced and committed as a regression fixture whe
 
 | ID | Scenario | Expected evidence |
 | --- | --- | --- |
-| IT-001 | Uncompressed fixture through reader, then decoder from TASK-005 | TASK-004 proves exact frames/offsets; decoder tests add typed sequence |
-| IT-002 | gzip fixture through reader, then decoder from TASK-005 | TASK-004 proves identical framed payload digest; decoder tests add semantic digest |
+| IT-001 | Uncompressed fixture through reader and decoder | Exact frames/offsets and typed sequence |
+| IT-002 | gzip fixture through reader and decoder | Identical framed-payload and semantic digests |
 | IT-003 | Full order lifecycle through reader/decoder/book | Exact 14-state plain/gzip golden trace |
 | IT-004 | Replay through event/snapshot writers | Exact headers, counts, records and hashes |
 | IT-005 | Interrupt replay during write | Partial suffix only; no completed manifest |
@@ -288,7 +288,7 @@ partial artefacts, no final paths, an unchanged source and a successful clean re
 
 - Golden byte files for event/snapshot schema v1 generated from synthetic records.
 - C++ writer compared byte-for-byte with golden files.
-- The TASK-016 production Python readers authenticate and read every golden event/snapshot record
+- The production Python readers authenticate and read every golden event/snapshot record
   into exact typed diagnostics across multiple chunk sizes. Independent `struct` decoding remains a
   separate oracle; corrupt schema, reserved-bit, endian, null-canonicalisation, ordering and hash
   cases fail with stable codes before an affected batch is yielded.
@@ -341,10 +341,10 @@ Defined in 07-security-and-privacy.md and implemented through:
 - Secret and dependency scans.
 - Tests that arbitrary pickle/joblib input is rejected.
 
-TASK-028 maintains separate framing and typed-decoder corpora under `tests/fuzz/corpus/`. The
+Separate framing and typed-decoder corpora are maintained under `tests/fuzz/corpus/`. The
 generator derives valid type seeds from the independent mixed fixture and fixes empty, truncated,
 maximum, oversized, unknown-type, wrong-length and invalid-timestamp boundaries. It also synthesises
-valid common-header seeds for the TASK-031 spec-known ignored types. Verify the corpus and run the
+valid common-header seeds for the spec-known ignored types. Verify the corpus and run the
 configured 10,000-mutation budget with:
 
     python tests/fuzz/generate_corpus.py --check
@@ -385,8 +385,8 @@ Rules:
 - Benchmark data structure alternatives using identical state digests.
 - CI has a generous catastrophic-regression threshold; hardware-specific claims are produced on the named machine.
 
-TASK-029's fixture recipe, commands, profile evidence, allocation counter and measured PERF-001–008
-results are recorded in [the TASK-029 performance note](performance/TASK-029-performance.md).
+The fixture recipe, commands, profile evidence, allocation counter and measured PERF-001–008
+results are recorded in the [performance evidence](performance/TASK-029-performance.md).
 
 ## Test-data strategy
 
@@ -412,9 +412,9 @@ results are recorded in [the TASK-029 performance note](performance/TASK-029-per
 
 ### Synthetic ITCH fixture corpus
 
-TASK-003 provides a standard-library-only builder in `tests/fixtures/`. It encodes fields from the
+The standard-library-only builder in `tests/fixtures/` encodes fields from the
 Nasdaq TotalView-ITCH 5.0 layouts without importing the production reader, decoder or their
-constants. ADR-005 records TASK-004 verification of the two-byte big-endian outer framing and
+constants. ADR-005 records verification of the two-byte big-endian outer framing and
 complete-frame EOF behaviour against an authorised official sample.
 
 | Fixture family | Purpose |
@@ -462,7 +462,7 @@ small representatives for integration, CLI and fuzz-regression tests.
 
 Generated code and third-party dependencies are excluded. Any exclusion in project-owned code requires a comment and review.
 
-TASK-030's Python gate aggregates `coverage.py --branch` JSON without rounding before comparison.
+The Python gate aggregates `coverage.py --branch` JSON without rounding before comparison.
 Critical contains interchange readers plus simulator accounting/state; high contains canonical
 config, config validation, features, labels, splits and strategies; every other package module is
 standard. `scripts/ci/check_coverage.py` fails closed on missing tiers or malformed totals.
@@ -489,7 +489,7 @@ from passing that compiler regression floor.
 9. Secret scan and dependency audit.
 10. Performance smoke threshold on a deterministic synthetic fixture.
 
-`.github/workflows/security.yml` supplies the TASK-028 PR, main-branch and weekly scheduled
+`.github/workflows/security.yml` supplies the pull-request, main-branch and weekly scheduled
 security job. Its third-party actions are pinned to full commits, Python installation uses the
 hashed development lock, and real libFuzzer is required before the consolidated gate runs.
 

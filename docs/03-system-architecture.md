@@ -144,8 +144,8 @@ Implemented correctness-first representation:
 - Standard-library PMR ordered bid/ask maps from Price4 to PriceLevel.
 - Each PriceLevel stores total quantity and a PMR FIFO list of order references.
 - OrderRecord stores a stable iterator into its level queue for O(1) removal.
-- Each book owns an unsynchronised pool resource; TASK-029 introduced this allocation optimisation
-  without changing the canonical logical-state digest.
+- Each book owns an unsynchronised pool resource, an allocation optimisation that leaves the
+  canonical logical-state digest unchanged.
 
 The public book interface owns all mutation invariants; writers and strategies cannot alter state directly.
 

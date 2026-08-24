@@ -288,7 +288,7 @@ physical pruning aids, not database indexes.
 
 ### FeatureRow and feature catalogue v1
 
-TASK-018 computes one row for every qualifying snapshot before sampling. The row identity columns
+The feature stage computes one row for every qualifying snapshot before sampling. The row identity columns
 are `trading_date` date32, `symbol` UTF-8, `symbol_id` uint16, `message_index` uint64,
 `timestamp_ns` uint64 and zero-based `qualifying_ordinal` uint64. `history_complete` is a non-feature
 boolean that is true only when every required event and clock lookback is complete. It lets the
@@ -306,7 +306,7 @@ resets between partitions. Events with a message index after the feature row are
 
 ### LabelRow and frozen dataset schema v1
 
-TASK-019 computes labels independently over the same qualifying snapshots. A raw label row repeats
+The label stage computes labels independently over the same qualifying snapshots. A raw label row repeats
 the immutable identity metadata through `qualifying_ordinal` and adds nullable int8
 `label_horizon_20`, `label_horizon_100` and `label_horizon_500` columns. Values are down `-1`, flat
 `0` and up `1`. For horizon `H`, the calculation compares `mid2(t+H) - mid2(t)` against the exact
@@ -321,7 +321,7 @@ validation or test boundary.
 
 ### ExperimentRun and predictive metrics v1
 
-TASK-020 stores a completed predictive run in `experiment-manifest.json`. The manifest records the
+A completed predictive run is stored in `experiment-manifest.json`. The manifest records the
 canonical experiment config and full/identity hashes, the authenticated dataset-manifest hash and
 dataset/schema identities, the Python package-content digest, Python/PyArrow/NumPy/scikit-learn
 versions, fixed class order, input feature order, selected parameters and validation log loss for

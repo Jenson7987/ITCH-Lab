@@ -8,12 +8,13 @@ Accepted for MVP.
 
 The Nasdaq BinaryFILE 1.00 specification describes records as a two-byte big-endian payload
 length followed by the payload. It also describes a zero-length record as an end-of-session marker
-and a file without that marker as incomplete. Before TASK-004, ITCH-Lab instead assumed that a
-complete frame followed by physical end of file was clean and that zero length was invalid.
+and a file without that marker as incomplete. ITCH-Lab's original framing assumption instead
+treated a complete frame followed by physical end of file as clean and zero length as invalid.
 
-TASK-004 verified the public Nasdaq TotalView-ITCH 5.0 sample
+The public Nasdaq TotalView-ITCH 5.0 sample
 `12302019.NASDAQ_ITCH50.gz`, downloaded from
-`https://emi.nasdaq.com/ITCH/Nasdaq%20ITCH/12302019.NASDAQ_ITCH50.gz` on 2026-08-04.
+`https://emi.nasdaq.com/ITCH/Nasdaq%20ITCH/12302019.NASDAQ_ITCH50.gz` on 2026-08-04, was used to
+verify the delivered framing.
 The stored gzip file is 3,524,013,057 bytes and has SHA-256
 `ef03df46a27e6bda4dead017f84c2e3979df7211f02c7868b51d53fceb99c689`.
 

@@ -2,10 +2,10 @@
 
 ## Scope
 
-This is the authoritative version-1 feature catalogue for TASK-018. Features are computed for every
-qualifying snapshot before TASK-019 applies history filtering, labels, row stride or day partitions.
-The runtime catalogue carries the same names, Arrow dtypes, formulae, lookbacks, units, null policies
-and owner values in this order.
+This is the authoritative version-1 feature catalogue. Features are computed for every qualifying
+snapshot before the dataset stage applies history filtering, labels, row stride or day partitions.
+The runtime catalogue carries the same names, Arrow dtypes, formulae, lookbacks, units, null
+policies and owner values in this order.
 
 All features are owned by `itchlab_research.datasets.features`. A current-row feature may use the
 qualifying snapshot and the exact normalised event at the same message index. A rolling feature may

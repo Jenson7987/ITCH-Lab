@@ -23,12 +23,12 @@ Environment differences must not change research semantics. Scientific parameter
 
 ## Supported release platforms
 
-TASK-030 fixes the supported native release targets to current macOS ARM64 and Ubuntu x86-64.
-GitHub Actions uses `macos-15` and `ubuntu-24.04`, asserts `arm64` and `x86_64` respectively before
-building, and runs both the native test suite and installed release smoke on each platform. The
-release builder validates the compiled executable with the host `file` tool and refuses an archive
-whose architecture does not match `macos-arm64` or `linux-x86_64`. Other platforms may build from
-source but are not release-tested MVP targets.
+The supported native release targets are current macOS ARM64 and Ubuntu x86-64. GitHub Actions uses
+`macos-15` and `ubuntu-24.04`, asserts `arm64` and `x86_64` respectively before building, and runs
+both the native test suite and installed release smoke on each platform. The release builder
+validates the compiled executable with the host `file` tool and refuses an archive whose
+architecture does not match `macos-arm64` or `linux-x86_64`. Other platforms may build from source
+but are not release-tested MVP targets.
 
 ## Local development environment
 
@@ -267,7 +267,7 @@ A release is healthy when:
 - Performance smoke is within the recorded catastrophic-regression threshold.
 - Documentation links and reproduction commands work.
 
-The local TASK-030 candidate command is:
+For an explicit pre-commit diagnostic candidate, run:
 
     ITCHLAB_ALLOW_DIRTY_RELEASE_CANDIDATE=1 \
         ITCHLAB_RELEASE_PYTHON=.venv/bin/python \
@@ -278,27 +278,23 @@ local: it builds and checks artefacts beneath a bounded temporary directory and 
 
 ## Release checklist
 
-TASK-032 local sign-off and remaining release-owner actions are recorded in the
-[v0.1.0 final review](release/v0.1.0-review.md). The checklist remains a release-time control: a
-local dirty-candidate result does not satisfy the clean commit or tag steps.
+The [v0.1.0 verification record](release/v0.1.0-review.md) captures the evidence for the initial
+release. For every release, verify all of the following before publication:
 
-- [ ] Working tree clean and release commit identified.
-- [ ] Product requirements and ADRs reflect implementation.
-- [ ] C++ format, build, unit, integration and contract tests pass.
-- [ ] ASan/UBSan and fuzz CI budgets pass.
-- [ ] Python Ruff, mypy, pytest and coverage pass.
-- [ ] Synthetic E2E and network-disabled run pass.
-- [ ] Accessibility/report checks pass.
-- [ ] Dependency, licence and secret scans pass.
-- [ ] Binary/manifest schema versions documented.
-- [ ] Migration compatibility tested.
-- [x] Release benchmarks captured with environment metadata (TASK-029 performance note).
-- [ ] Raw/bulk data absent from Git and archives.
-- [ ] Public manifests contain no absolute user paths.
-- [ ] Limitations and historical/simulated labels are present.
-- [ ] Source, Python and optional binary packages built and checksummed.
-- [ ] Clean-environment installation and doctor check pass.
-- [ ] Release notes and rollback target prepared.
+- The working tree is clean and the release commit is identified.
+- Product requirements and accepted ADRs reflect the implementation.
+- C++ formatting, builds, unit/integration/contract tests, sanitizers and fuzz budgets pass.
+- Python Ruff, mypy, pytest and tiered coverage pass.
+- Synthetic E2E, network-isolated installation and doctor checks pass on supported platforms.
+- Accessibility, report, dependency, licence and secret checks pass.
+- Binary and manifest schema versions and migration compatibility are documented.
+- Benchmarks are captured with environment metadata and meet the release floor.
+- Raw/bulk data are absent from Git and archives; public manifests contain no private absolute
+  paths.
+- Reports retain historical/simulated labels, negative results and limitations.
+- Source, Python and native packages are built once, checksummed and installed successfully in a
+  clean environment.
+- Release notes identify supported platforms, schemas, limitations and the rollback target.
 
 ## Incident-recovery considerations
 

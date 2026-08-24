@@ -1,4 +1,6 @@
-# TASK-031 frozen official-data study protocol
+# Frozen official-data study protocol
+
+Traceability: TASK-031.
 
 Status: frozen on 2026-08-21 before test-partition research outcomes were inspected.
 
@@ -165,7 +167,7 @@ machine-specific paths, aggregate report artefacts, deterministic reproduction i
 the existing synthetic fixtures. This resolves OQ-002 conservatively.
 
 The final [study evidence](EVIDENCE.md) references the pinned performance result in
-`docs/performance/TASK-029-performance.md`; TASK-031 does not rerun optimisation or change its
+`docs/performance/TASK-029-performance.md`; the study does not rerun optimisation or change the
 release throughput floor. The generated [Markdown](report/report.md) and
 [HTML](report/report.html) reports retain the complete favourable and unfavourable outcomes.
 

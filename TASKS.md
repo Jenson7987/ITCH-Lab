@@ -4,27 +4,21 @@ Authoritative task details and evidence requirements are in docs/10-implementati
 
 ## Current milestone — M5 Publishable project
 
-## Queued
-
-- [x] TASK-030: Finish CI, doctor and release packaging
-  - Dependencies: TASK-028–029
-  - Acceptance criteria: Clean offline installed E2E and safe release archive
-  - Tests: Full CI/release smoke
-  - Documentation to update: README and 09-deployment.md
-  - Evidence: local installed-wheel E2E passed offline on macOS ARM64 (2,580 messages over three replay dates); Python suite passed (681 tests); C++ dev, release, coverage and sanitizer builds each passed all 133 runnable tests, with the authorised official-data test skipped; security, coverage and release-performance gates passed.
-  - Limitation: the Ubuntu x86_64 and macOS ARM64 hosted GitHub Actions matrix definitions are in place but have not been executed remotely; all completed evidence is local.
+## Current
 
 - [ ] TASK-032: Final documentation and traceability review
   - Dependencies: TASK-031
   - Acceptance criteria: No contradiction or unmapped requirement; v0.1.0 ready
   - Tests: Docs lint, traceability validator, reviewer walkthrough
   - Documentation to update: All authoritative documents
-  - Local evidence: the [v0.1.0 final review](docs/release/v0.1.0-review.md) records the reconciled
+  - Evidence: the [v0.1.0 verification record](docs/release/v0.1.0-review.md) records the reconciled
     documentation/interface walkthrough, exact 46-requirement/32-task traceability pass, 689 Python
     tests, all 136 locally runnable C++ tests in development/Release/ASan-UBSan, coverage, fuzz,
-    security, package-build and installed dirty-candidate E2E results.
-  - Remaining evidence: final release-owner commit, clean publishable candidate and `v0.1.0` tag.
-    This task is intentionally unchecked until the tag evidence is supplied.
+    security, package-build and installed E2E results. Hosted Ubuntu x86-64 and macOS ARM64 native
+    and installed-release jobs passed, as did the hosted security workflow.
+  - Release state: the annotated `v0.1.0` tag exists at the pre-cleanup commit
+    `0ef502ca41f691cab48df0759c3f380c1a136cda`. This post-tag polish remains uncommitted, so the task
+    stays unchecked until the release owner reconciles the final commit and tag identity.
 
 ## Completed
 
@@ -40,7 +34,16 @@ Authoritative task details and evidence requirements are in docs/10-implementati
     passed 136 CTests with one authorised-data opt-in skip; both 10,000-mutation fuzz targets, all
     684 Python tests, formatting, lint, mypy, package build, static analysis, dependency/secret and
     network-disabled security checks, docs lint and the installed release smoke passed. OQ-001 and
-    conservative OQ-002 are resolved; the absent OQ-005 reference is documented in the evidence.
+    conservative OQ-002 are resolved.
+
+- [x] TASK-030: Finish CI, doctor and release packaging
+  - Completed: 2026-08-23
+  - Evidence: The local installed-wheel E2E passed offline on macOS ARM64 with 2,580 messages over
+    three replay dates; the Python suite passed 681 tests; C++ development, Release, coverage and
+    sanitizer builds each passed all 133 runnable tests with the authorised-data case skipped; and
+    the security, coverage and release-performance gates passed. Against the final tagged commit,
+    GitHub Actions then passed native and offline installed E2E jobs on Ubuntu x86-64 and macOS
+    ARM64, plus documentation, static/coverage, performance and security jobs.
 
 - [x] TASK-029: Benchmark/profile/optimise one bottleneck
   - Completed: 2026-08-18
