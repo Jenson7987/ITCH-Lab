@@ -195,8 +195,16 @@ def test_task_032_traceability_checker_requires_completed_task_evidence(
 ) -> None:
     _copy_traceability_contract(tmp_path)
     checklist = tmp_path / "TASKS.md"
+    text = checklist.read_text(encoding="utf-8")
+    task_start = text.index("- [x] TASK-030:")
+    task_end = text.find("\n- [", task_start + 1)
+    if task_end == -1:
+        task_end = len(text)
+    task_block = text[task_start:task_end]
+    assert "  - Evidence:" in task_block
+    task_block = task_block.replace("  - Evidence:", "  - Record:", 1)
     checklist.write_text(
-        checklist.read_text(encoding="utf-8").replace("  - Evidence:", "  - Record:", 1),
+        text[:task_start] + task_block + text[task_end:],
         encoding="utf-8",
     )
 
