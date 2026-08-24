@@ -7,7 +7,8 @@
 - Do not start a dependent task before its dependencies meet their acceptance criteria.
 - Update requirements/ADRs before changing public behaviour or architecture.
 - Complexity describes expected reasoning/integration effort, not elapsed time: Small, Medium or Large.
-- Application code is not present in this documentation pack; paths below are expected implementation locations.
+- Paths below identify the implemented or originally planned component locations; `TASKS.md`
+  records execution state and concrete completion evidence.
 
 ## Phase 0 — Foundation
 

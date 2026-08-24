@@ -19,6 +19,12 @@ Authoritative task details and evidence requirements are in docs/10-implementati
   - Acceptance criteria: No contradiction or unmapped requirement; v0.1.0 ready
   - Tests: Docs lint, traceability validator, reviewer walkthrough
   - Documentation to update: All authoritative documents
+  - Local evidence: the [v0.1.0 final review](docs/release/v0.1.0-review.md) records the reconciled
+    documentation/interface walkthrough, exact 46-requirement/32-task traceability pass, 689 Python
+    tests, all 136 locally runnable C++ tests in development/Release/ASan-UBSan, coverage, fuzz,
+    security, package-build and installed dirty-candidate E2E results.
+  - Remaining evidence: final release-owner commit, clean publishable candidate and `v0.1.0` tag.
+    This task is intentionally unchecked until the tag evidence is supplied.
 
 ## Completed
 

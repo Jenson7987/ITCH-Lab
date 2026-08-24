@@ -70,9 +70,8 @@ The project must remain usable without those services after checkout and depende
 
 | Variable | Secret | Default | Rules |
 | --- | --- | --- | --- |
-| ITCHLAB_DATA_DIR | No | ./data | May be absolute locally; publishable manifests store relative/basename only |
-| ITCHLAB_RUNS_DIR | No | ./runs | Must not resolve to filesystem root or input file |
-| ITCHLAB_LOG_LEVEL | No | info | debug, info, warning, error |
+| ITCHLAB_DATA_DIR | No | ./data | `doctor` checks the existing `derived/` child; it may be absolute locally |
+| ITCHLAB_RUNS_DIR | No | ./runs | C++ replay default and existing root checked by `doctor`; unsafe broad/symlink roots are rejected |
 | CMAKE_BUILD_PARALLEL_LEVEL | No | tool default | Positive integer when set |
 | NO_COLOR | No | unset | Any value disables colour |
 
@@ -253,8 +252,7 @@ Long-run observability comes from progress logs, terminal status and immutable m
 
 - Default logs are human-readable stderr.
 - --log-format jsonl supports automation.
-- Optional --log-file must point beneath the selected run directory.
-- Logs rotate only within a single command by size if implemented; global log daemons are unnecessary.
+- The MVP has no project-owned log-file or rotation service; users may capture stderr explicitly.
 - Completed manifest summaries are the durable operational record.
 - Debug payload dumps are opt-in, capped and never part of a release package.
 
@@ -279,6 +277,10 @@ The dirty-candidate switch is omitted for the clean CI/release run. This command
 local: it builds and checks artefacts beneath a bounded temporary directory and publishes nothing.
 
 ## Release checklist
+
+TASK-032 local sign-off and remaining release-owner actions are recorded in the
+[v0.1.0 final review](release/v0.1.0-review.md). The checklist remains a release-time control: a
+local dirty-candidate result does not satisfy the clean commit or tag steps.
 
 - [ ] Working tree clean and release commit identified.
 - [ ] Product requirements and ADRs reflect implementation.

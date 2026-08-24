@@ -82,7 +82,14 @@ Domain validation follows schema validation and enforces relationships that JSON
 
 Purpose: qualify input, list message composition and inspect directory/timestamps without publishing derived data.
 
-    itchlab inspect +      --input <path> +      [--limit <positive-integer>|--all] +      [--symbols <comma-separated>] +      [--mode strict|permissive] +      [--format human|json]
+    itchlab inspect \
+        --input <path> \
+        [--limit <positive-integer>|--all] \
+        [--symbols <comma-separated>] \
+        [--mode strict|permissive] \
+        [--format human|json] \
+        [--log-format human|jsonl] \
+        [--quiet] [--ascii] [--no-colour]
 
 Validation:
 
@@ -130,7 +137,13 @@ a `.partial` suffix until a same-filesystem directory rename makes `events.ilb`,
 the completed manifest visible together. The read-only validate command below independently
 rechecks published bytes.
 
-    itchlab replay +      --config <replay-config.json> +      [--output-root <directory>] +      [--format human|json] +      [--log-format human|jsonl] +      [--quiet] +      [--force-new-run]
+    itchlab replay \
+        --config <replay-config.json> \
+        [--output-root <directory>] \
+        [--format human|json] \
+        [--log-format human|jsonl] \
+        [--quiet] [--ascii] [--no-colour] \
+        [--force-new-run]
 
 Replay config v1:
 
@@ -197,7 +210,12 @@ Idempotency:
 
 Purpose: verify a replay or standalone interchange artefact.
 
-    itchlab validate +      (--run <replay-directory> | --file <events-or-snapshots-file>) +      [--verify-source <path>] +      [--deep] +      [--format human|json]
+    itchlab validate \
+        (--run <replay-directory> | --file <events-or-snapshots-file>) \
+        [--verify-source <path>] \
+        [--deep] \
+        [--format human|json] \
+        [--ascii] [--no-colour]
 
 Default checks headers, supported schema, declared sizes/counts and file hashes. Deep mode streams records, validates ordering/flags/depth and optionally reconstructs the final book/state digest.
 
@@ -215,7 +233,8 @@ Purpose: benchmark parser, filtering and book stages using a pinned fixture.
         [--symbols <comma-separated>] \
         [--repetitions <integer>] \
         [--output <benchmark.json>] \
-        [--format human|json]
+        [--format human|json] \
+        [--ascii] [--no-colour]
 
 Validation:
 
@@ -264,7 +283,7 @@ invalid usage and 70 means an unexpected internal failure.
         [--force-new-run] \
         [--format human|json] \
         [--log-format human|jsonl] \
-        [--quiet]
+        [--quiet] [--ascii] [--no-colour]
 
 Conversion config v1:
 
@@ -316,7 +335,12 @@ Success artefacts:
 
 ### build-dataset
 
-    itchlab-research build-dataset --config <dataset-config.json>
+    itchlab-research build-dataset \
+        --config <dataset-config.json> \
+        [--force-new-run] \
+        [--format human|json] \
+        [--log-format human|jsonl] \
+        [--quiet] [--ascii] [--no-colour]
 
 Required config shape:
 
@@ -469,7 +493,11 @@ retrains from the recorded config, seed, parent hash and package-content digest.
 
 ### simulate
 
-    itchlab-research simulate --config <simulation-config.json>
+    itchlab-research simulate \
+        --config <simulation-config.json> \
+        [--force-new-run] \
+        [--format human|json] \
+        [--quiet] [--ascii] [--no-colour]
 
 Simulation config v1:
 
@@ -573,9 +601,10 @@ Validation rejects marketable orders in passive-only mode, negative latency, inv
 ### report
 
     itchlab-research report \
-        --run-id <experiment-id> \
+        --run-id <run-id> \
         [--output-format markdown|html|both] \
-        [--format human|json]
+        [--format human|json] \
+        [--quiet] [--ascii] [--no-colour]
 
 The command accepts either a completed predictive experiment ID or completed simulation ID. A
 simulation report combines upstream predictive evidence when present with strategy selection,
@@ -704,15 +733,15 @@ Contract:
   version-1 digest byte contract.
 
 ```cpp
-class ReplayEngine {
+class ReplayCoordinator {
 public:
-  Result<ReplaySummary, ReplayError> run(
+  ReplayResult run(
     ByteSource& source,
     const ReplayConfig& config,
     EventSink& events,
     SnapshotSink& snapshots,
-    CancellationToken cancellation,
-    ProgressReporter* progress);
+    CancellationToken cancellation = {},
+    ProgressReporter* progress = nullptr) const;
 };
 ```
 
@@ -741,7 +770,6 @@ Contract:
         expected_sha256: str,
         chunk_records: int,
     ) -> Iterator[SnapshotBatch]: ...
-    def validate_replay(manifest: Path, *, deep: bool = False) -> ValidationReport: ...
     def feature_schema(config: FeatureConfig) -> Schema: ...
     def feature_catalogue(config: FeatureConfig) -> tuple[FeatureDefinition, ...]: ...
     def build_feature_batches(

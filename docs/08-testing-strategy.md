@@ -478,7 +478,7 @@ from passing that compiler regression floor.
 
 ### Pull-request jobs
 
-1. Markdown/link/diagram lint.
+1. Markdown/link/diagram lint and requirement/task traceability validation.
 2. C++ format and warnings-as-errors build on Ubuntu.
 3. C++ unit/integration tests.
 4. ASan/UBSan test subset.
@@ -506,7 +506,7 @@ built archives, and runs the full synthetic E2E without a source-tree package im
 - Longer fuzz corpus.
 - macOS build/test when runner availability permits.
 - Dependency vulnerability rescan.
-- Documentation link check.
+- Documentation and traceability contract checks.
 
 Official full-day files are never downloaded into public CI.
 
@@ -527,7 +527,9 @@ A task is done only when:
 
 - Tests use stable IDs in names or metadata, for example FR_004_replace_resets_priority.
 - docs/11-traceability.md maps every FR, NFR and SEC requirement to task and test IDs.
-- A CI script parses the matrix and fails if a requirement lacks a task or test reference.
+- `scripts/ci/check_traceability.py` validates the exact v0.1.0 requirement/task inventories,
+  source-to-matrix coverage, accepted design references, defined task references, executable test
+  or review evidence, and completion evidence in `TASKS.md`. CI runs it with the Markdown checker.
 - Reviewers update the matrix in the same change as a requirement.
 
 ## Major example test catalogue

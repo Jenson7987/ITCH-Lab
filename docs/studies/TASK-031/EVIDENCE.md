@@ -126,7 +126,7 @@ and focused regression under all three already-passing build modes.
 | Hashed release-lock dependency audit | Pass: no known vulnerabilities |
 | Network-disabled synthetic security smoke | Pass: 3 CTests and 2 Python tests |
 | Isolated installed release smoke | Pass: complete synthetic inspect-to-report vertical slice and 10 doctor checks |
-| Documentation/traceability lint | Pass: 30 Markdown files |
+| Documentation lint | Pass: 30 Markdown files; TASK-032 subsequently added the separate traceability contract gate |
 
 The pinned TASK-029 performance result remains the applicable release evidence; this scientific
 execution did not change its fixture or throughput floor.
@@ -138,9 +138,9 @@ no OQ-005. The only unresolved data-publication question was OQ-002, so this tas
 and applies the conservative OQ-002 treatment. No new question or architectural decision was
 invented.
 
-TASK-030 is still listed as queued even though its release implementation is present and its full
-installed smoke passed during this task. TASK-031 used that existing repository behaviour but did
-not change the state of an adjacent task.
+At TASK-031 completion, TASK-030 was still listed as queued even though its release implementation
+was present and its full installed smoke passed during this study. TASK-031 used that existing
+repository behaviour without changing the adjacent task; TASK-030 was completed subsequently.
 
 The study has only one day per chronological partition, so confidence intervals that require at
 least five trading days are correctly omitted. Results cover three selected symbols and the

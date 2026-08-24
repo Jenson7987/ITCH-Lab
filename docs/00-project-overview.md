@@ -2,7 +2,12 @@
 
 ## Executive summary
 
-ITCH-Lab will provide a reproducible local pipeline for studying event-level equity-market microstructure. A C++20 core will safely decode Nasdaq TotalView-ITCH 5.0 data and reconstruct full visible order state for selected instruments. A Python research package will transform normalised events and book snapshots into leakage-controlled datasets, train transparent baselines, and run a queue-aware historical execution simulation. The output is an evidence-led technical report, not a claim that a strategy would be profitable in live trading.
+ITCH-Lab provides a reproducible local pipeline for studying event-level equity-market
+microstructure. A C++20 core safely decodes Nasdaq TotalView-ITCH 5.0 data and reconstructs full
+visible order state for selected instruments. A Python research package transforms normalised
+events and book snapshots into leakage-controlled datasets, trains transparent baselines, and runs
+a queue-aware historical execution simulation. The output is an evidence-led technical report,
+not a claim that a strategy would be profitable in live trading.
 
 ## Problem being solved
 
@@ -138,7 +143,10 @@ The MVP succeeds when:
 - Historical replay cannot establish the market impact of hypothetical orders.
 - The implementation must remain understandable to one developer and avoid premature distributed architecture.
 
-## Open questions
+## Resolved v0.1.0 questions
+
+No product question remains unresolved for v0.1.0. The decisions below record how the original
+planning questions were closed.
 
 | ID | Question | Current treatment |
 | --- | --- | --- |

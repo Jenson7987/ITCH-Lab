@@ -4,26 +4,16 @@ ITCH-Lab is an offline quantitative-research platform that decodes Nasdaq TotalV
 
 ## Status
 
-Specification complete. The reproducible C++/Python foundation, bounded plain/gzip framed-input
-layer, stateless full-MVP decoder, deterministic full-lifecycle level-3 book and selected-symbol
-inspect/replay command slice are implemented. Replay routes the complete visible lifecycle and
-session/trading-state metadata, supports strict or budgeted permissive processing, emits bounded
-stderr progress and cancels safely at message boundaries. The production event-v1 binary writer is
-implemented alongside snapshot-v1 and atomic completed replay manifests. Public artefact
-validation and authenticated, bounded conversion to partitioned Parquet are implemented. The
-version-1 causal feature catalogue, bounded event/snapshot feature service, frozen dataset
-publication, required predictive baselines and predictive experiment reporting are also
-implemented. The immutable simulated-order lifecycle and integer-nanosecond latency scheduler are
-implemented alongside exact-known visible queue tracking, conservative partial fills and bounded
-queue diagnostics. Checked integer cash/inventory accounting, signed costs, projected inventory
-risk and visible-spread terminal liquidation are implemented. The training-only intensity
-calibration, causal trailing volatility, tick-rounded inventory-aware baseline and bounded causal
-signal adjustment, immutable simulation runner and authenticated accessible reporting are also
-implemented. Security hardening now includes maintained framing/decoder fuzz corpora, full
-sanitizer and static-analysis gates, path/injection policy regressions, reviewed dependency and
-secret scans, and a network-isolated synthetic smoke.
-The installed-environment doctor, deterministic local release archives/checksums and pinned
-Ubuntu x86-64/macOS ARM64 CI and installed-release matrices are implemented for TASK-030.
+The v0.1.0 MVP is implemented through the official-data study. The C++ pipeline provides bounded
+plain/gzip framing, the complete MVP decoder, deterministic selected-symbol level-3 replay,
+versioned event/snapshot writers, immutable manifests, artefact validation and release benchmarks.
+The Python package provides authenticated conversion, causal datasets and labels, frozen predictive
+baselines, conservative queue-aware simulation, and immutable accessible reports. Security,
+coverage, deterministic packaging and offline installed-environment gates are included in CI.
+
+TASK-031's public-safe evidence records the completed three-symbol, three-day study. TASK-032's
+local documentation and traceability review is complete except for the final release-owner commit
+and `v0.1.0` tag evidence; the task deliberately remains open until that evidence exists.
 
 Classification legend used throughout the documentation:
 
@@ -74,8 +64,8 @@ Classification legend used throughout the documentation:
     ├── schemas/
     └── tests/
 
-The repository structure is being implemented incrementally according to `TASKS.md`. The current
-foundation provides buildable version/help CLIs, fixed C++ domain/error types, strict validated
+The repository implements the MVP described by `TASKS.md`. It provides buildable version/help
+CLIs, fixed C++ domain/error types, strict validated
 configuration contracts with canonical cross-language hashes, and bounded streaming of verified
 `itch-length-v1` plain/gzip sources. It domain-decodes S/R/H/A/F/E/C/X/D/U/P/Q/B and structurally
 validates the spec-known Y/L/V/W/K/I/N/J/h types with exact length, big-endian header and timestamp
@@ -143,12 +133,12 @@ No secrets are required for the MVP.
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| ITCHLAB_DATA_DIR | No | ./data | Root for raw and derived market data |
-| ITCHLAB_RUNS_DIR | No | ./runs | Root for immutable experiment-run outputs |
-| ITCHLAB_LOG_LEVEL | No | info | debug, info, warning or error |
+| ITCHLAB_DATA_DIR | No | ./data | Data root used by `doctor`; it checks the existing `derived/` child |
+| ITCHLAB_RUNS_DIR | No | ./runs | C++ replay default and existing run root checked by `doctor` |
 | CMAKE_BUILD_PARALLEL_LEVEL | No | tool default | Parallel C++ build jobs |
 
-Command-line arguments override environment variables; environment variables override defaults. Config files must not contain machine-specific absolute paths.
+Command-specific options and versioned configs define research inputs and outputs. Config files
+must not contain machine-specific absolute paths in publishable evidence.
 
 ## Development commands
 
@@ -282,6 +272,7 @@ output and confirms that a corrupt gzip source cannot publish a completed replay
     python -m mypy python/src
     python -m build --no-isolation python
     python scripts/ci/check_docs.py
+    python scripts/ci/check_traceability.py
     python -m coverage erase
     python -m coverage run --branch --source=itchlab_research -m pytest python/tests
     python -m coverage json -o build/python-coverage.json
@@ -349,6 +340,7 @@ are documented in [the TASK-029 performance note](docs/performance/TASK-029-perf
 - [Implementation plan](docs/10-implementation-plan.md)
 - [Traceability matrix](docs/11-traceability.md)
 - [Feature catalogue](docs/12-feature-catalogue.md)
+- [v0.1.0 final review](docs/release/v0.1.0-review.md)
 - [Architecture decisions](docs/decisions/)
 - [Consolidated specification](FULL_PROJECT_SPECIFICATION.md)
 

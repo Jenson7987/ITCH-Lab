@@ -44,7 +44,7 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 | NFR-009 | 08 coverage/CI | TASK-008, TASK-028, TASK-030 | Exact Python tier gate, C++ compiler-coverage regression floor/report, TASK-028 security workflow and CI matrix |
 | NFR-010 | ADR-004; 02 UF-003–005 | TASK-018–020, TASK-023–027, TASK-031 | UT-FEAT-001, UT-LABEL-001, IT-008, partition properties, UT-MODEL-001, simulator properties and TASK-031 full-day validation/reproduction spot-check |
 | NFR-011 | 06 accessibility | TASK-007, TASK-021, TASK-030 | NO_COLOR/TERM, doctor human/JSON parity, HTML accessibility and plot tests |
-| NFR-012 | ADR-001–004; AGENTS.md | TASK-001, TASK-032 | API docs review, docs/traceability lint |
+| NFR-012 | ADR-001–004; AGENTS.md | TASK-001, TASK-032 | API docs review, traceability-checker policy tests and CI gate |
 
 ## Security and privacy requirements
 
@@ -65,9 +65,12 @@ This matrix is authoritative for requirement-to-design, implementation and verif
 
 ## Coverage review checklist
 
-- [ ] Every requirement row has at least one accepted design location.
-- [ ] Every requirement row has at least one implementation task.
-- [ ] Every requirement row has at least one executable test or review gate.
-- [ ] Completed TASKS.md items link their actual test output/commit evidence.
-- [ ] Requirement changes update this matrix in the same commit.
-- [ ] No test ID refers only to inaccessible raw market data.
+- [x] Every requirement row has at least one accepted design location.
+- [x] Every requirement row has at least one defined implementation task.
+- [x] Every requirement row has at least one executable test or review gate.
+- [x] Every completed `TASKS.md` item records concrete test and completion evidence.
+- [x] CI validates source/matrix/task inventories and mapping fields.
+- [x] No verification reference depends only on inaccessible raw market data.
+
+TASK-032's [v0.1.0 final review](release/v0.1.0-review.md) records the fresh-reviewer walkthrough,
+local command evidence and the release-owner evidence still required before the task can close.

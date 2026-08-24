@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import runpy
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -14,6 +15,7 @@ import pytest
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 COVERAGE_SCRIPT = REPOSITORY_ROOT / "scripts/ci/check_coverage.py"
 DOCS_SCRIPT = REPOSITORY_ROOT / "scripts/ci/check_docs.py"
+TRACEABILITY_SCRIPT = REPOSITORY_ROOT / "scripts/ci/check_traceability.py"
 
 
 def _summary(
@@ -112,6 +114,97 @@ def test_task_030_documentation_checker_rejects_broken_local_links(tmp_path: Pat
     assert issues == ("guide.md:1: local link does not exist: absent.md",)
 
 
+def _copy_traceability_contract(tmp_path: Path) -> None:
+    for relative in (
+        "TASKS.md",
+        "docs/01-product-requirements.md",
+        "docs/07-security-and-privacy.md",
+        "docs/08-testing-strategy.md",
+        "docs/10-implementation-plan.md",
+        "docs/11-traceability.md",
+    ):
+        source = REPOSITORY_ROOT / relative
+        destination = tmp_path / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+
+
+def _traceability_checker() -> Any:
+    namespace = runpy.run_path(str(TRACEABILITY_SCRIPT), run_name="task032_traceability")
+    return cast(Any, namespace["check_repository"])
+
+
+def test_task_032_traceability_checker_accepts_repository_contract() -> None:
+    completed = subprocess.run(
+        [sys.executable, str(TRACEABILITY_SCRIPT)],
+        cwd=REPOSITORY_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert completed.stdout == "Traceability checks passed for 46 requirements and 32 tasks.\n"
+    assert completed.stderr == ""
+
+
+def test_task_032_traceability_checker_rejects_undefined_task(tmp_path: Path) -> None:
+    _copy_traceability_contract(tmp_path)
+    matrix = tmp_path / "docs/11-traceability.md"
+    matrix.write_text(
+        matrix.read_text(encoding="utf-8").replace("TASK-004, TASK-007", "TASK-999", 1),
+        encoding="utf-8",
+    )
+
+    issues = _traceability_checker()(tmp_path)
+
+    assert any("(FR-001): undefined tasks: TASK-999" in issue for issue in issues)
+
+
+def test_task_032_traceability_checker_rejects_missing_mapping(tmp_path: Path) -> None:
+    _copy_traceability_contract(tmp_path)
+    matrix = tmp_path / "docs/11-traceability.md"
+    text = matrix.read_text(encoding="utf-8")
+    matrix.write_text(
+        "\n".join(line for line in text.splitlines() if not line.startswith("| SEC-012 |")) + "\n",
+        encoding="utf-8",
+    )
+
+    issues = _traceability_checker()(tmp_path)
+
+    assert "traceability matrix: missing mappings: SEC-012" in issues
+
+
+def test_task_032_traceability_checker_requires_verification_evidence(tmp_path: Path) -> None:
+    _copy_traceability_contract(tmp_path)
+    matrix = tmp_path / "docs/11-traceability.md"
+    matrix.write_text(
+        matrix.read_text(encoding="utf-8").replace(
+            "| IT-001, IT-002, CLI inspect contract |", "|  |", 1
+        ),
+        encoding="utf-8",
+    )
+
+    issues = _traceability_checker()(tmp_path)
+
+    assert any("(FR-001): lacks executable test or review evidence" in issue for issue in issues)
+
+
+def test_task_032_traceability_checker_requires_completed_task_evidence(
+    tmp_path: Path,
+) -> None:
+    _copy_traceability_contract(tmp_path)
+    checklist = tmp_path / "TASKS.md"
+    checklist.write_text(
+        checklist.read_text(encoding="utf-8").replace("  - Evidence:", "  - Record:", 1),
+        encoding="utf-8",
+    )
+
+    issues = _traceability_checker()(tmp_path)
+
+    assert any("completed TASK-030 lacks an Evidence entry" in issue for issue in issues)
+
+
 def test_task_030_workflow_fixes_supported_platforms_and_offline_release_gate() -> None:
     workflow = (REPOSITORY_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
 
@@ -121,5 +214,6 @@ def test_task_030_workflow_fixes_supported_platforms_and_offline_release_gate() 
     assert "expected_architecture: arm64" in workflow
     assert "./scripts/release/task030-release-smoke.sh" in workflow
     assert "python scripts/ci/check_coverage.py" in workflow
+    assert "python scripts/ci/check_traceability.py" in workflow
     assert "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" in workflow
     assert "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1" in workflow

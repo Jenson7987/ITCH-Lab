@@ -1,6 +1,6 @@
 # ITCH-Lab research package
 
-This is the Python foundation for the offline ITCH-Lab research platform. It provides version/help
+This is the Python research package for the offline ITCH-Lab platform. It provides version/help
 entry points, strict configuration, stable-error and canonical-hashing contracts, plus authenticated
 chunked readers for the event-v1 and snapshot-v1 C++ interchange files. The implemented `convert`
 command validates completed replay lineage, writes typed Zstandard Parquet in bounded batches and
@@ -45,7 +45,7 @@ machine-readable and `--quiet` suppresses progress on stderr.
 Matching completed dataset and experiment identities are revalidated and reused; use
 `--force-new-run` to retain another immutable run. Predictive reproduction retrains from recorded
 lineage and never loads a pickle/joblib model object.
-Report bundles are written beneath `runs/report/<experiment-id>/<markdown|html|both>/`. Existing
+Report bundles are written beneath `runs/report/<run-id>/<markdown|html|both>/`. Existing
 byte-identical bundles are reused, while inconsistent completed or partial bundles fail without
 overwrite. Reports are static, contain no scripts and do not download data.
 

@@ -87,7 +87,6 @@ Stored inside a replay manifest.
 | framing | string | No | itch-length-v1 | ADR-005; positive two-byte big-endian length and complete-frame EOF |
 | trading_date | ISO date | No | — | Required config; not silently inferred |
 | exchange_timezone | string | No | America/New_York | Fixed IANA zone for Nasdaq MVP |
-| source_uri | string | Yes | null | Optional public landing page, never a signed URL |
 
 ### Instrument
 
@@ -112,7 +111,7 @@ One directory with replay-manifest.json, events.ilb and snapshots.ilb.
 | Field | Type | Nullable | Default | Constraints/owner |
 | --- | --- | --- | --- | --- |
 | replay_id | string | No | generated | UTC timestamp plus 12-char identity-hash prefix |
-| status | enum | No | running | running, completed, failed, cancelled or degraded |
+| status | enum | No | — | Published manifest is `completed` or `degraded` |
 | schema_version | uint16 | No | 1 | Manifest schema |
 | source | SourceFile | No | — | Exactly one source per replay |
 | config | object | No | — | Canonical replay config |
@@ -130,6 +129,8 @@ Version 1 additionally records `identity_sha256`, `identity_config_sha256`,
 `executable_sha256`, `publishable`, global session events, final per-instrument state/digest and
 per-artefact record metadata. `publishable` is false unless the recorded build is a Release build
 from a clean Git tree. Artefact paths are fixed run-relative basenames.
+Failed or cancelled work remains beneath a `.partial` path and never receives a completed replay
+manifest; its operational state is therefore not part of this published-manifest schema.
 
 ### NormalisedEvent
 
@@ -382,15 +383,20 @@ metrics/diagnostics JSON files.
 
 | Field | Type | Nullable | Default | Constraints |
 | --- | --- | --- | --- | --- |
+| schema_version | uint16 | No | 1 | Strict completed-manifest schema |
 | simulation_id | string | No | generated | Content-addressed identity |
-| dataset_id | string | No | — | Parent dataset |
-| prediction_identity | string | Yes | null | Null only for non-signal baseline |
+| status | enum | No | completed | Published manifests are completed only |
+| started_at/completed_at | UTC timestamp | No | — | Observational publication times |
 | config | object | No | — | Strategy, queue, latency, costs, liquidation |
-| random_seed | uint64 | No | — | Even if selected model is deterministic; JSON v1 maximum is 2^53−1 |
+| config_sha256/identity_config_sha256/identity_sha256 | hex | No | — | Full config and locator-free content identities |
+| tool | object | No | — | Package digest and runtime versions |
+| parents | object | No | — | Authenticated dataset, experiment, conversion and replay lineage |
+| calibration | object | No | — | Training-only intensity-calibration evidence |
+| selection | object | No | — | Validation-only model and signal-weight evidence |
 | scenarios | array | No | — | Minimum three latency and two cost settings in final report |
-| status | enum | No | running | Terminal publication rules match ReplayRun |
-| metrics | object | No | — | Aggregate results and diagnostic counts |
-| artefacts | array | No | — | Orders, fills, time series, summary |
+| schemas | object | No | — | Exact orders, fills, liquidations and equity schemas |
+| artefacts | array | No | — | Six authenticated Parquet/JSON children |
+| assumptions/limitations/warnings | string arrays | No | — | Public-safe research disclosures |
 
 The manifest authenticates the dataset and optional experiment parent, canonical simulation
 config, package-content digest, exact training calibration dates/buckets/fits/source, fixed
@@ -398,6 +404,10 @@ selection evidence, scenario catalogue, all child hashes and all four Parquet sc
 Publication is immutable and manifest-last. The required test grid is the Cartesian product of
 symmetric 0/100,000/1,000,000 ns latency and −2,000/+3,000 microusd/share maker cost; a distinct
 configured scenario is retained as an additional cell.
+
+The simulation seed is stored in the canonical `config` and is limited to 0 through 2^53−1.
+Aggregate metrics and diagnostic counts are stored in the authenticated `metrics.json` and
+`diagnostics.json` child artefacts rather than duplicated as top-level manifest fields.
 
 `diagnostics.json` retains exact positive counts for every diagnostic code. Detailed `records` and
 their independently reconciled `record_counts` retain queue anomalies and any other exceptional
@@ -739,7 +749,9 @@ These examples illustrate shape only and must be labelled synthetic.
 ## Migration approach
 
 1. Binary and manifest readers reject unknown major schema versions.
-2. Additive optional JSON fields may be introduced within a version only when old readers safely ignore them and canonical hashing rules remain defined.
+2. Version-1 JSON schemas are strict and reject unknown properties. A JSON contract change requires
+   an explicitly compatible schema/version and defined canonical hashing behaviour; fields are not
+   added silently within the existing strict contract.
 3. Any binary layout change increments the schema version and adds a new reader/writer pair.
 4. Migration creates new artefacts and a new manifest; it never edits an old completed run in place.
 5. Golden fixtures for every supported version remain in tests.

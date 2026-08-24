@@ -129,7 +129,8 @@ There is no upload endpoint. Local files are still untrusted.
 
 ## Secret management
 
-The MVP has no secrets. Environment variables listed in README configure paths/log levels only. If future data access needs credentials:
+The MVP has no secrets. Documented environment variables configure local paths, build concurrency
+or presentation only. If future data access needs credentials:
 
 1. Do not commit them or store them in run manifests.
 2. Use environment variables or OS credential storage.
@@ -226,6 +227,10 @@ run; the equivalent gates below passed locally before TASK-028 was closed.
 | 8. Report injection | Markdown and HTML tests cover `<script>` and Markdown link/table metacharacters and require escaped output with no trusted raw data HTML. |
 | 9. Private paths | Policy tests scan public configs and minimal golden manifests for the repository and home paths; existing manifest/report recursive assertions also pass. |
 | 10. Honest limitations | Predictive and simulation report tests require historical/simulated status, fill/latency/venue assumptions and the absence of profitability guarantees. |
+
+TASK-032's [v0.1.0 final review](release/v0.1.0-review.md) re-ran the consolidated local security
+gate and records the final locally verifiable release evidence. It introduced no threat-model,
+dependency or security-policy change.
 
 Local evidence toolchain:
 

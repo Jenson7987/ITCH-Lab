@@ -53,7 +53,7 @@ Each leaf command owns its parsed options and delegates validated domain objects
 | Validated config | Immutable config domain object | Whole command |
 | Progress counters | Command coordinator/replay engine | Running command |
 | Cancellation flag | Process-level CancellationToken | Running command |
-| Book/replay state | C++ ReplayEngine/OrderBook | One source run |
+| Book/replay state | C++ ReplayCoordinator/OrderBook | One source run |
 | Dataset lazy plan | Python dataset service | One transformation |
 | Model/simulation state | Python service | One immutable run |
 | Completion metadata | Manifest builder | Persisted |
@@ -119,7 +119,7 @@ Multiple config errors are presented together. Runtime stream errors stop at the
 
 - Empty input: error and no run.
 - Valid replay with no selected events: completed empty replay, clearly labelled; downstream modelling refuses it.
-- No plot backend: report completes with tables/text and warns that plots were omitted.
+- No predictive parent: a simulation report completes with its tables/text and no calibration plots.
 - Degraded permissive replay: yellow when colour is enabled, plus the literal word DEGRADED; never colour alone.
 - No fills in a simulation: valid result, with zero-fill diagnostics and no division-by-zero metrics.
 - Single-class partition: model command fails before training with class counts.

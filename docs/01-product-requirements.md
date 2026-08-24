@@ -381,7 +381,7 @@ Acceptance criteria:
 | Latency | Integer nanoseconds from 0 through 10 seconds | ERR_LATENCY |
 | Fee/rebate | Signed integer microusd per share with absolute value at most 1,000,000 | ERR_COST |
 | Queue anomaly budget | Integer from 0 through 2^53−1 | ERR_QUEUE_STATE |
-| Random seed | Unsigned 64-bit integer recorded in the manifest | ERR_SEED |
+| Random seed | Integer from 0 through 2^53−1, the exact JSON v1 interoperability range, recorded in the manifest | ERR_SEED |
 | Existing run | Completed directory is immutable unless a new run ID is requested | ERR_RUN_EXISTS |
 
 ## Error conditions and recovery

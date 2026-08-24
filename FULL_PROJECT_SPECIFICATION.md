@@ -2,7 +2,7 @@
 
 > This is a secondary human-readable consolidation. The individual documents in docs/, accepted ADRs and requirement traceability matrix are authoritative.
 
-## Proposed directory tree
+## Implemented directory tree
 
     itch-lab/
     ├── README.md
@@ -33,7 +33,11 @@
     │   ├── 09-deployment.md
     │   ├── 10-implementation-plan.md
     │   ├── 11-traceability.md
-    │   └── decisions/
+    │   ├── 12-feature-catalogue.md
+    │   ├── decisions/
+    │   ├── performance/
+    │   ├── release/
+    │   └── studies/
     ├── python/
     │   ├── pyproject.toml
     │   ├── requirements-dev.lock
@@ -46,7 +50,8 @@
 
 ## Status and classification
 
-Status: implementation-ready specification; application implementation has not started.
+Status: the v0.1.0 MVP and official-data study are implemented. Local final review is complete;
+the release-owner commit and `v0.1.0` tag evidence remain pending.
 
 - **Confirmed requirement**: accepted through selection of the ITCH-Lab concept.
 - **Assumption**: planning premise requiring confirmation/evidence.

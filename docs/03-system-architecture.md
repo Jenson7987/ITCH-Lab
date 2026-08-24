@@ -49,7 +49,7 @@ flowchart TD
 | Python packaging | pyproject.toml, src layout | Modern isolated package and test imports |
 | Tabular engine | PyArrow/Parquet with bounded Python state | Typed columnar batches without pandas object fallbacks; Polars remains optional until a measured later-stage need |
 | Baseline models | scikit-learn | Transparent, established baselines |
-| Reporting | Markdown plus optional static HTML and PNG/SVG plots | Reviewable in Git and usable offline |
+| Reporting | Markdown plus optional static HTML and project-owned static SVG plots | Reviewable in Git and usable offline without a plotting runtime |
 
 CMake uses find_package(ZLIB REQUIRED) for the platform zlib and FetchContent with immutable pinned
 revisions for nlohmann/json, Catch2 and the release-only Google Benchmark harness. Python
@@ -138,12 +138,14 @@ Responsibilities:
 
 ### OrderBook
 
-Recommended correctness-first representation:
+Implemented correctness-first representation:
 
-- An unordered map from order reference to an OrderRecord.
-- Ordered bid/ask maps from Price4 to PriceLevel.
-- Each PriceLevel stores total quantity and a FIFO list of order references.
+- A standard-library PMR unordered map from order reference to an OrderRecord.
+- Standard-library PMR ordered bid/ask maps from Price4 to PriceLevel.
+- Each PriceLevel stores total quantity and a PMR FIFO list of order references.
 - OrderRecord stores a stable iterator into its level queue for O(1) removal.
+- Each book owns an unsynchronised pool resource; TASK-029 introduced this allocation optimisation
+  without changing the canonical logical-state digest.
 
 The public book interface owns all mutation invariants; writers and strategies cannot alter state directly.
 
@@ -326,7 +328,7 @@ flowchart TD
 
 There is no production server. “Deployment” means a versioned local release archive and reproducible environment instructions.
 
-## Proposed source-code directory structure
+## Implemented source-code directory structure
 
     cpp/
     ├── apps/itchlab/
@@ -339,7 +341,7 @@ There is no production server. “Deployment” means a versioned local release 
     │   ├── itch/messages.hpp
     │   ├── itch/decoder.hpp
     │   ├── book/order_book.hpp
-    │   ├── replay/replay_engine.hpp
+    │   ├── replay/replay_coordinator.hpp
     │   ├── output/event_writer.hpp
     │   ├── output/snapshot_writer.hpp
     │   ├── output/manifest.hpp
@@ -376,4 +378,6 @@ There is no production server. “Deployment” means a versioned local release 
     ├── dataset-config.schema.json
     ├── dataset-manifest.schema.json
     ├── experiment-config.schema.json
-    └── simulation-config.schema.json
+    ├── experiment-manifest.schema.json
+    ├── simulation-config.schema.json
+    └── simulation-manifest.schema.json
